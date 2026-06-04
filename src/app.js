@@ -1153,25 +1153,46 @@ async function copyShareLink() {
 }
 
 function printPlan() {
+  const definition = getPlanDefinition(currentPlanId);
   const rows = result.parts.map((part, index) => `<tr><td>${index + 1}</td><td>${escapeHtml(part.part)}</td><td>${part.qty}</td><td>${escapeHtml(formatLength(part.length, plan.unit))}</td><td>${escapeHtml(formatLength(part.width, plan.unit))}</td><td>${escapeHtml(formatLength(part.thickness, plan.unit))}</td><td>${escapeHtml(part.notes)}</td></tr>`).join('');
   const guides = result.parts.map((part, index) => printGuideHtml(part, index)).filter(Boolean).join('');
   const views = printViewHtml();
+  const details = printPlanDetailsHtml(definition);
+  const dimensions = printDimensionSummaryHtml();
+  const purchases = printPurchaseSummaryHtml();
+  const buildSteps = printBuildStepsHtml(definition);
   const printWindow = window.open('', '_blank');
   if (!printWindow) return;
   printWindow.document.write(`
-    <!doctype html><title>Floating Frame Plan</title>
+    <!doctype html><title>${escapeHtml(definition.title)} Plan</title>
     <style>
       @page{margin:.55in}
-      body{font-family:Arial,sans-serif;padding:28px;color:#111}
-      h1{margin:0 0 8px} .summary{margin:0 0 18px;color:#444}
-      table{border-collapse:collapse;width:100%;font-size:12px} th,td{border:1px solid #bbb;padding:6px;text-align:left} th{background:#eee}
+      body{font-family:Arial,sans-serif;padding:28px;color:#111;line-height:1.35}
+      h1{margin:0 0 8px;font-size:28px} h2{font-size:17px;margin:0 0 9px} h3{font-size:14px;margin:0 0 6px}
+      section{margin:22px 0}.summary{margin:0 0 18px;color:#444;max-width:820px}.muted{color:#555}
+      .hero{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;margin-bottom:20px}.hero img{width:100%;height:auto;border-radius:6px;background:#0c1117;border:1px solid #bbb}.panel{break-inside:avoid;border:1px solid #bbb;border-radius:6px;padding:12px;margin:0 0 12px}.twocol{display:grid;grid-template-columns:1fr 1fr;gap:12px}.kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.kv div{border:1px solid #ddd;padding:6px}.kv span{display:block;color:#555;font-size:11px}.kv b{font-size:12px} ul{margin:0;padding-left:18px} li{margin-bottom:5px}
+      table{border-collapse:collapse;width:100%;font-size:12px} th,td{border:1px solid #bbb;padding:6px;text-align:left;vertical-align:top} th{background:#eee}
       .views{margin:20px 0 22px}.viewGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.viewShot{break-inside:avoid;border:1px solid #bbb;border-radius:6px;padding:8px}.viewShot b{display:block;font-size:12px;margin:0 0 6px;color:#333}.viewShot img{display:block;width:100%;height:auto;border-radius:4px;background:#0c1117}
-      h2{font-size:15px;margin:0 0 8px}.guides{margin-top:24px}.guideGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px}.printGuide{break-inside:avoid;border:1px solid #bbb;border-radius:6px;padding:12px;margin:0 0 14px}.printGuide b{display:block;margin-bottom:4px}.cutHelpText{display:block;font-size:12px;color:#333;margin-bottom:8px}.cutDiagram{width:100%;max-width:520px;height:auto}.miterDiagram{width:100%;max-width:430px;height:auto}.profile,.topProfile{fill:none;stroke:#111;stroke-width:4;stroke-linecap:round;stroke-linejoin:round}.keepProfile{fill:#b7dfbf;stroke:none}.remove{fill:#e26b6b;opacity:.55}.ledge{fill:#37a857;opacity:.75}.topRemove{fill:none;stroke:#d85656;stroke-width:3;stroke-linecap:round}.squiggle{fill:none;stroke:#888;stroke-width:1.5}.dimLine,.tick{stroke:#777;stroke-width:2}.grayText,.dimText{fill:#555;font-size:11px}.dimText{text-anchor:middle}
+      .steps{counter-reset:step}.printStep{break-inside:avoid;display:grid;grid-template-columns:.9fr 1.1fr;gap:12px;border:1px solid #bbb;border-radius:6px;padding:12px;margin:0 0 14px}.printStep img{width:100%;height:auto;border-radius:4px;background:#0c1117}.stepNo{font-size:11px;font-weight:bold;color:#555;text-transform:uppercase}.purchaseStats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}.purchaseStats span{border:1px solid #bbb;border-radius:999px;padding:5px 8px;font-size:12px}
+      .guides{margin-top:24px}.guideGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px}.printGuide{break-inside:avoid;border:1px solid #bbb;border-radius:6px;padding:12px;margin:0 0 14px}.printGuide b{display:block;margin-bottom:4px}.cutHelpText{display:block;font-size:12px;color:#333;margin-bottom:8px}.cutDiagram{width:100%;max-width:520px;height:auto}.miterDiagram{width:100%;max-width:430px;height:auto}.profile,.topProfile{fill:none;stroke:#111;stroke-width:4;stroke-linecap:round;stroke-linejoin:round}.keepProfile{fill:#b7dfbf;stroke:none}.remove{fill:#e26b6b;opacity:.55}.ledge{fill:#37a857;opacity:.75}.topRemove{fill:none;stroke:#d85656;stroke-width:3;stroke-linecap:round}.squiggle{fill:none;stroke:#888;stroke-width:1.5}.dimLine,.tick{stroke:#777;stroke-width:2}.grayText,.dimText{fill:#555;font-size:11px}.dimText{text-anchor:middle}
+      @media print{.printStep,.panel,.viewShot,.printGuide{break-inside:avoid}.pageBreak{break-before:page}}
     </style>
-    <h1>Floating Frame Plan</h1>
-    <p class="summary">Canvas ${formatLength(plan.canvasW, plan.unit)} x ${formatLength(plan.canvasH, plan.unit)} · Reveal ${formatLength(plan.reveal, plan.unit)} · Face ${formatLength(plan.face, plan.unit)} · Build ${normalizeBuild(plan.build)}</p>
+    <h1>${escapeHtml(definition.title)}</h1>
+    <p class="summary">${escapeHtml(definition.details?.description || definition.summary)}</p>
+    <section class="hero">
+      <div>
+        ${details}
+        ${dimensions}
+      </div>
+      <div>${printCompletedImageHtml()}</div>
+    </section>
     ${views}
+    ${purchases}
+    <section>
+      <h2>Cut List</h2>
     <table><thead><tr><th>#</th><th>Part</th><th>Qty</th><th>Length</th><th>Width</th><th>Thickness</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table>
+    </section>
+    ${buildSteps}
     ${guides ? `<section class="guides"><h2>Cutting Diagrams</h2><div class="guideGrid">${guides}</div></section>` : ''}
   `);
   printWindow.document.close();
@@ -1181,15 +1202,129 @@ function printPlan() {
   }, 250);
 }
 
+function printPlanDetailsHtml(definition) {
+  const details = definition.details;
+  if (!details) return '';
+  const sections = [
+    ['Materials', details.materials],
+    ['Tools', details.tools],
+    ['Notes', details.notes]
+  ].filter(([, items]) => items?.length);
+  return sections.map(([title, items]) => `
+    <div class="panel">
+      <h2>${escapeHtml(title)}</h2>
+      <ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+    </div>
+  `).join('');
+}
+
+function printDimensionSummaryHtml() {
+  const rows = isShelfPlan()
+    ? [
+        ['Overall size', `${formatLength(plan.shelfW, plan.unit)} x ${formatLength(plan.shelfH, plan.unit)} x ${formatLength(plan.shelfD, plan.unit)}`],
+        ['Levels', result.levels],
+        ['Bays', result.bays],
+        ['Post size', `${formatLength(result.post, plan.unit)} x ${formatLength(result.stock, plan.unit)}`],
+        ['Rail height', formatLength(plan.shelfRail, plan.unit)],
+        ['Deck/plank width', formatLength(result.deck || plan.shelfDeck, plan.unit)]
+      ]
+    : [
+        ['Canvas', `${formatLength(plan.canvasW, plan.unit)} x ${formatLength(plan.canvasH, plan.unit)} x ${formatLength(plan.canvasT, plan.unit)}`],
+        ['Outer size', `${formatLength(result.outerW, plan.unit)} x ${formatLength(result.outerH, plan.unit)}`],
+        ['Reveal', formatLength(plan.reveal, plan.unit)],
+        ['Face width', formatLength(plan.face, plan.unit)],
+        ['Depth', formatLength(plan.depth, plan.unit)],
+        ['Mounting', result.effectiveMountMethod]
+      ];
+  return `
+    <div class="panel">
+      <h2>Plan Summary</h2>
+      <div class="kv">${rows.map(([key, value]) => `<div><span>${escapeHtml(key)}</span><b>${escapeHtml(value)}</b></div>`).join('')}</div>
+    </div>
+  `;
+}
+
+function printPurchaseSummaryHtml() {
+  const estimate = estimateBoardPurchases(result.parts, purchaseBoardLength, plan.kerf || 0);
+  if (!estimate.groups.length) return '';
+  return `
+    <section>
+      <h2>Board Purchase Estimate</h2>
+      <div class="purchaseStats">
+        <span><b>${estimate.totalBoards}</b> board${estimate.totalBoards === 1 ? '' : 's'} to buy</span>
+        <span><b>${escapeHtml(formatLength(estimate.totalPurchased, plan.unit))}</b> purchased length</span>
+        <span><b>${escapeHtml(formatLength(estimate.totalWaste, plan.unit))}</b> estimated offcut</span>
+      </div>
+      <table><thead><tr><th>Stock</th><th>Boards</th><th>Cut layout</th><th>Offcut</th></tr></thead><tbody>
+        ${estimate.groups.map((group) => `
+          <tr>
+            <td>${escapeHtml(formatLength(group.width, plan.unit))} x ${escapeHtml(formatLength(group.thickness, plan.unit))}</td>
+            <td>${group.boards.length}</td>
+            <td>${group.boards.map((board, index) => `<div><b>${index + 1}</b>: ${board.pieces.map((piece) => escapeHtml(formatLength(piece.length, plan.unit))).join(' + ')}</div>`).join('')}</td>
+            <td>${escapeHtml(formatLength(group.waste, plan.unit))}</td>
+          </tr>
+        `).join('')}
+      </tbody></table>
+    </section>
+  `;
+}
+
+function printCompletedImageHtml() {
+  const target = printCameraTarget();
+  const span = printCameraSpan();
+  const data = viewer.captureImage({
+    camera: { x: span * 1.15, y: span * 0.75, z: span * 1.25 },
+    target,
+    vis: buildStepVisibility(),
+    stage: 999,
+    width: 980,
+    height: 640
+  });
+  return data ? `<img src="${data}" alt="Completed ${escapeHtml(getPlanDefinition(currentPlanId).title)}">` : '';
+}
+
+function printBuildStepsHtml(definition) {
+  const steps = definition.buildSteps || [];
+  if (!steps.length) return '';
+  return `
+    <section class="steps pageBreak">
+      <h2>Step-by-step Build Instructions</h2>
+      ${steps.map((step, index) => {
+        const image = viewer.captureImage({
+          stage: step.stage ?? 999,
+          vis: step.vis || buildStepVisibility(),
+          camera: printStepCamera(step),
+          target: printCameraTarget(),
+          width: 820,
+          height: 480
+        });
+        return `
+          <div class="printStep">
+            <div>
+              <div class="stepNo">Step ${index + 1}</div>
+              <h3>${escapeHtml(step.title)}</h3>
+              <ul>${(step.instructions || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+            </div>
+            ${image ? `<img src="${image}" alt="${escapeHtml(step.title)} assembly view">` : '<div class="panel muted">3D view unavailable</div>'}
+          </div>
+        `;
+      }).join('')}
+    </section>
+  `;
+}
+
 function printViewHtml() {
-  const fullVis = { face: true, liner: true, spacers: true, canvas: true, hardware: true };
-  const frameVis = { face: true, liner: true, spacers: true, canvas: false, hardware: true };
-  const target = { x: 0, y: 0, z: 0 };
+  const fullVis = buildStepVisibility();
+  const frameVis = isShelfPlan()
+    ? { posts: true, rails: true, slats: false, hardware: true }
+    : { face: true, liner: true, spacers: true, canvas: false, hardware: true };
+  const target = printCameraTarget();
+  const span = printCameraSpan();
   const shots = [
-    { title: 'Top view, full assembly', camera: { x: 0, y: 7, z: 0.01 }, vis: fullVis },
-    { title: 'Angled view, full assembly', camera: { x: 5.5, y: 4.2, z: 6.4 }, vis: fullVis },
-    { title: 'Top view, frame and supports', camera: { x: 0, y: 7, z: 0.01 }, vis: frameVis },
-    { title: 'Back view, full assembly', camera: { x: 5.5, y: -4.2, z: 6.4 }, vis: fullVis }
+    { title: 'Top view, full assembly', camera: { x: 0.01, y: span * 1.8, z: 0.01 }, vis: fullVis },
+    { title: 'Angled view, full assembly', camera: { x: span * 1.15, y: span * 0.75, z: span * 1.25 }, vis: fullVis },
+    { title: isShelfPlan() ? 'Structure without shelf surfaces' : 'Frame and supports', camera: { x: 0.01, y: span * 1.8, z: 0.01 }, vis: frameVis },
+    { title: 'Back view, full assembly', camera: { x: span * 1.1, y: span * 0.45, z: -span * 1.35 }, vis: fullVis }
   ].map((shot) => ({
     ...shot,
     data: viewer.captureImage({ camera: shot.camera, target, vis: shot.vis, stage: 999, width: 900, height: 520 })
@@ -1197,12 +1332,31 @@ function printViewHtml() {
   if (!shots.length) return '';
   return `
     <section class="views">
-      <h2>Frame Views</h2>
+      <h2>Completed Object Views</h2>
       <div class="viewGrid">
         ${shots.map((shot) => `<div class="viewShot"><b>${escapeHtml(shot.title)}</b><img src="${shot.data}" alt="${escapeHtml(shot.title)}"></div>`).join('')}
       </div>
     </section>
   `;
+}
+
+function printCameraSpan() {
+  const width = isShelfPlan() ? result?.shelfW || 48 : result?.outerW || 24;
+  const height = isShelfPlan() ? result?.shelfH || 72 : result?.outerH || 24;
+  const depth = isShelfPlan() ? result?.shelfD || 24 : plan.depth || 2;
+  return Math.max(width, height, depth, 24) * 0.13;
+}
+
+function printCameraTarget() {
+  return isShelfPlan()
+    ? { x: 0, y: (result?.shelfH || 72) * 0.05, z: 0 }
+    : { x: 0, y: Math.max(0.05, (plan.depth || 1) * 0.05), z: 0 };
+}
+
+function printStepCamera(step) {
+  if (step.camera) return step.camera;
+  const span = printCameraSpan();
+  return { x: span * 1.15, y: span * 0.72, z: span * 1.25 };
 }
 
 function printGuideHtml(part, index) {
