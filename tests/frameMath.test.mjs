@@ -84,6 +84,7 @@ assert.equal(shelves.assembly.connections.some((connection) => connection.type =
 const toteRack = calculateShelfPlan({
   build: 'tote-rack',
   toteW: 20.5,
+  toteLipWidth: 1.25,
   toteD: 30.5,
   toteH: 14.25,
   toteColumns: 3,
@@ -98,13 +99,15 @@ assert.equal(toteRack.ok, true);
 assert.equal(toteRack.capacity, 9);
 assert.equal(toteRack.shelfW, 69.5);
 assert.equal(toteRack.shelfD, 36);
+assert.equal(toteRack.runnerClearWidth, 18);
 assert.equal(toteRack.assembly.parts.filter((part) => part.material === 'tote').length, 9);
 assert.equal(toteRack.assembly.parts.filter((part) => part.id.startsWith('rail.runner.')).length, 18);
+assert.equal(toteRack.assembly.parts.filter((part) => part.id.startsWith('block.runner.')).length, 36);
 assert.equal(toteRack.assembly.parts.filter((part) => part.meta?.kind === 'caster').length, 4);
 assert.deepEqual(toteRack.assembly.parts.find((part) => part.id === 'post.front.0').size, { x: 1.5, y: 51, z: 3.5 });
 assert.deepEqual(toteRack.assembly.parts.find((part) => part.id === 'rail.frame.front.top').size, { x: 69.5, y: 1.5, z: 3.5 });
 assert.equal(toteRack.assembly.parts.find((part) => part.id === 'post.front.0').position.y, 28.5);
-assert.equal(toteRack.assembly.parts.find((part) => part.id === 'rail.runner.row0.bay0.left').position.x, -32.5);
+assert.equal(Math.round(toteRack.assembly.parts.find((part) => part.id === 'rail.runner.row0.bay0.left').position.x * 1000) / 1000, -32.417);
 assert.equal(toteRack.assembly.parts.filter((part) => part.id.startsWith('rail.tie.bottom.')).length, 8);
 assert.equal(toteRack.assembly.parts.filter((part) => part.id.startsWith('rail.tie.top.')).length, 0);
 assert.equal(toteRack.assembly.parts.find((part) => part.id === 'rail.tie.bottom.0.post0').position.x, -33);
@@ -114,6 +117,7 @@ assert.equal(toteRack.validation.componentOverlaps.count, 0);
 const customToteRack = calculateShelfPlan({
   build: 'tote-rack',
   toteW: 22,
+  toteLipWidth: 1.25,
   toteD: 30.5,
   toteH: 14.25,
   toteColumns: 2,
@@ -126,5 +130,6 @@ const customToteRack = calculateShelfPlan({
 });
 assert.equal(customToteRack.capacity, 8);
 assert.equal(customToteRack.shelfW, 50.5);
+assert.equal(customToteRack.runnerClearWidth, 19.5);
 
 console.log('frameMath tests passed');

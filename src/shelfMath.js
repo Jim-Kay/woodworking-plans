@@ -79,6 +79,7 @@ function calculateToteRackPlan(plan) {
   const errors = [];
   const warnings = [];
   const toteW = positive(plan.toteW, 'Tote width', errors);
+  const toteLipWidth = nonnegative(plan.toteLipWidth, 'Tote lip width', errors);
   const toteD = positive(plan.toteD, 'Tote length', errors);
   const toteH = positive(plan.toteH, 'Tote height', errors);
   const columns = integerAtLeast(plan.toteColumns, 1, 'Tote columns', errors);
@@ -92,6 +93,9 @@ function calculateToteRackPlan(plan) {
   const casterHeight = 4.21;
   const toteLipThickness = 0.75;
   const baseStackHeight = stock * 2;
+  if (Number.isFinite(toteW) && Number.isFinite(toteLipWidth) && toteLipWidth * 2 >= toteW) {
+    errors.push('Tote lip width must leave a positive body width between the runner rails.');
+  }
   const ok = errors.length === 0;
   if (!ok) return { type: 'shelves', style: 'tote-rack', ok: false, errors, warnings, parts: [], boardFeet: 0 };
 
@@ -103,6 +107,11 @@ function calculateToteRackPlan(plan) {
   const postLength = runnerY(rows - 1) + rail / 2 + verticalClearance - baseStackHeight;
   const height = baseStackHeight + postLength + stock;
   const postStep = (width - stock) / columns;
+  const requestedRunnerClearWidth = Math.max(stock, toteW - toteLipWidth * 2);
+  const availableRunnerClearWidth = Math.max(stock, postStep - stock * 3);
+  const runnerClearWidth = Math.min(requestedRunnerClearWidth, availableRunnerClearWidth);
+  const runnerCenterSpacing = runnerClearWidth + stock;
+  const runnerSpacerLength = Math.max(0, (availableRunnerClearWidth - runnerClearWidth) / 2);
   const railLength = Math.max(stock, postStep - stock);
   const depthRailLength = Math.max(stock, depth - stock * 2);
   const frameRailLength = width;
@@ -112,22 +121,26 @@ function calculateToteRackPlan(plan) {
   const capacity = columns * rows;
   if (verticalClearance < 2) warnings.push('Vertical clearance is under 2 in; totes may be hard to lift over the support rails.');
   if (sideClearance < 1) warnings.push('Side clearance is under 1 in; measure the tote lid lip carefully before cutting.');
+  if (requestedRunnerClearWidth > availableRunnerClearWidth + 0.001) warnings.push('The lip-adjusted runner spacing is wider than this bay allows; increase side gap, increase lip width, or expect the runner spacing to be clamped inside the posts.');
   if (toteD > 36) warnings.push('Tote length is over 36 in; check rack depth and wall clearance.');
 
   const parts = [
     { part: 'Vertical posts', qty: (columns + 1) * 2, length: postLength, width: post, thickness: stock, notes: 'Front and back posts sit on the doubled bottom rails; mark every row height before assembly.' },
     { part: 'Top frame rails', qty: 2, length: frameRailLength, width: rail, thickness: stock, notes: 'Full-width front and back top rails laid flat on top of the posts.' },
     { part: 'Doubled bottom frame rails', qty: 4, length: frameRailLength, width: rail, thickness: stock, notes: 'Two stacked full-width rails across the front and back create a stronger caster-bearing base.' },
-    { part: 'Tote runner rails', qty: rows * columns * 2, length: supportRailLength, width: rail, thickness: stock, notes: 'Two front-to-back runners for each tote bay; runners are not shared between neighboring totes.' },
+    { part: 'Tote runner rails', qty: rows * columns * 2, length: supportRailLength, width: rail, thickness: stock, notes: 'Two front-to-back runners for each tote bay; inside spacing follows tote width minus twice the measured lip width.' },
     { part: 'Doubled bottom depth tie rails', qty: (columns + 1) * 2, length: tieRailLength, width: rail, thickness: stock, notes: 'Two stacked bottom depth ties; outer rails are inset so their outside faces align with the post outside faces.' },
     { part: 'Swivel casters', qty: 4, length: casterHeight, width: 3.62, thickness: 2.44, notes: 'Mount to the doubled bottom frame rails if the rack needs to roll.' },
     { part: 'Structural screws', qty: rows * columns * 8 + (columns + 1) * 8, length: 2.5, width: NaN, thickness: NaN, notes: 'Fasten runner and tie rail ends into posts; add wall anchors for tall racks.' }
   ];
+  if (runnerSpacerLength > 0.001) {
+    parts.splice(4, 0, { part: 'Runner spacer blocks', qty: rows * columns * 4, length: runnerSpacerLength, width: rail, thickness: stock, notes: 'Spacer blocks bridge each runner rail to the adjacent front and back posts when the tote lip makes the runner spacing narrower than the post bay.' });
+  }
   const boardFeet = parts.reduce((sum, p) => {
     const boardFeetForPart = (p.qty * p.length * p.width * p.thickness) / 144;
     return Number.isFinite(boardFeetForPart) ? sum + boardFeetForPart : sum;
   }, 0);
-  const model = { width, height, totalHeight, depth, rows, columns, toteW, toteD, toteH, sideClearance, verticalClearance, railInset, post, postLength, stock, rail, bayWidth, postStep, railLength, depthRailLength, frameRailLength, tieRailLength, supportRailLength, rowPitch, casterHeight, toteLipThickness, baseStackHeight };
+  const model = { width, height, totalHeight, depth, rows, columns, toteW, toteLipWidth, toteD, toteH, sideClearance, verticalClearance, railInset, post, postLength, stock, rail, bayWidth, postStep, railLength, depthRailLength, frameRailLength, tieRailLength, supportRailLength, rowPitch, casterHeight, toteLipThickness, baseStackHeight, requestedRunnerClearWidth, runnerClearWidth, runnerCenterSpacing, runnerSpacerLength };
   const assembly = buildToteRackAssembly(model);
   const validation = validateShelfConstruction(assembly, warnings);
   return {
@@ -158,6 +171,7 @@ function calculateToteRackPlan(plan) {
     bayWidth,
     shelfSpacing: rowPitch,
     toteW,
+    toteLipWidth,
     toteD,
     toteH,
     rows,
@@ -165,6 +179,10 @@ function calculateToteRackPlan(plan) {
     sideClearance,
     verticalClearance,
     railInset,
+    requestedRunnerClearWidth,
+    runnerClearWidth,
+    runnerCenterSpacing,
+    runnerSpacerLength,
     casterHeight,
     frameHeight: height,
     capacity,
@@ -639,6 +657,7 @@ function buildToteRackAssembly(model) {
   const frameRailMeta = { group: 'rails', subgroup: 'frame' };
   const tieRailMeta = { group: 'rails', subgroup: 'tie' };
   const runnerRailMeta = { group: 'rails', subgroup: 'runner' };
+  const runnerSpacerMeta = { group: 'rails', subgroup: 'spacer', intentionalOverlap: true };
 
   for (let i = 0; i <= model.columns; i += 1) {
     const x = postXForIndex(i);
@@ -688,11 +707,28 @@ function buildToteRackAssembly(model) {
     for (let bay = 0; bay < model.columns; bay += 1) {
       const x = bayCenterX(bay);
       [-1, 1].forEach((sideSign) => {
-        const runnerX = sideSign < 0 ? postXForIndex(bay) + model.stock : postXForIndex(bay + 1) - model.stock;
+        const sideName = sideSign < 0 ? 'left' : 'right';
+        const postIndex = sideSign < 0 ? bay : bay + 1;
+        const runnerX = x + sideSign * model.runnerCenterSpacing / 2;
         const runnerRailId = `rail.runner.row${row}.bay${bay}.${sideSign < 0 ? 'left' : 'right'}`;
-        parts.push(assemblyPart(runnerRailId, 'front-to-back tote runner rail', 'wood', { x: model.stock, y: model.rail, z: model.supportRailLength }, { x: runnerX, y, z: 0 }, { ...runnerRailMeta, row, bay, side: sideSign < 0 ? 'left' : 'right' }));
-        connections.push(contactConnection(`contact.${runnerRailId}.frontPost`, runnerRailId, `post.front.${sideSign < 0 ? bay : bay + 1}`, 'runner rail bears on front post'));
-        connections.push(contactConnection(`contact.${runnerRailId}.backPost`, runnerRailId, `post.back.${sideSign < 0 ? bay : bay + 1}`, 'runner rail bears on back post'));
+        parts.push(assemblyPart(runnerRailId, 'front-to-back tote runner rail', 'wood', { x: model.stock, y: model.rail, z: model.supportRailLength }, { x: runnerX, y, z: 0 }, { ...runnerRailMeta, row, bay, side: sideName }));
+        ['front', 'back'].forEach((face) => {
+          const postId = `post.${face}.${postIndex}`;
+          const postX = postXForIndex(postIndex);
+          const z = face === 'front' ? zFront : zBack;
+          const postInnerX = postX + (sideSign < 0 ? model.stock / 2 : -model.stock / 2);
+          const runnerOuterX = runnerX + (sideSign < 0 ? -model.stock / 2 : model.stock / 2);
+          const gap = sideSign < 0 ? runnerOuterX - postInnerX : postInnerX - runnerOuterX;
+          if (gap > 0.001) {
+            const spacerX = sideSign < 0 ? postInnerX + gap / 2 : runnerOuterX + gap / 2;
+            const spacerId = `block.runner.row${row}.bay${bay}.${sideName}.${face}`;
+            parts.push(assemblyPart(spacerId, 'runner spacer block', 'wood', { x: gap, y: model.rail, z: model.stock }, { x: spacerX, y, z }, { ...runnerSpacerMeta, row, bay, side: sideName, face }));
+            connections.push(contactConnection(`contact.${spacerId}.post`, spacerId, postId, 'runner spacer touches post'));
+            connections.push(contactConnection(`contact.${spacerId}.runner`, spacerId, runnerRailId, 'runner rail bears on spacer block'));
+          } else {
+            connections.push(contactConnection(`contact.${runnerRailId}.${face}Post`, runnerRailId, postId, 'runner rail bears on post'));
+          }
+        });
       });
       const toteTop = y + model.rail / 2 + model.toteLipThickness;
       parts.push(assemblyPart(`tote.row${row}.bay${bay}`, '27 gallon tote with lip clearance envelope', 'tote', { x: model.toteW, y: model.toteH, z: model.toteD }, { x, y: toteTop - model.toteH / 2, z: 0 }, { group: 'totes', row, bay, intentionalOverlap: true, lipThickness: model.toteLipThickness, bodyScale: 0.78 }));

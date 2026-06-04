@@ -48,6 +48,7 @@ export const DEFAULT_PLAN = {
   shelfRail: 3.5,
   shelfDeck: 3.5,
   toteW: 20.5,
+  toteLipWidth: 1.25,
   toteD: 30.5,
   toteH: 14.25,
   toteColumns: 3,

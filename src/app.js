@@ -41,6 +41,7 @@ const fields = {
   shelfRail: $('#shelfRail'),
   shelfDeck: $('#shelfDeck'),
   toteW: $('#toteW'),
+  toteLipWidth: $('#toteLipWidth'),
   toteD: $('#toteD'),
   toteH: $('#toteH'),
   toteColumns: $('#toteColumns'),
@@ -354,7 +355,7 @@ function isShelfPlan() {
 }
 
 function renderFields() {
-  const numericKeys = ['canvasW', 'canvasH', 'canvasT', 'stretcherW', 'face', 'reveal', 'depth', 'faceLip', 'linerW', 'strainerDepth', 'stock', 'kerf', 'rabbet', 'shelfW', 'shelfH', 'shelfD', 'shelfLevels', 'shelfBays', 'shelfSlats', 'shelfPost', 'shelfRail', 'shelfDeck', 'toteW', 'toteD', 'toteH', 'toteColumns', 'toteRows', 'toteSideClearance', 'toteVerticalClearance', 'toteRailInset'];
+  const numericKeys = ['canvasW', 'canvasH', 'canvasT', 'stretcherW', 'face', 'reveal', 'depth', 'faceLip', 'linerW', 'strainerDepth', 'stock', 'kerf', 'rabbet', 'shelfW', 'shelfH', 'shelfD', 'shelfLevels', 'shelfBays', 'shelfSlats', 'shelfPost', 'shelfRail', 'shelfDeck', 'toteW', 'toteLipWidth', 'toteD', 'toteH', 'toteColumns', 'toteRows', 'toteSideClearance', 'toteVerticalClearance', 'toteRailInset'];
   numericKeys.forEach((key) => {
     const displayValue = plan.build === 'rolling-shelves' && key === 'shelfDeck' && result?.deck ? result.deck : plan[key];
     const isCount = ['shelfLevels', 'shelfBays', 'shelfSlats', 'toteColumns', 'toteRows'].includes(key);
@@ -454,6 +455,8 @@ function renderDimensionSummary() {
       const rows = [
         ['Rack size', `${formatLength(result.shelfW, plan.unit)} x ${formatLength(result.shelfH, plan.unit)} x ${formatLength(result.shelfD, plan.unit)}`],
         ['Tote size', `${formatLength(result.toteW, plan.unit)} x ${formatLength(result.toteH, plan.unit)} x ${formatLength(result.toteD, plan.unit)}`],
+        ['Tote lip width', formatLength(result.toteLipWidth, plan.unit)],
+        ['Runner clear width', formatLength(result.runnerClearWidth, plan.unit)],
         ['Tote layout', `${result.columns} wide x ${result.rows} high`],
         ['Side gap', formatLength(result.sideClearance, plan.unit)],
         ['Vertical gap', formatLength(result.verticalClearance, plan.unit)],

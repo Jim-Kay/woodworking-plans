@@ -1430,6 +1430,7 @@ function shelfPartMaterial(plan, part) {
       frame: 0xf3f7bd,
       tie: 0x5ec46e,
       runner: 0x36aaa3,
+      spacer: 0x67e8f9,
       rails: 0x36aaa3,
       fasteners: 0x111827
     };
