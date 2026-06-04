@@ -103,6 +103,9 @@ assert.equal(toteRack.assembly.parts.filter((part) => part.id.startsWith('rail.r
 assert.equal(toteRack.assembly.parts.filter((part) => part.meta?.kind === 'caster').length, 4);
 assert.deepEqual(toteRack.assembly.parts.find((part) => part.id === 'post.front.0').size, { x: 1.5, y: toteRack.frameHeight, z: 3.5 });
 assert.deepEqual(toteRack.assembly.parts.find((part) => part.id === 'rail.frame.front.top.bay0').size, { x: 21.166666666666668, y: 1.5, z: 3.5 });
+assert.equal(toteRack.assembly.parts.filter((part) => part.id.startsWith('rail.tie.bottom.')).length, 8);
+assert.equal(toteRack.assembly.parts.find((part) => part.id === 'rail.tie.bottom.0.post0').position.x, -33);
+assert.equal(toteRack.assembly.parts.find((part) => part.id === 'rail.tie.bottom.0.post3').position.x, 33);
 assert.equal(toteRack.validation.componentOverlaps.count, 0);
 
 const customToteRack = calculateShelfPlan({
