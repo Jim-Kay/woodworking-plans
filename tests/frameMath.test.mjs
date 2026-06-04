@@ -98,7 +98,7 @@ const toteRack = calculateShelfPlan({
 assert.equal(toteRack.ok, true);
 assert.equal(toteRack.capacity, 9);
 assert.equal(toteRack.shelfW, 69);
-assert.equal(toteRack.shelfD, 36);
+assert.equal(toteRack.shelfD, 33);
 assert.equal(toteRack.runnerClearWidth, 18);
 assert.equal(toteRack.toteNeckClearance, 0.25);
 assert.equal(toteRack.lipBearing, 1);
@@ -111,6 +111,8 @@ assert.deepEqual(toteRack.assembly.parts.find((part) => part.id === 'post.front.
 assert.deepEqual(toteRack.assembly.parts.find((part) => part.id === 'rail.frame.front.top').size, { x: 69, y: 1.5, z: 3.5 });
 assert.equal(toteRack.assembly.parts.find((part) => part.id === 'post.front.0').position.y, 28.5);
 assert.equal(toteRack.assembly.parts.find((part) => part.id === 'rail.runner.row0.bay0.left').position.x, -32.25);
+assert.equal(toteRack.assembly.parts.find((part) => part.id === 'post.front.0').position.z, -14.75);
+assert.equal(toteRack.assembly.parts.find((part) => part.id === 'rail.runner.row0.bay0.left').size.z, 33);
 assert.equal(toteRack.assembly.parts.filter((part) => part.id.startsWith('rail.tie.bottom.')).length, 8);
 assert.equal(toteRack.assembly.parts.filter((part) => part.id.startsWith('rail.tie.top.')).length, 0);
 assert.equal(toteRack.assembly.parts.find((part) => part.id === 'rail.tie.bottom.0.post0').position.x, -32.75);

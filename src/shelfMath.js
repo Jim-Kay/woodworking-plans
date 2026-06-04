@@ -104,7 +104,7 @@ function calculateToteRackPlan(plan) {
   const postStep = toteW + sideClearance * 2 + stock;
   const bayWidth = postStep;
   const width = columns * postStep + stock;
-  const depth = toteD + stock * 2 + railInset * 2;
+  const depth = toteD + railInset * 2;
   const rowPitch = toteH + verticalClearance;
   const runnerY = (row) => baseStackHeight + toteH - toteLipThickness - rail / 2 + row * rowPitch;
   const postLength = runnerY(rows - 1) + rail / 2 + verticalClearance - baseStackHeight;
@@ -115,7 +115,7 @@ function calculateToteRackPlan(plan) {
   const lipBearing = toteLipWidth - sideClearance - toteNeckClearance;
   const runnerCenterSpacing = runnerClearWidth + stock;
   const railLength = Math.max(stock, postStep - stock);
-  const depthRailLength = Math.max(stock, depth - stock * 2);
+  const depthRailLength = depth;
   const frameRailLength = width;
   const tieRailLength = Math.max(stock, depth - post * 2);
   const supportRailLength = depthRailLength;
