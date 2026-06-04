@@ -1440,17 +1440,27 @@ function shelfPartMaterial(plan, part) {
     return partMaterial(plan, 0xc7a268, { ...part, meta: { ...part.meta, group: 'slats' } }, 0.72);
   }
   if (plan.build === 'tote-rack') {
-    const toteColors = {
-      posts: 0xd8a7f1,
-      frame: 0xf3f7bd,
-      tie: 0x5ec46e,
-      runner: 0x36aaa3,
-      spacer: 0x67e8f9,
-      rails: 0x36aaa3,
+    const colorKey = part.meta?.subgroup || group;
+    if (plan.modelPalette === 'component') {
+      const toteColors = {
+        posts: 0xd8a7f1,
+        frame: 0xf3f7bd,
+        tie: 0x5ec46e,
+        runner: 0x36aaa3,
+        rails: 0x36aaa3,
+        fasteners: 0x111827
+      };
+      return makeModelMaterial(plan, toteColors[colorKey] || 0xc5a178, group === 'rails' ? 0.6 : 0.72);
+    }
+    const toteWoodColors = {
+      posts: 0xb08f64,
+      frame: 0xd7bd83,
+      tie: 0xb88b57,
+      runner: 0x8f5f37,
+      rails: 0xa97949,
       fasteners: 0x111827
     };
-    const colorKey = part.meta?.subgroup || group;
-    return makeModelMaterial(plan, toteColors[colorKey] || 0xc5a178, group === 'rails' ? 0.6 : 0.72);
+    return partMaterial(plan, toteWoodColors[colorKey] || 0xc5a178, part, group === 'rails' ? 0.66 : 0.74);
   }
   const naturalColors = {
     posts: 0xb08f64,
