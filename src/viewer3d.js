@@ -1017,8 +1017,10 @@ function addToteRackDimensions(group, result, plan) {
     });
   }
 
-  const row0 = parts.get('rail.runner.row0.bay0.left');
-  const row1 = parts.get('rail.runner.row1.bay0.left');
+  const upperRowIndex = Math.max(1, (result.rows || result.levels || 2) - 1);
+  const lowerRowIndex = upperRowIndex - 1;
+  const row0 = parts.get(`rail.runner.row${lowerRowIndex}.bay0.left`);
+  const row1 = parts.get(`rail.runner.row${upperRowIndex}.bay0.left`);
   if (row0 && row1) {
     const pitch = Math.abs(row1.position.y - row0.position.y);
     addDimensionLine(dimGroup, {
