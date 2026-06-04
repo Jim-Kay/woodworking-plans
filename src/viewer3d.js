@@ -233,6 +233,8 @@ export class FrameViewer {
       const shotPlan = {
         ...this.plan,
         stage: options.stage ?? 999,
+        showDimensions: options.showDimensions ?? this.plan.showDimensions,
+        dimensionContext: options.dimensionContext || null,
         vis: options.vis ? { ...this.plan.vis, ...options.vis } : this.plan.vis
       };
       this.manualCamera = true;
@@ -961,6 +963,14 @@ function addTaperedTote(group, part, plan) {
 function addToteRackDimensions(group, result, plan) {
   const assembly = result.assembly;
   if (!assembly?.parts?.length) return;
+  const dimensionContext = plan.dimensionContext || 'all';
+  const showDimension = (name) => {
+    if (dimensionContext === 'all') return true;
+    if (dimensionContext === 'overall') return ['cartWidth', 'cartDepth', 'height'].includes(name);
+    if (dimensionContext === 'post') return name === 'postWidth';
+    if (dimensionContext === 'runner') return ['runnerWidth', 'runnerPitch', 'postWidth'].includes(name);
+    return false;
+  };
   const parts = new Map(assembly.parts.map((part) => [part.id, part]));
   const width = result.shelfW;
   const depth = result.shelfD;
@@ -988,37 +998,43 @@ function addToteRackDimensions(group, result, plan) {
     depthTest: false
   });
 
-  addDimensionLine(dimGroup, {
-    start: { x: leftX, y: floorY + 1.5, z: frontZ - offset },
-    end: { x: rightX, y: floorY + 1.5, z: frontZ - offset },
-    tickAxis: 'y',
-    labelOffset: { x: 0, y: 1.2, z: 0 },
-    label: `Cart width ${formatDimensionValue(width, plan.unit)}`,
-    lineMat,
-    tickMat
-  });
-  addDimensionLine(dimGroup, {
-    start: { x: rightX + offset, y: floorY + 1.5, z: frontZ },
-    end: { x: rightX + offset, y: floorY + 1.5, z: backZ },
-    tickAxis: 'y',
-    labelOffset: { x: 0, y: 1.2, z: 0 },
-    label: `Cart depth ${formatDimensionValue(depth, plan.unit)}`,
-    lineMat,
-    tickMat
-  });
-  addDimensionLine(dimGroup, {
-    start: { x: rightX + offset, y: floorY, z: frontZ - offset * 0.45 },
-    end: { x: rightX + offset, y: topY, z: frontZ - offset * 0.45 },
-    tickAxis: 'x',
-    labelOffset: { x: 1.4, y: 0, z: 0 },
-    label: `Overall height ${formatDimensionValue(height, plan.unit)}`,
-    lineMat,
-    tickMat
-  });
+  if (showDimension('cartWidth')) {
+    addDimensionLine(dimGroup, {
+      start: { x: leftX, y: floorY + 1.5, z: frontZ - offset },
+      end: { x: rightX, y: floorY + 1.5, z: frontZ - offset },
+      tickAxis: 'y',
+      labelOffset: { x: 0, y: 1.2, z: 0 },
+      label: `Cart width ${formatDimensionValue(width, plan.unit)}`,
+      lineMat,
+      tickMat
+    });
+  }
+  if (showDimension('cartDepth')) {
+    addDimensionLine(dimGroup, {
+      start: { x: rightX + offset, y: floorY + 1.5, z: frontZ },
+      end: { x: rightX + offset, y: floorY + 1.5, z: backZ },
+      tickAxis: 'y',
+      labelOffset: { x: 0, y: 1.2, z: 0 },
+      label: `Cart depth ${formatDimensionValue(depth, plan.unit)}`,
+      lineMat,
+      tickMat
+    });
+  }
+  if (showDimension('height')) {
+    addDimensionLine(dimGroup, {
+      start: { x: rightX + offset, y: floorY, z: frontZ - offset * 0.45 },
+      end: { x: rightX + offset, y: topY, z: frontZ - offset * 0.45 },
+      tickAxis: 'x',
+      labelOffset: { x: 1.4, y: 0, z: 0 },
+      label: `Overall height ${formatDimensionValue(height, plan.unit)}`,
+      lineMat,
+      tickMat
+    });
+  }
 
   const leftRunner = parts.get('rail.runner.row0.bay0.left');
   const rightRunner = parts.get('rail.runner.row0.bay0.right');
-  if (leftRunner && rightRunner) {
+  if (showDimension('runnerWidth') && leftRunner && rightRunner) {
     const clearWidth = Math.max(0, rightRunner.position.x - leftRunner.position.x - leftRunner.size.x);
     const y = leftRunner.position.y + leftRunner.size.y / 2 + 0.75;
     addDimensionLine(dimGroup, {
@@ -1036,7 +1052,7 @@ function addToteRackDimensions(group, result, plan) {
   const topLeftRunner = parts.get(`rail.runner.row${topRowIndex}.bay0.left`);
   const leftPost = parts.get('post.front.0');
   const nextPost = parts.get('post.front.1');
-  if (topLeftRunner && leftPost && nextPost) {
+  if (showDimension('postWidth') && topLeftRunner && leftPost && nextPost) {
     const clearWidth = Math.max(0, nextPost.position.x - leftPost.position.x - leftPost.size.x);
     const y = topLeftRunner.position.y + topLeftRunner.size.y / 2 + 1.95;
     addDimensionLine(dimGroup, {
@@ -1054,7 +1070,7 @@ function addToteRackDimensions(group, result, plan) {
   const lowerRowIndex = upperRowIndex - 1;
   const row0 = parts.get(`rail.runner.row${lowerRowIndex}.bay0.left`);
   const row1 = parts.get(`rail.runner.row${upperRowIndex}.bay0.left`);
-  if (row0 && row1) {
+  if (showDimension('runnerPitch') && row0 && row1) {
     const pitch = Math.abs(row1.position.y - row0.position.y);
     addDimensionLine(dimGroup, {
       start: { x: (row0.position.x + row0.size.x / 2) + 1.2, y: row0.position.y, z: frontZ - offset * 0.25 },

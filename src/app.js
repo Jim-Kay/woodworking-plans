@@ -716,6 +716,8 @@ function buildStepHtml(step, index) {
   const image = viewer.captureImage({
     stage: step.stage ?? 999,
     vis: step.vis || buildStepVisibility(),
+    showDimensions: Boolean(step.dimensionContext),
+    dimensionContext: step.dimensionContext,
     width: 760,
     height: 430,
     grid: true
@@ -1344,6 +1346,8 @@ function printBuildStepsHtml(definition) {
         const image = viewer.captureImage({
           stage: step.stage ?? 999,
           vis: step.vis || buildStepVisibility(),
+          showDimensions: Boolean(step.dimensionContext),
+          dimensionContext: step.dimensionContext,
           camera: printStepCamera(step),
           target: printCameraTarget(),
           width: 820,
