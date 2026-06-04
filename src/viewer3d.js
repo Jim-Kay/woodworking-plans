@@ -1032,6 +1032,24 @@ function addToteRackDimensions(group, result, plan) {
     });
   }
 
+  const topRowIndex = Math.max(0, (result.rows || result.levels || 1) - 1);
+  const topLeftRunner = parts.get(`rail.runner.row${topRowIndex}.bay0.left`);
+  const leftPost = parts.get('post.front.0');
+  const nextPost = parts.get('post.front.1');
+  if (topLeftRunner && leftPost && nextPost) {
+    const clearWidth = Math.max(0, nextPost.position.x - leftPost.position.x - leftPost.size.x);
+    const y = topLeftRunner.position.y + topLeftRunner.size.y / 2 + 1.95;
+    addDimensionLine(dimGroup, {
+      start: { x: leftPost.position.x + leftPost.size.x / 2, y, z: frontZ - offset * 0.58 },
+      end: { x: nextPost.position.x - nextPost.size.x / 2, y, z: frontZ - offset * 0.58 },
+      tickAxis: 'y',
+      labelOffset: { x: 0, y: 1.1, z: 0 },
+      label: `Post clear width ${formatDimensionValue(clearWidth, plan.unit)}`,
+      lineMat,
+      tickMat
+    });
+  }
+
   const upperRowIndex = Math.max(1, (result.rows || result.levels || 2) - 1);
   const lowerRowIndex = upperRowIndex - 1;
   const row0 = parts.get(`rail.runner.row${lowerRowIndex}.bay0.left`);
