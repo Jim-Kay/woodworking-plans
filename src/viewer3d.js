@@ -877,10 +877,11 @@ function addTaperedTote(group, part, plan) {
   const height = part.size.y * SCALE;
   const depth = part.size.z * SCALE;
   const lipT = (part.meta?.lipThickness || 0.75) * SCALE;
+  const lipW = (part.meta?.lipWidth || 1.5) * SCALE;
   const wallT = Math.min(width, depth) * 0.035;
   const bodyScale = part.meta?.bodyScale || 0.78;
-  const bodyTopW = width * 0.9;
-  const bodyTopD = depth * 0.9;
+  const bodyTopW = Math.max(width * 0.2, (part.meta?.neckWidth || Math.max(0, part.size.x - (part.meta?.lipWidth || 1.5) * 2)) * SCALE);
+  const bodyTopD = Math.max(depth * 0.2, (part.meta?.neckDepth || Math.max(0, part.size.z - (part.meta?.lipWidth || 1.5) * 2)) * SCALE);
   const bodyBottomW = width * bodyScale;
   const bodyBottomD = depth * bodyScale;
   const topY = height / 2 - lipT;
@@ -923,10 +924,10 @@ function addTaperedTote(group, part, plan) {
 
   const lipY = height / 2 - lipT / 2;
   [
-    { x: 0, z: -depth / 2 + wallT / 2, w: width, h: wallT },
-    { x: 0, z: depth / 2 - wallT / 2, w: width, h: wallT },
-    { x: -width / 2 + wallT / 2, z: 0, w: wallT, h: depth },
-    { x: width / 2 - wallT / 2, z: 0, w: wallT, h: depth }
+    { x: 0, z: -depth / 2 + lipW / 2, w: width, h: lipW },
+    { x: 0, z: depth / 2 - lipW / 2, w: width, h: lipW },
+    { x: -width / 2 + lipW / 2, z: 0, w: lipW, h: depth },
+    { x: width / 2 - lipW / 2, z: 0, w: lipW, h: depth }
   ].forEach((lip) => {
     addRail(toteGroup, {
       x: lip.x,

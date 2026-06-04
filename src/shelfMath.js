@@ -718,7 +718,7 @@ function buildToteRackAssembly(model) {
         });
       });
       const toteTop = y + model.rail / 2 + model.toteLipThickness;
-      parts.push(assemblyPart(`tote.row${row}.bay${bay}`, '27 gallon tote with lip clearance envelope', 'tote', { x: model.toteW, y: model.toteH, z: model.toteD }, { x, y: toteTop - model.toteH / 2, z: 0 }, { group: 'totes', row, bay, intentionalOverlap: true, lipThickness: model.toteLipThickness, bodyScale: 0.78 }));
+      parts.push(assemblyPart(`tote.row${row}.bay${bay}`, '27 gallon tote with lip clearance envelope', 'tote', { x: model.toteW, y: model.toteH, z: model.toteD }, { x, y: toteTop - model.toteH / 2, z: 0 }, { group: 'totes', row, bay, intentionalOverlap: true, lipThickness: model.toteLipThickness, lipWidth: model.toteLipWidth, neckWidth: model.toteNeckWidth, neckDepth: Math.max(0, model.toteD - model.toteLipWidth * 2), bodyScale: 0.78 }));
     }
   }
 
