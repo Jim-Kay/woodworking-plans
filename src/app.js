@@ -66,7 +66,7 @@ const urlPlan = hydratePlanFromUrl();
 const savedState = urlPlan ? null : hydratePlanFromStorage();
 let currentPlanId = resolvePlanId(urlParams.get('plan') || (urlPlan ? planIdForBuild(urlPlan.build) : savedState?.planId) || planIdForBuild(savedState?.plan?.build));
 if (currentPlanId === 'rolling-storage-shelf') purchaseBoardLength = 48;
-const shouldShowCatalog = !urlParams.toString() && !savedState;
+const shouldShowCatalog = !urlParams.toString();
 let plan = urlPlan || savedState?.plan || clonePlan(DEFAULT_PLAN);
 if (!urlPlan && !savedState?.plan) Object.assign(plan, getPlanDefinition(currentPlanId).defaults || {});
 plan.build = buildForPlanId(currentPlanId);
