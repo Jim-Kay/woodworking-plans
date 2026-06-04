@@ -105,14 +105,14 @@ export const PLAN_CATALOG = [
     family: 'Storage',
     status: 'ready',
     build: 'tote-rack',
-    defaults: { build: 'tote-rack', toteW: 20.5, toteLipWidth: 1.25, toteD: 30.5, toteH: 14.25, toteColumns: 3, toteRows: 3, toteSideClearance: 1.5, toteVerticalClearance: 3, toteRailInset: 1.25, shelfPost: 3.5, shelfRail: 3.5, shelfDeck: 1.5 },
+    defaults: { build: 'tote-rack', toteW: 20.5, toteLipWidth: 1.5, toteD: 30.5, toteH: 14.25, toteColumns: 3, toteRows: 3, toteSideClearance: 0.25, toteVerticalClearance: 3, toteRailInset: 1.25, shelfPost: 3.5, shelfRail: 3.5, shelfDeck: 1.5 },
     summary: 'A slide-in rack sized for common 27 gallon totes, with adjustable tote dimensions and clearances.',
     materials: '2x4 posts and rails, screws, optional anti-tip anchors',
     details: {
       description: 'A garage or basement rack for black-and-yellow 27 gallon storage totes. The default tote size matches a common published 30.5 in L x 20.5 in W x 14.25 in H bin, but the rack recalculates from the actual tote length, width, height, and lid lip width entered by the user.',
       materials: ['2x4 posts and horizontal rails', 'Structural screws or lag screws', 'Actual 27 gallon totes for test fitting', 'Optional wall anchors or anti-tip straps'],
       tools: ['Miter saw or circular saw', 'Drill/driver', 'Tape measure and square', 'Clamps', 'Level'],
-      notes: ['Measure the tote at the widest lid/lip, not just the tapered base.', 'Measure the horizontal lip width separately; the post spacing follows the full tote width while the runner spacing follows the narrower body under the lip.', 'Leave enough vertical clearance to lift the front lip slightly as the tote slides in and out.', 'Heavy totes should be tested gradually; add wall anchoring for tall racks.']
+      notes: ['Measure the tote at the widest lid/lip, not just the tapered base.', 'Measure the horizontal lip width separately; the post spacing follows the full tote width while the runner spacing follows the narrower body under the lip.', 'The default side gap leaves 1/4 in between the lid edge and each post, plus about 1/4 in between the tote neck and each runner when the lip is 1-1/2 in wide.', 'Leave enough vertical clearance to lift the front lip slightly as the tote slides in and out.', 'Heavy totes should be tested gradually; add wall anchoring for tall racks.']
     },
     buildSteps: [
       { title: 'Measure one real tote', stage: 0, instructions: ['Measure the tote length, width, and height at its largest outside dimensions, usually across the lid lip.', 'Measure how far the lip projects inward from each side; enter that as the tote lip width so the runners support the lip while clearing the tapered body.', 'Enter those dimensions in the Tote Size controls before cutting rack parts.', 'Confirm the row and column count fits the wall space and ceiling height.'] },
