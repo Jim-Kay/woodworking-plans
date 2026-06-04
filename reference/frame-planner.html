@@ -1,0 +1,3862 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0d11" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Floating Frame Planner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0b0d11;           /* deep slate */
+      --panel:#141821;        /* card */
+      --panel-2:#10141b;      /* secondary */
+      --text:#e8eef8;         /* high */
+      --muted:#a7b0c0;        /* medium */
+      --accent:#4da3ff;       /* blue */
+      --ok:#22c55e;           /* green */
+      --warn:#f59e0b;         /* amber */
+      --err:#ef4444;          /* red */
+      --chip:#1f2532;         /* chip bg */
+      --bd:1px solid #243042; /* generic border */
+      --radius:16px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      color:var(--text); background:linear-gradient(180deg,#0a0d12 0%,#0b0d11 100%);
+    }
+    .app{
+      display:grid; grid-template-columns: 420px 1fr; gap:20px; padding:20px; height:100%;
+      overflow-x:hidden;
+    }
+    .left, .right{display:flex; flex-direction:column; gap:20px; min-height:0; min-width:0; position:relative}
+    .left{z-index:auto; overflow:hidden}
+    .right{overflow:auto}
+    .card{
+      background:linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+      border:var(--bd); border-radius:var(--radius); padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.35);
+    }
+    .card h2{margin:0 0 10px; font-size:18px}
+    .row{display:grid; grid-template-columns: 1fr 110px; gap:10px; align-items:center; margin:8px 0}
+    .row > *{min-width:0}
+    .row .wide{grid-column:1 / -1}
+    .fullrow{grid-column:1 / -1}
+    .row label{color:var(--muted); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+    input, select, button{
+      width:100%; padding:10px 12px; border-radius:12px; border:var(--bd); background:#0c1117; color:var(--text);
+      outline:none; transition:border .15s ease, transform .02s ease-in-out; font-size:14px;
+    }
+    input:focus, select:focus{border:1px solid var(--accent)}
+    .units-toggle{display:flex; gap:8px; flex-wrap:wrap}
+    .units-toggle button{flex:1 1 120px; background:var(--chip); border:var(--bd); color:var(--muted)}
+    .units-toggle button.active{color:var(--text); border:1px solid var(--accent); box-shadow:0 0 0 3px rgba(77,163,255,.15) inset}
+    .pillbar{display:flex; gap:8px; flex-wrap:wrap}
+    .pill{padding:8px 10px; border-radius:999px; background:var(--chip); border:var(--bd); color:var(--muted); cursor:pointer}
+    .pill:hover{color:var(--text)}
+    .grid2{display:grid; grid-template-columns: 1fr 1fr; gap:10px}
+    .grid3{display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px}
+    .grid4{display:grid; grid-template-columns: repeat(4, 1fr); gap:10px}
+    .grid2 > *, .grid3 > *, .grid4 > * { min-width:0 }
+    .toolbar{display:flex; gap:10px; flex-wrap:wrap}
+    .btn{background:#0c1117; border:var(--bd); border-radius:12px; padding:10px 12px; cursor:pointer}
+    .btn.primary{background:linear-gradient(180deg,#1a5fff,#1061d1); border:none}
+    .btn.ghost{background:transparent; border:var(--bd)}
+    .btn:active{transform:translateY(1px)}
+    .muted{color:var(--muted)}
+    .cuts{border-collapse:collapse; width:100%;}
+    .cuts th,.cuts td{border:var(--bd); padding:8px 10px; text-align:left; font-size:13px}
+    .cuts th{color:#bcd0ff; background:#0e131b}
+    .status{display:flex; gap:10px; align-items:center; flex-wrap:wrap; overflow-wrap:anywhere}
+    .badge{padding:6px 10px; border-radius:999px; font-size:12px; background:var(--chip); border:var(--bd); color:var(--muted)}
+    .stage{display:flex; align-items:center; gap:12px}
+    .stage input[type=range]{width:100%}
+    .canvas-wrap{position:relative; width:100%; border-radius:var(--radius); overflow:hidden; border:var(--bd); background:#0c1117; aspect-ratio: 2 / 1; min-height:300px; height:auto; flex:1 1 auto}
+    .canvas-wrap canvas{position:relative; display:block; width:100%; height:100%}
+    .builderRow{display:flex; gap:12px; min-height:0; flex:1 1 auto}
+    .builderRow .canvas-wrap{flex:1 1 auto; min-width:0}
+    .quickPanel{width:320px; flex:0 0 auto; border-radius:var(--radius); border:var(--bd); background:var(--panel-2); overflow:hidden; display:flex; flex-direction:column; min-height:0}
+    .quickPanel.collapsed{width:44px; cursor:pointer}
+    .quickHeader{display:flex; align-items:center; justify-content:space-between; padding:10px 10px; border-bottom:var(--bd); gap:8px}
+    .quickHeader .title{font-size:12px; color:var(--muted); letter-spacing:.02em}
+    .quickHeader .toolbar{display:flex; gap:8px; align-items:center}
+    .quickBody{padding:10px; overflow:auto; min-height:0}
+    .quickPanel.collapsed .quickBody{display:none}
+    .quickPanel.collapsed .quickHeader{flex-direction:column; padding:10px 6px; border-bottom:none; writing-mode:vertical-rl; text-orientation:mixed; height:100%}
+    .quickPanel.collapsed .quickHeader .title{white-space:nowrap}
+    .quickPanel.collapsed .quickHeader .toolbar{display:none}
+    .quickSection{border:var(--bd); border-radius:12px; padding:10px; background:#0c1117; margin-bottom:10px}
+    .quickSectionTitle{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px}
+    .quickSectionTitle .name{font-size:12px; color:var(--text)}
+    .quickSectionTitle .mini{font-size:12px; color:var(--muted)}
+    .qRow{display:grid; grid-template-columns: 1fr 74px; gap:8px; align-items:center; margin-top:8px}
+    .qRow label{font-size:12px; color:var(--muted)}
+    .qRow input[type=range]{width:100%}
+    .qRow input[type=range].hasError{accent-color:var(--err)}
+    .qRow.hasError label{color:var(--err)}
+    .qVal{font-size:12px; color:var(--text); text-align:right; font-variant-numeric:tabular-nums}
+    .qButtons{display:flex; gap:8px; margin-top:10px}
+    .qButtons .btn{flex:1 1 auto}
+    @media (max-width: 1080px){
+      .builderRow{flex-direction:column}
+      .quickPanel{width:100%}
+      .quickPanel.collapsed{width:100%}
+    }
+    .piece-wrap{position:relative; border-radius:12px; overflow:hidden; border:var(--bd); background:#0c1117; height:220px; margin-top:10px}
+    .piece-wrap canvas{display:block; width:100%; height:100%}
+    .legend{display:flex; gap:8px; flex-wrap:wrap; font-size:12px}
+    .chip{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:var(--chip); border:var(--bd)}
+    .swatch{width:14px; height:14px; border-radius:3px; border:1px solid rgba(255,255,255,.2)}
+    .footer{color:var(--muted); font-size:12px; text-align:center}
+    .cuts tr{cursor:pointer}
+    .cuts tr.selected{background:rgba(77,163,255,.12)}
+    .tabs{display:flex; gap:8px; margin-bottom:10px}
+    .tabs button{background:var(--chip); border:var(--bd); color:var(--muted); padding:8px 12px; border-radius:10px; cursor:pointer}
+    .tabs button.active{color:var(--text); border:1px solid var(--accent); box-shadow:0 0 0 3px rgba(77,163,255,.15) inset}
+    .kvlist{border:var(--bd); border-radius:12px; background:#0c1117; padding:10px; max-height:260px; overflow:auto}
+    .kvitem{display:flex; justify-content:space-between; gap:12px; padding:6px 4px; border-bottom:1px solid rgba(36,48,66,.6); font-size:13px}
+    .kvitem:last-child{border-bottom:none}
+    .kvk{color:var(--muted)}
+    .kvv{color:var(--text); font-variant-numeric:tabular-nums}
+    .modalOverlay{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; padding:18px; z-index:9999}
+    .modalOverlay.open{display:flex}
+    .modal{width:min(920px, 100%); max-height:min(92vh, 900px); overflow:auto; background:linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+      border:var(--bd); border-radius:var(--radius); box-shadow:0 20px 60px rgba(0,0,0,.6); padding:16px}
+    .modalHeader{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px}
+    .modalHeader h2{margin:0; font-size:18px}
+    .modalBody{display:grid; grid-template-columns: 160px 1fr; gap:14px; align-items:start}
+    .modalNav{position:sticky; top:10px; align-self:start}
+    .modalNav .navTitle{font-size:11px; color:var(--muted); margin:6px 0 8px}
+    .modalNav a{display:block; text-decoration:none; color:var(--muted); font-size:12px; padding:8px 10px; border-radius:10px; border:1px solid transparent}
+    .modalNav a:hover{color:var(--text); border-color:#243042; background:rgba(31,37,50,.35)}
+    .modalNav a.active{color:var(--text); border-color:rgba(77,163,255,.55); background:rgba(77,163,255,.10)}
+    .modalContent{min-width:0}
+    .sectionFlash{animation:sectionflash .9s ease-in-out}
+    @keyframes sectionflash{0%{box-shadow:0 0 0 0 rgba(77,163,255,.0)} 35%{box-shadow:0 0 0 4px rgba(77,163,255,.20)} 100%{box-shadow:0 0 0 0 rgba(77,163,255,.0)}}
+    .sectionTitle{margin:16px 0 8px; font-size:13px; color:#bcd0ff; padding-top:12px; border-top:1px solid rgba(36,48,66,.55)}
+    .modalHeader + .sectionTitle{margin-top:0; padding-top:0; border-top:none}
+    .help{font-size:12px; color:var(--muted); line-height:1.35}
+    .warnline{margin-top:8px; font-size:12px; color:#ffd3d3}
+    #presetSelect{min-width:320px}
+    .segmented{display:flex; gap:8px; flex-wrap:wrap}
+    .segmented button{flex:1 1 160px; background:var(--chip); border:var(--bd); color:var(--muted)}
+    .segmented button.active{color:var(--text); border:1px solid var(--accent); box-shadow:0 0 0 3px rgba(77,163,255,.15) inset}
+    .segmented.compact{flex-wrap:nowrap; justify-content:flex-start}
+    .segmented.compact button{flex:0 0 auto; width:auto}
+    .lockedField{background:#0a0f14 !important; border-color:#2a3547 !important; color:#c5cfdd !important}
+    .editableField{border-color:#365079 !important}
+    .fieldWrap{position:relative}
+    .fieldLock{position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:12px; color:#93a4bf; pointer-events:none; display:none}
+    .fieldWrap.locked .fieldLock{display:block}
+    .solverCols{display:grid; grid-template-columns: 1fr; gap:10px; margin-top:10px}
+    .solverCard{border:1px solid rgba(36,48,66,.55); border-radius:12px; background:rgba(12,17,23,.55); padding:10px}
+    .solverCard .miniTitle{margin:0 0 6px}
+    .solverCard .row{grid-template-columns: 1fr 140px}
+    .solverCard .row label{white-space:normal; overflow:visible; text-overflow:unset; line-height:1.2}
+    .solverMeta{margin-top:6px}
+    .solverHelp{font-size:12px; color:var(--muted)}
+    .solverEq{font-size:12px; color:#93a4bf; margin-top:4px}
+    .miniTitle{margin:10px 0 6px; font-size:12px; color:#bcd0ff}
+    .inlineWarn{margin-top:8px; font-size:12px; color:#ffe1b7; display:none}
+    .flash{animation:flashbg .35s ease-in-out}
+    @keyframes flashbg{0%{box-shadow:0 0 0 0 rgba(77,163,255,.0)} 40%{box-shadow:0 0 0 4px rgba(77,163,255,.18)} 100%{box-shadow:0 0 0 0 rgba(77,163,255,.0)}}
+    .modalActionsSticky{position:sticky; bottom:0; margin-top:14px; padding-top:10px; background:linear-gradient(180deg, rgba(16,20,27,0) 0%, rgba(16,20,27,.65) 14%, rgba(16,20,27,.98) 40%);
+      border-top:1px solid rgba(36,48,66,.65); display:flex; align-items:center; justify-content:space-between; gap:10px}
+    .modalActionsSticky .toolbar{flex-wrap:nowrap}
+    .modalActionsSticky .toolbar .btn{width:auto}
+    .unsaved{color:#ffe1b7; font-size:12px}
+    .hidden{display:none !important}
+    /* Helper Diagram Overlay */
+    .helperDiagram{position:absolute; top:12px; right:12px; width:180px; height:auto; background:rgba(20,24,33,0.95); border:1px solid #2a3142; border-radius:10px; padding:0; z-index:100; box-shadow:0 4px 20px rgba(0,0,0,0.4); transition:width 0.2s ease}
+    .helperDiagram.small{width:140px}
+    .helperDiagram.medium{width:180px}
+    .helperDiagram.large{width:260px}
+    .helperHeader{display:flex; align-items:center; justify-content:space-between; padding:6px 10px; border-bottom:1px solid #2a3142; background:rgba(30,35,45,0.5); border-radius:10px 10px 0 0}
+    .helperTitle{font-size:11px; color:#8899aa; font-weight:500}
+    .helperControls{display:flex; gap:2px; align-items:center}
+    .helperSizeBtn{font-size:9px; padding:2px 5px; background:transparent; border:1px solid #3a4555; color:#8899aa; border-radius:3px; cursor:pointer; transition:all 0.15s}
+    .helperSizeBtn:hover{border-color:#5a6575; color:#c0c8d0}
+    .helperSizeBtn.active{background:#2a3545; border-color:#4da3ff; color:#4da3ff}
+    .helperCloseBtn{font-size:14px; padding:0 4px; background:transparent; border:none; color:#8899aa; cursor:pointer; margin-left:4px}
+    .helperCloseBtn:hover{color:#ff6b6b}
+    .helperSvgWrap{padding:10px}
+    .helperSvg{width:100%; height:auto; display:block}
+    .helperRegion{transition:filter 0.2s, opacity 0.2s}
+    .helperRegion.highlight{filter:brightness(1.3) saturate(1.3)}
+    .helperRegion.dimmed{opacity:0.3; filter:saturate(0.3)}
+    .dimLine{transition:opacity 0.25s ease-in-out}
+    .dimLine.show{opacity:1 !important}
+    .helperTooltip{position:absolute; bottom:8px; left:50%; transform:translateX(-50%); background:#1a1f2a; border:1px solid #3a4555; border-radius:4px; padding:4px 8px; font-size:10px; color:#e0e6ed; white-space:nowrap; pointer-events:none; z-index:10}
+    .helperToggle{font-size:11px; padding:2px 6px; margin-left:4px; opacity:0.7}
+    .helperToggle:hover{opacity:1}
+    .helperToggle.active{opacity:1; color:#4da3ff; border-color:#4da3ff}
+    @media (max-width: 1080px){
+      .app{grid-template-columns: 1fr; height:auto}
+      .canvas-wrap{min-height:300px}
+    }
+    @media (max-width: 760px){
+      .modalBody{grid-template-columns: 1fr}
+      .modalNav{display:none}
+    }
+    @media (max-width: 700px){
+      .app{ padding:12px; gap:12px; }
+      .canvas-wrap{ aspect-ratio: 1 / 1; min-height:300px; height:auto }
+      input, select, button{ font-size:16px }
+      .grid2, .grid3, .grid4{ grid-template-columns: 1fr }
+    }
+    /* Respect iOS/Android safe areas on small screens */
+    @supports (padding: max(0px)) {
+      @media (max-width: 700px){
+        .app{
+          padding-left: max(12px, env(safe-area-inset-left));
+          padding-right: max(12px, env(safe-area-inset-right));
+          padding-top: max(12px, env(safe-area-inset-top));
+          padding-bottom: max(12px, env(safe-area-inset-bottom));
+        }
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <!-- LEFT: Controls -->
+  <div class="left">
+    <div class="card">
+      <h2>Canvas & Frame Inputs</h2>
+      <div class="row">
+        <label title="Choose the measurement units for input and display. Internally the app calculates in inches.">Units</label>
+        <div class="units-toggle" id="unitsToggle">
+          <button class="active" data-unit="in">Inches</button>
+          <button data-unit="mm">Millimeters</button>
+        </div>
+      </div>
+      <div class="row">
+        <label title="A compact summary of the current inputs and derived dimensions.">Dimensions</label>
+        <span class="muted" style="font-size:11px">Use Quick Sliders →</span>
+      </div>
+      <div class="kvlist" id="kvDims"></div>
+      <div class="toolbar">
+        <button class="btn primary" id="btnCalc">Calculate</button>
+        <button class="btn" id="btnReset">Reset</button>
+        <button class="btn ghost" id="btnShare">Copy Share Link</button>
+      </div>
+      <div class="status" id="statusBar" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card">
+      <h2>Build Stages</h2>
+      <div class="stage">
+        <label class="muted" style="width:120px" title="Step through the assembly sequence. Each stage adds more parts to the 3D view.">Stage</label>
+        <input type="range" id="stageSlider" min="0" max="12" value="0" />
+        <div class="badge" id="stageLabel">Plan</div>
+      </div>
+      <div class="legend" style="margin-top:10px">
+        <div class="chip"><span class="swatch" style="background:#d1b38b"></span> Frame Boards</div>
+        <div class="chip"><span class="swatch" style="background:#9ca3af"></span> Spacers</div>
+        <div class="chip"><span class="swatch" style="background:#8ab4ff"></span> Canvas</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: 3D View -->
+  <div class="right">
+    <div class="tabs">
+      <button id="tabBuilder" class="active">3D Builder</button>
+      <button id="tabCut">Cut List</button>
+    </div>
+    <div id="cardBuilder" class="card" style="display:flex; flex-direction:column; min-height:0">
+      <h2 style="margin-bottom:12px">3D Builder</h2>
+      <div class="builderRow">
+        <div class="canvas-wrap">
+          <canvas id="viewport"></canvas>
+          <!-- Helper Diagram Overlay -->
+          <div id="helperDiagram" class="helperDiagram" style="display:none">
+            <!-- Helper Header with size controls -->
+            <div class="helperHeader">
+              <span class="helperTitle" id="helperTitle">Diagram</span>
+              <div class="helperControls">
+                <button class="helperSizeBtn" data-size="small" title="Small">S</button>
+                <button class="helperSizeBtn active" data-size="medium" title="Medium">M</button>
+                <button class="helperSizeBtn" data-size="large" title="Large">L</button>
+                <button class="helperCloseBtn" id="btnHelperClose" title="Close">×</button>
+              </div>
+            </div>
+            <!-- Hover tooltip -->
+            <div class="helperTooltip" id="helperTooltip" style="display:none"></div>
+            <!-- SVG container -->
+            <div class="helperSvgWrap">
+              <!-- Canvas Section Diagram (top-down nested rectangles) -->
+              <svg id="helperCanvas" class="helperSvg" viewBox="0 -15 200 175" style="display:none">
+              <defs>
+                <marker id="arrowL" markerWidth="6" markerHeight="6" refX="0" refY="3" orient="auto">
+                  <path d="M6,0 L0,3 L6,6" fill="none" stroke="#4da3ff" stroke-width="1"/>
+                </marker>
+                <marker id="arrowR" markerWidth="6" markerHeight="6" refX="6" refY="3" orient="auto">
+                  <path d="M0,0 L6,3 L0,6" fill="none" stroke="#4da3ff" stroke-width="1"/>
+                </marker>
+              </defs>
+              <!-- Face (outermost visible band) - warm brown -->
+              <rect id="hFace" x="10" y="10" width="180" height="140" fill="#8b7355" class="helperRegion" data-region="face" data-label="Face" style="cursor:pointer"/>
+              <!-- Reveal gap - dark blue/gray -->
+              <rect id="hReveal" x="25" y="25" width="150" height="110" fill="#2d3a4a" class="helperRegion" data-region="reveal" data-label="Reveal Gap" style="cursor:pointer"/>
+              <!-- Stretchers - golden/tan -->
+              <rect id="hStretchers" x="38" y="38" width="124" height="84" fill="#c9a227" class="helperRegion" data-region="stretcher" data-label="Stretcher Bar" style="cursor:pointer"/>
+              <!-- Canvas inner (painted surface) - blue -->
+              <rect id="hCanvasInner" x="52" y="52" width="96" height="56" fill="#5a8fc4" class="helperRegion" data-region="canvas" data-label="Canvas (painted surface)" style="cursor:pointer"/>
+              <!-- Labels -->
+              <text x="100" y="15" text-anchor="middle" fill="#e0e6ed" font-size="8" font-family="Inter, sans-serif" pointer-events="none">Face</text>
+              <text x="17" y="80" text-anchor="middle" fill="#8899aa" font-size="7" font-family="Inter, sans-serif" pointer-events="none" transform="rotate(-90 17 80)">Reveal</text>
+              <text x="44" y="80" text-anchor="middle" fill="#c9a227" font-size="7" font-family="Inter, sans-serif" pointer-events="none" transform="rotate(-90 44 80)">Stretcher</text>
+              <text x="100" y="82" text-anchor="middle" fill="#e0e6ed" font-size="9" font-family="Inter, sans-serif" pointer-events="none">Canvas</text>
+              <!-- Dimension lines (hidden by default, shown on hover) -->
+              <g id="dimCanvasW" class="dimLine" style="opacity:0">
+                <line x1="38" y1="130" x2="162" y2="130" stroke="#4da3ff" stroke-width="1.5" marker-start="url(#arrowL)" marker-end="url(#arrowR)"/>
+                <text x="100" y="142" text-anchor="middle" fill="#4da3ff" font-size="9" font-family="Inter, sans-serif">Canvas Width (incl. stretchers)</text>
+              </g>
+              <g id="dimCanvasH" class="dimLine" style="opacity:0">
+                <line x1="170" y1="38" x2="170" y2="122" stroke="#4da3ff" stroke-width="1.5" marker-start="url(#arrowL)" marker-end="url(#arrowR)"/>
+                <text x="182" y="80" text-anchor="middle" fill="#4da3ff" font-size="8" font-family="Inter, sans-serif" transform="rotate(90 182 80)">Canvas Height</text>
+              </g>
+              <g id="dimFace" class="dimLine" style="opacity:0">
+                <line x1="10" y1="0" x2="25" y2="0" stroke="#4da3ff" stroke-width="1.5" marker-start="url(#arrowL)" marker-end="url(#arrowR)"/>
+                <line x1="10" y1="0" x2="10" y2="10" stroke="#4da3ff" stroke-width="1" stroke-dasharray="2,2"/>
+                <line x1="25" y1="0" x2="25" y2="25" stroke="#4da3ff" stroke-width="1" stroke-dasharray="2,2"/>
+                <text x="17" y="-5" text-anchor="middle" fill="#4da3ff" font-size="8" font-family="Inter, sans-serif">Face</text>
+              </g>
+              <g id="dimReveal" class="dimLine" style="opacity:0">
+                <line x1="25" y1="0" x2="38" y2="0" stroke="#4da3ff" stroke-width="1.5" marker-start="url(#arrowL)" marker-end="url(#arrowR)"/>
+                <line x1="25" y1="0" x2="25" y2="25" stroke="#4da3ff" stroke-width="1" stroke-dasharray="2,2"/>
+                <line x1="38" y1="0" x2="38" y2="38" stroke="#4da3ff" stroke-width="1" stroke-dasharray="2,2"/>
+                <text x="31" y="-5" text-anchor="middle" fill="#4da3ff" font-size="8" font-family="Inter, sans-serif">Reveal</text>
+              </g>
+              <g id="dimStretcherWCanvas" class="dimLine" style="opacity:0">
+                <line x1="38" y1="0" x2="52" y2="0" stroke="#4da3ff" stroke-width="1.5" marker-start="url(#arrowL)" marker-end="url(#arrowR)"/>
+                <line x1="38" y1="0" x2="38" y2="38" stroke="#4da3ff" stroke-width="1" stroke-dasharray="2,2"/>
+                <line x1="52" y1="0" x2="52" y2="52" stroke="#4da3ff" stroke-width="1" stroke-dasharray="2,2"/>
+                <text x="45" y="-5" text-anchor="middle" fill="#4da3ff" font-size="8" font-family="Inter, sans-serif">Stretcher</text>
+              </g>
+              <g id="dimOuterW" class="dimLine" style="opacity:0">
+                <line x1="10" y1="155" x2="190" y2="155" stroke="#4da3ff" stroke-width="1.5" marker-start="url(#arrowL)" marker-end="url(#arrowR)"/>
+                <text x="100" y="148" text-anchor="middle" fill="#4da3ff" font-size="9" font-family="Inter, sans-serif">Outer Width (full frame)</text>
+              </g>
+              <g id="dimOuterH" class="dimLine" style="opacity:0">
+                <line x1="5" y1="10" x2="5" y2="150" stroke="#4da3ff" stroke-width="1.5" marker-start="url(#arrowL)" marker-end="url(#arrowR)"/>
+                <text x="3" y="80" text-anchor="middle" fill="#4da3ff" font-size="8" font-family="Inter, sans-serif" transform="rotate(-90 3 80)">Outer Height</text>
+              </g>
+            </svg>
+            <!-- Depth Section Diagram (profile/cross-section view) -->
+            <svg id="helperDepth" class="helperSvg" viewBox="0 0 200 140" style="display:none">
+              <defs>
+                <marker id="arrowL2" markerWidth="6" markerHeight="6" refX="0" refY="3" orient="auto">
+                  <path d="M6,0 L0,3 L6,6" fill="none" stroke="#4da3ff" stroke-width="1"/>
+                </marker>
+                <marker id="arrowR2" markerWidth="6" markerHeight="6" refX="6" refY="3" orient="auto">
+                  <path d="M0,0 L6,3 L0,6" fill="none" stroke="#4da3ff" stroke-width="1"/>
+                </marker>
+              </defs>
+              <!-- Frame profile (left side) -->
+              <rect id="hFrameProfile" x="20" y="10" width="30" height="100" fill="#3a3028" stroke="#8b7355" stroke-width="2" class="helperRegion" data-region="frameProfile" data-label="Frame Depth" style="cursor:pointer"/>
+              <!-- Frame profile (right side) -->
+              <rect x="150" y="10" width="30" height="100" fill="#3a3028" stroke="#8b7355" stroke-width="2" class="helperRegion" data-region="frameProfile" data-label="Frame Depth" style="cursor:pointer"/>
+              <!-- Stretcher bar (left) -->
+              <rect id="hStretcher" x="50" y="60" width="25" height="50" fill="#5a4a38" stroke="#a08060" stroke-width="1.5" class="helperRegion" data-region="stretcher" data-label="Stretcher Bar" style="cursor:pointer"/>
+              <!-- Stretcher bar (right) -->
+              <rect x="125" y="60" width="25" height="50" fill="#5a4a38" stroke="#a08060" stroke-width="1.5" class="helperRegion" data-region="stretcher" data-label="Stretcher Bar" style="cursor:pointer"/>
+              <!-- Canvas (cross-section) -->
+              <rect id="hCanvasT" x="40" y="45" width="120" height="15" fill="#6a9fd4" stroke="#8ab4ff" stroke-width="2" class="helperRegion" data-region="canvasT" data-label="Canvas Thickness" style="cursor:pointer"/>
+              <!-- Liner -->
+              <rect id="hLiner" x="75" y="60" width="50" height="50" fill="#4a5568" stroke="#718096" stroke-width="1" class="helperRegion" data-region="liner" data-label="Liner" style="cursor:pointer"/>
+              <!-- Labels -->
+              <text x="100" y="55" text-anchor="middle" fill="#e0e6ed" font-size="9" font-family="Inter, sans-serif" pointer-events="none">Canvas</text>
+              <text x="100" y="90" text-anchor="middle" fill="#e0e6ed" font-size="8" font-family="Inter, sans-serif" pointer-events="none">Liner</text>
+              <!-- Dimension lines -->
+              <g id="dimDepth" class="dimLine" style="opacity:0">
+                <line x1="8" y1="10" x2="8" y2="110" stroke="#4da3ff" stroke-width="1.5" marker-start="url(#arrowL2)" marker-end="url(#arrowR2)"/>
+                <text x="5" y="60" text-anchor="middle" fill="#4da3ff" font-size="8" font-family="Inter, sans-serif" transform="rotate(-90 5 60)">Depth</text>
+              </g>
+              <g id="dimCanvasT" class="dimLine" style="opacity:0">
+                <line x1="165" y1="45" x2="165" y2="60" stroke="#4da3ff" stroke-width="1.5" marker-start="url(#arrowL2)" marker-end="url(#arrowR2)"/>
+                <text x="180" y="52" text-anchor="start" fill="#4da3ff" font-size="8" font-family="Inter, sans-serif">Thickness</text>
+              </g>
+              <g id="dimStretcherW" class="dimLine" style="opacity:0">
+                <line x1="50" y1="115" x2="75" y2="115" stroke="#4da3ff" stroke-width="1.5" marker-start="url(#arrowL2)" marker-end="url(#arrowR2)"/>
+                <text x="62" y="128" text-anchor="middle" fill="#4da3ff" font-size="8" font-family="Inter, sans-serif">Stretcher</text>
+              </g>
+            </svg>
+            <!-- Mounting Section Diagram - Cross-section view -->
+            <svg id="helperMount" class="helperSvg" viewBox="0 0 220 150" style="display:none">
+              <!-- Frame (tall vertical bar on left, bottom flush with liner at y=130) -->
+              <rect x="10" y="10" width="25" height="120" fill="#8b7355" class="helperRegion" data-region="frame" data-label="Frame" style="cursor:pointer"/>
+              <text x="22" y="75" text-anchor="middle" fill="#e0e6ed" font-size="10" font-family="Inter, sans-serif" pointer-events="none" transform="rotate(-90 22 75)">Frame</text>
+              <!-- Reveal gap (vertical strip between frame and stretcher) -->
+              <rect x="35" y="10" width="15" height="85" fill="#2d3a4a" class="helperRegion" data-region="reveal" data-label="Reveal Gap" style="cursor:pointer"/>
+              <text x="42" y="55" text-anchor="middle" fill="#8899aa" font-size="9" font-family="Inter, sans-serif" pointer-events="none" transform="rotate(-90 42 55)">Reveal</text>
+              <!-- Canvas (horizontal strip at top, extending right) -->
+              <rect x="50" y="10" width="160" height="12" fill="#5a8fc4" class="helperRegion" data-region="canvas" data-label="Canvas" style="cursor:pointer"/>
+              <text x="130" y="19" text-anchor="middle" fill="#1a1f2a" font-size="9" font-family="Inter, sans-serif" pointer-events="none">Canvas</text>
+              <!-- Stretcher (large box below canvas) -->
+              <rect x="50" y="22" width="90" height="73" fill="#c9a227" class="helperRegion" data-region="stretcher" data-label="Stretcher" style="cursor:pointer"/>
+              <text x="95" y="62" text-anchor="middle" fill="#1a1f2a" font-size="12" font-family="Inter, sans-serif" pointer-events="none">Stretcher</text>
+              <!-- Liner for Z-clips (positioned lower left, narrower) -->
+              <rect id="mountLinerClip" x="35" y="95" width="70" height="35" fill="#4a5568" class="helperRegion" data-region="liner" data-label="Liner" style="cursor:pointer"/>
+              <!-- Liner for Screws (extended to right, flush with stretcher) -->
+              <rect id="mountLinerScrew" x="35" y="95" width="105" height="35" fill="#4a5568" class="helperRegion" data-region="liner" data-label="Liner" style="cursor:pointer; display:none"/>
+              <text x="70" y="117" text-anchor="middle" fill="#e0e6ed" font-size="11" font-family="Inter, sans-serif" pointer-events="none">Liner</text>
+              <!-- Z-clip mounting (Z-shape) -->
+              <g id="mountClipGroup">
+                <polygon points="98,95 143,95 143,102 105,102 105,137 63,137 63,130 98,130" fill="#22c55e" stroke="#16a34a" stroke-width="1" class="helperRegion" data-region="clip" data-label="Z-Clip" style="cursor:pointer"/>
+                <text x="148" y="100" text-anchor="start" fill="#22c55e" font-size="11" font-family="Inter, sans-serif" pointer-events="none">Z-Clip</text>
+              </g>
+              <!-- Screw mounting (vertical line through liner into stretcher) -->
+              <g id="mountScrewGroup" style="display:none">
+                <line x1="87" y1="70" x2="87" y2="125" stroke="#22c55e" stroke-width="4" stroke-linecap="round"/>
+                <circle cx="87" cy="125" r="5" fill="#22c55e"/>
+                <text x="95" y="100" text-anchor="start" fill="#22c55e" font-size="11" font-family="Inter, sans-serif" pointer-events="none">Screw</text>
+              </g>
+            </svg>
+            </div><!-- end helperSvgWrap -->
+          </div>
+        </div>
+        <div class="quickPanel" id="quickPanel">
+          <div class="quickHeader">
+            <div class="title">Quick Sliders</div>
+            <div class="toolbar">
+              <button class="btn ghost" id="btnQuickCollapse" type="button" title="Collapse/Expand">⟷</button>
+            </div>
+          </div>
+          <div class="quickBody">
+            <div class="quickSection" id="qsCanvas">
+              <div class="quickSectionTitle">
+                <div class="name">Canvas</div>
+                <div style="display:flex; gap:4px">
+                  <button class="btn ghost" id="btnSelectCanvas" type="button" title="Select from catalog">Select...</button>
+                  <button class="btn ghost helperToggle" id="btnHelperCanvas" type="button" title="Show helper diagram">?</button>
+                  <button class="btn ghost" id="btnQuickLockCanvas" type="button" title="Lock/unlock canvas section">🔓</button>
+                </div>
+              </div>
+              <div class="qRow"><label for="qsCanvasW">Width</label><div class="qVal" id="qsCanvasWVal"></div></div>
+              <input id="qsCanvasW" type="range" min="6" max="72" step="0.125" data-helper="canvas" data-dim="dimCanvasW" data-region="canvas" />
+              <div class="qRow"><label for="qsCanvasH">Height</label><div class="qVal" id="qsCanvasHVal"></div></div>
+              <input id="qsCanvasH" type="range" min="6" max="72" step="0.125" data-helper="canvas" data-dim="dimCanvasH" data-region="canvas" />
+              <div class="qRow"><label for="qsCanvasT">Thickness</label><div class="qVal" id="qsCanvasTVal"></div></div>
+              <input id="qsCanvasT" type="range" min="0.25" max="3" step="0.0625" data-helper="depth" data-dim="dimCanvasT" data-region="canvasT" />
+              <div class="qRow"><label for="qsStretcherW">Stretcher width</label><div class="qVal" id="qsStretcherWVal"></div></div>
+              <input id="qsStretcherW" type="range" min="0.5" max="4" step="0.125" data-helper="canvas" data-dim="dimStretcherWCanvas" data-region="stretcher" />
+            </div>
+
+            <div class="quickSection" id="qsOuter">
+              <div class="quickSectionTitle">
+                <div class="name">Frame / Outer</div>
+                <div style="display:flex; gap:4px">
+                  <button class="btn ghost helperToggle" id="btnHelperOuter" type="button" title="Show helper diagram">?</button>
+                  <button class="btn ghost" id="btnQuickLockOuter" type="button" title="Lock/unlock outer section">🔓</button>
+                </div>
+              </div>
+              <div class="qRow"><label for="qsOuterW">Outer width</label><div class="qVal" id="qsOuterWVal"></div></div>
+              <input id="qsOuterW" type="range" min="8" max="84" step="0.125" data-helper="canvas" data-dim="dimOuterW" data-region="face" />
+              <div class="qRow"><label for="qsOuterH">Outer height</label><div class="qVal" id="qsOuterHVal"></div></div>
+              <input id="qsOuterH" type="range" min="8" max="84" step="0.125" data-helper="canvas" data-dim="dimOuterH" data-region="face" />
+              <div class="qRow"><label for="qsFace">Face</label><div class="qVal" id="qsFaceVal"></div></div>
+              <input id="qsFace" type="range" min="0.25" max="4" step="0.125" data-helper="canvas" data-dim="dimFace" data-region="face" />
+              <div class="qRow"><label for="qsReveal">Reveal</label><div class="qVal" id="qsRevealVal"></div></div>
+              <input id="qsReveal" type="range" min="0" max="1" step="0.03125" data-helper="canvas" data-dim="dimReveal" data-region="reveal" />
+              <div class="qRow"><label for="qsDepth">Depth</label><div class="qVal" id="qsDepthVal"></div></div>
+              <input id="qsDepth" type="range" min="0.75" max="4" step="0.125" data-helper="depth" data-dim="dimDepth" data-region="frameProfile" />
+            </div>
+
+            <div class="quickSection" id="qsMount">
+              <div class="quickSectionTitle">
+                <div class="name">Mounting</div>
+                <div style="display:flex; gap:4px">
+                  <button class="btn ghost helperToggle" id="btnHelperMount" type="button" title="Show helper diagram">?</button>
+                  <button class="btn ghost" id="btnQuickLockMount" type="button" title="Lock/unlock mounting method">🔓</button>
+                </div>
+              </div>
+              <div class="qRow" style="gap:6px">
+                <button class="btn ghost qMountBtn active" id="btnMountScrews" type="button" data-mount="screws">Screws</button>
+                <button class="btn ghost qMountBtn" id="btnMountClips" type="button" data-mount="clips">Z-Clips</button>
+              </div>
+              <div id="qsClipOptions" style="display:none; margin-top:8px">
+                <div class="qRow"><label for="qsClipOffset">Clip offset</label><div class="qVal" id="qsClipOffsetVal"></div></div>
+                <select id="qsClipOffset" style="width:100%; padding:4px; background:#181c24; color:#e0e6ed; border:1px solid #2a3142; border-radius:4px">
+                  <option value="0.5">1/2" (shallow)</option>
+                  <option value="0.75" selected>3/4" (standard)</option>
+                  <option value="1">1" (deep)</option>
+                </select>
+              </div>
+              <div class="qRow" style="margin-top:6px; font-size:11px; color:#8899aa" id="qsMountStatus"></div>
+              <button class="btn ghost" id="btnFixClip" type="button" style="display:none; margin-top:8px; width:100%; font-size:11px; border-color:#ffaa44; color:#ffaa44">Fix…</button>
+            </div>
+
+            <div class="qButtons" style="margin-top:12px">
+              <button class="btn" id="btnQuickAdvanced" type="button">Advanced…</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <div class="muted" style="font-size:12px; margin-bottom:6px">Visibility</div>
+        <div id="visToggle" class="segmented" style="gap:10px">
+          <button type="button" class="active" data-vis="face">Face</button>
+          <button type="button" class="active" data-vis="liner">Liner</button>
+          <button type="button" class="active" data-vis="spacers">Spacers</button>
+          <button type="button" class="active" data-vis="canvas">Canvas</button>
+          <button type="button" class="active" data-vis="clips">Clips</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="cardCutlist" class="card" style="display:none">
+      <h2 style="margin-bottom:12px">Cut List</h2>
+      <div style="overflow-x:auto">
+        <table style="width:100%; border-collapse:collapse; font-size:13px">
+          <thead>
+            <tr style="background:#1a2332; color:#8899aa; text-align:left">
+              <th style="padding:8px 12px">#</th>
+              <th style="padding:8px 12px">Part</th>
+              <th style="padding:8px 12px">Qty</th>
+              <th style="padding:8px 12px">Length</th>
+              <th style="padding:8px 12px">Width</th>
+              <th style="padding:8px 12px">Thickness</th>
+              <th style="padding:8px 12px">Notes</th>
+            </tr>
+          </thead>
+          <tbody id="cutTable"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:16px; display:flex; gap:8px">
+        <button class="btn" id="btnExport" type="button">Export CSV</button>
+        <button class="btn ghost" id="btnCopy" type="button">Copy to Clipboard</button>
+        <button class="btn ghost" id="btnPrint" type="button">Print Plan</button>
+      </div>
+    </div>
+
+    <!-- ... -->
+  </div>
+</div>
+
+<!-- Fix Clip Modal -->
+<div id="fixClipModal" class="modalOverlay">
+  <div class="modal" style="max-width:480px">
+    <div class="modalHeader">
+      <h3 style="margin:0; color:#e0e6ed">Fix Clip Compatibility</h3>
+      <button class="btn ghost" id="btnFixClipClose" type="button" style="font-size:18px; padding:4px 8px">×</button>
+    </div>
+    <div style="padding:16px">
+      <p style="color:#8899aa; font-size:13px; margin-top:0" id="fixClipSummary">The selected Z-clip does not fit the current geometry.</p>
+      
+      <div id="fixClipOptions" style="display:flex; flex-direction:column; gap:12px">
+        <!-- Option 1: Adjust depth to match clip offset -->
+        <div class="fixOption" id="fixOptionDepth" style="display:none; background:#1a1f2a; border:1px solid #2a3142; border-radius:6px; padding:12px">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+            <div style="font-weight:500; color:#e0e6ed">Adjust Frame Depth</div>
+            <button class="btn" id="btnFixDepth" type="button" style="font-size:12px; padding:4px 12px">Apply</button>
+          </div>
+          <p style="color:#8899aa; font-size:12px; margin:0" id="fixDepthDesc">Change frame depth to match clip offset.</p>
+          <div id="fixDepthLockWarn" style="display:none; color:#ffaa44; font-size:11px; margin-top:6px">
+            ⚠ Frame/Outer section is locked. Unlock it first to allow depth changes.
+          </div>
+        </div>
+        
+        <!-- Option 2: Adjust liner width for flange clearance -->
+        <div class="fixOption" id="fixOptionLiner" style="display:none; background:#1a1f2a; border:1px solid #2a3142; border-radius:6px; padding:12px">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+            <div style="font-weight:500; color:#e0e6ed">Adjust Liner Width</div>
+            <button class="btn" id="btnFixLiner" type="button" style="font-size:12px; padding:4px 12px">Apply</button>
+          </div>
+          <p style="color:#8899aa; font-size:12px; margin:0" id="fixLinerDesc">Reduce liner width to allow clip flange clearance.</p>
+          <div id="fixLinerLockWarn" style="display:none; color:#ffaa44; font-size:11px; margin-top:6px">
+            ⚠ Canvas section is locked. Unlock it first to allow liner width changes.
+          </div>
+        </div>
+        
+        <!-- Option 3: Adjust stretcher width -->
+        <div class="fixOption" id="fixOptionStretcher" style="display:none; background:#1a1f2a; border:1px solid #2a3142; border-radius:6px; padding:12px">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+            <div style="font-weight:500; color:#e0e6ed">Adjust Stretcher Width</div>
+            <button class="btn" id="btnFixStretcher" type="button" style="font-size:12px; padding:4px 12px">Apply</button>
+          </div>
+          <p style="color:#8899aa; font-size:12px; margin:0" id="fixStretcherDesc">Increase stretcher width to provide more flange landing area.</p>
+          <div id="fixStretcherLockWarn" style="display:none; color:#ffaa44; font-size:11px; margin-top:6px">
+            ⚠ Canvas section is locked. Unlock it first to allow stretcher width changes.
+          </div>
+        </div>
+        
+        <!-- Option 4: Switch to different clip -->
+        <div class="fixOption" id="fixOptionClip" style="display:none; background:#1a1f2a; border:1px solid #2a3142; border-radius:6px; padding:12px">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+            <div style="font-weight:500; color:#e0e6ed">Use Different Clip</div>
+            <button class="btn" id="btnFixClip2" type="button" style="font-size:12px; padding:4px 12px">Apply</button>
+          </div>
+          <p style="color:#8899aa; font-size:12px; margin:0" id="fixClipDesc">Switch to a clip that fits the current geometry.</p>
+          <select id="fixClipSelect" style="width:100%; margin-top:8px; padding:4px; background:#181c24; color:#e0e6ed; border:1px solid #2a3142; border-radius:4px">
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" style="padding:12px 16px; border-top:1px solid #2a3142; display:flex; justify-content:flex-end">
+      <button class="btn ghost" id="btnFixClipCancel" type="button">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Canvas Selection Modal -->
+<div id="canvasSelectModal" class="modalOverlay">
+  <div class="modal" style="max-width:520px">
+    <div class="modalHeader">
+      <h3 style="margin:0; color:#e0e6ed">Select Canvas</h3>
+      <button class="btn ghost" id="btnCanvasSelectClose" type="button" style="font-size:18px; padding:4px 8px">×</button>
+    </div>
+    <div style="padding:16px">
+      <p style="color:#8899aa; font-size:13px; margin-top:0">Choose a pre-stretched canvas from the catalog:</p>
+      <div id="canvasCatalogList" style="display:flex; flex-direction:column; gap:8px; max-height:320px; overflow-y:auto">
+        <!-- Canvas items will be populated dynamically -->
+      </div>
+    </div>
+    <div class="modal-footer" style="padding:12px 16px; border-top:1px solid #2a3142; display:flex; justify-content:flex-end">
+      <button class="btn ghost" id="btnCanvasSelectCancel" type="button">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ... -->
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+</script>
+<script type="module">
+  // ...
+  import * as THREE from 'three';
+  import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+  const $ = (sel, root=document)=> root.querySelector(sel);
+  const $$ = (sel, root=document)=> Array.from(root.querySelectorAll(sel));
+  const qdom = {
+    panel: document.getElementById('quickPanel'),
+    btnCollapse: document.getElementById('btnQuickCollapse'),
+    btnAdv: document.getElementById('btnQuickAdvanced'),
+    btnLockCanvas: document.getElementById('btnQuickLockCanvas'),
+    btnSelectCanvas: document.getElementById('btnSelectCanvas'),
+    btnLockOuter: document.getElementById('btnQuickLockOuter'),
+    btnLockMount: document.getElementById('btnQuickLockMount'),
+    btnMountScrews: document.getElementById('btnMountScrews'),
+    btnMountClips: document.getElementById('btnMountClips'),
+    clipOptions: document.getElementById('qsClipOptions'),
+    clipOffset: document.getElementById('qsClipOffset'),
+    mountStatus: document.getElementById('qsMountStatus'),
+    btnFixClip: document.getElementById('btnFixClip'),
+    canvasW: document.getElementById('qsCanvasW'),
+    canvasH: document.getElementById('qsCanvasH'),
+    canvasT: document.getElementById('qsCanvasT'),
+    stretcherW: document.getElementById('qsStretcherW'),
+    outerW: document.getElementById('qsOuterW'),
+    outerH: document.getElementById('qsOuterH'),
+    face: document.getElementById('qsFace'),
+    reveal: document.getElementById('qsReveal'),
+    depth: document.getElementById('qsDepth'),
+    vCanvasW: document.getElementById('qsCanvasWVal'),
+    vCanvasH: document.getElementById('qsCanvasHVal'),
+    vCanvasT: document.getElementById('qsCanvasTVal'),
+    vStretcherW: document.getElementById('qsStretcherWVal'),
+    vOuterW: document.getElementById('qsOuterWVal'),
+    vOuterH: document.getElementById('qsOuterHVal'),
+    vFace: document.getElementById('qsFaceVal'),
+    vReveal: document.getElementById('qsRevealVal'),
+    vDepth: document.getElementById('qsDepthVal')
+  };
+
+  const dom = {
+    // Main controls
+    btnEditDims: document.getElementById('btnEditDims'),
+    btnCalc: document.getElementById('btnCalc'),
+    btnReset: document.getElementById('btnReset'),
+    btnCSV: document.getElementById('btnCSV'),
+    btnCopy: document.getElementById('btnCopy'),
+    btnPrint: document.getElementById('btnPrint'),
+    stageSlider: document.getElementById('stageSlider'),
+    stageLabel: document.getElementById('stageLabel'),
+
+    // Modal
+    dimsModal: document.getElementById('dimsModal'),
+    btnDimsClose: document.getElementById('btnDimsClose'),
+    btnDimsCancelBottom: document.getElementById('btnDimsCancelBottom'),
+    btnDimsSaveBottom: document.getElementById('btnDimsSaveBottom'),
+    btnDimsRevert: document.getElementById('btnDimsRevert'),
+    solveToggle: document.getElementById('solveToggle'),
+    depthSolveToggle: document.getElementById('depthSolveToggle'),
+
+    // Modal inputs
+    inCanvasW: document.getElementById('inCanvasW'),
+    inCanvasH: document.getElementById('inCanvasH'),
+    inCanvasT: document.getElementById('inCanvasT'),
+    inStretcherW: document.getElementById('inStretcherW'),
+    inReveal: document.getElementById('inReveal'),
+    inFace: document.getElementById('inFace'),
+    inOuterW: document.getElementById('inOuterW'),
+    inOuterH: document.getElementById('inOuterH'),
+    inDepth: document.getElementById('inDepth'),
+    inStock: document.getElementById('inStock'),
+    inKerf: document.getElementById('inKerf'),
+    inBackGap: document.getElementById('inBackGap'),
+    inBuild: document.getElementById('inBuild'),
+    inSolve: document.getElementById('inSolve'),
+    inDepthSolve: document.getElementById('inDepthSolve'),
+    inLinerW: document.getElementById('inLinerW'),
+    inMountClip: document.getElementById('inMountClip'),
+    inClipFlange: document.getElementById('inClipFlange'),
+    inFinishColor: document.getElementById('inFinishColor'),
+    inFinishSheen: document.getElementById('inFinishSheen'),
+
+    // Modal wrappers
+    wrapReveal: document.getElementById('wrapReveal'),
+    wrapFace: document.getElementById('wrapFace'),
+    wrapOuterW: document.getElementById('wrapOuterW'),
+    wrapOuterH: document.getElementById('wrapOuterH'),
+    wrapDepth: document.getElementById('wrapDepth'),
+    wrapStock: document.getElementById('wrapStock'),
+    wrapBackGap: document.getElementById('wrapBackGap'),
+
+    // Mounting UI
+    mountWarn: document.getElementById('mountWarn'),
+
+    // Fix Clip Modal
+    fixClipModal: document.getElementById('fixClipModal'),
+    btnFixClipClose: document.getElementById('btnFixClipClose'),
+    btnFixClipCancel: document.getElementById('btnFixClipCancel'),
+    fixClipSummary: document.getElementById('fixClipSummary'),
+    fixOptionDepth: document.getElementById('fixOptionDepth'),
+    fixOptionLiner: document.getElementById('fixOptionLiner'),
+    fixOptionStretcher: document.getElementById('fixOptionStretcher'),
+    fixOptionClip: document.getElementById('fixOptionClip'),
+    btnFixDepth: document.getElementById('btnFixDepth'),
+    btnFixLiner: document.getElementById('btnFixLiner'),
+    btnFixStretcher: document.getElementById('btnFixStretcher'),
+    btnFixClip2: document.getElementById('btnFixClip2'),
+    fixDepthDesc: document.getElementById('fixDepthDesc'),
+    fixLinerDesc: document.getElementById('fixLinerDesc'),
+    fixStretcherDesc: document.getElementById('fixStretcherDesc'),
+    fixClipDesc: document.getElementById('fixClipDesc'),
+    fixDepthLockWarn: document.getElementById('fixDepthLockWarn'),
+    fixLinerLockWarn: document.getElementById('fixLinerLockWarn'),
+    fixStretcherLockWarn: document.getElementById('fixStretcherLockWarn'),
+    fixClipSelect: document.getElementById('fixClipSelect'),
+
+    // Canvas Selection Modal
+    canvasSelectModal: document.getElementById('canvasSelectModal'),
+    btnCanvasSelectClose: document.getElementById('btnCanvasSelectClose'),
+    btnCanvasSelectCancel: document.getElementById('btnCanvasSelectCancel'),
+    canvasCatalogList: document.getElementById('canvasCatalogList'),
+
+    // Output elements
+    statusBar: document.getElementById('statusBar'),
+    summary: document.getElementById('summary'),
+    cutTable: document.getElementById('cutTable'),
+    kvDims: document.getElementById('kvDims')
+  };
+
+  const state = {
+    unit: 'in',
+    canvasW: 24,
+    canvasH: 18,
+    canvasT: 0.75,
+    stretcherW: 1.5,
+    reveal: 0.125,
+    face: 1.5,
+    outerW: NaN,
+    outerH: NaN,
+    depth: 1.25,
+    stock: 0.75,
+    join: 'miter',
+    kerf: 0.125,
+    backGap: 0,
+    build: 'two',
+    linerW: 0.75,
+    solve: 'outer',
+    depthSolve: 'depth',
+    stage: 0,
+    finishColor: 'stain_dark_brown',
+    finishSheen: 'satin',
+    mountClip: 'none',
+    clipFlange: 0.625,
+    quickLocks: { canvas:false, outer:false, mount:false },
+    quickMountMethod: 'screws', // 'screws' or 'clips'
+    vis: { face:true, liner:true, spacers:true, canvas:true, clips:true },
+    results: null
+  };
+
+  function getStageLabels(){
+    // Stage 0 is always Plan. Remaining stages map to the build3D step list.
+    const labels = ['Plan'];
+    if(state.build==='two'){
+      labels.push('Liner: Bottom');
+      labels.push('Liner: Top');
+      labels.push('Liner: Left');
+      labels.push('Liner: Right');
+    }
+    labels.push('Face: Bottom');
+    labels.push('Face: Top');
+    labels.push('Face: Left');
+    labels.push('Face: Right');
+    labels.push('Spacers');
+    labels.push('Canvas');
+    labels.push('Mounting');
+    labels.push('Stretchers');
+    return labels;
+  }
+
+  function clamp(x, a, b){
+    x = +x;
+    if(!isFinite(x)) return a;
+    return Math.min(b, Math.max(a, x));
+  }
+
+  function parseInches(input){
+    const s = String(input ?? '').trim();
+    if(!s) return NaN;
+    const clean = s.replace(/\u2033|"/g, '').trim();
+    const parts = clean.split(/\s+/);
+    let total = 0;
+    for(const p of parts){
+      if(!p) continue;
+      if(p.includes('/')){
+        const [n,d] = p.split('/');
+        const nn = parseFloat(n), dd = parseFloat(d);
+        if(isFinite(nn) && isFinite(dd) && dd !== 0) total += nn/dd;
+        else return NaN;
+      }else{
+        const v = parseFloat(p);
+        if(!isFinite(v)) return NaN;
+        total += v;
+      }
+    }
+    return total;
+  }
+
+  function fmt(v, unit){
+    if(!isFinite(v)) return '';
+    if(unit === 'mm'){
+      const mm = v * 25.4;
+      return `${mm.toFixed(1)} mm`;
+    }
+    const s = v.toFixed(3).replace(/\.0+$/,'').replace(/(\.\d*[1-9])0+$/,'$1');
+    return `${s} in`;
+  }
+
+  // Z-clip constants
+  const zClipTolIn = 1/32;           // tolerance for offset matching (inches)
+  const zClipMinEdgeDistLinerIn = 0.5; // minimum edge distance for screws (inches)
+
+  // Canvas catalog: pre-defined stretched canvas sizes
+  const CANVAS_CATALOG = [
+    { name: 'Edge Pro 10×10" 1½" Deep', width: 10, height: 10, thickness: 1.5, stretcherW: 1.5, brand: 'Jerry\'s Artarama', sku: '65518' },
+    { name: 'Edge Pro 18×18" 1½" Deep', width: 18, height: 18, thickness: 1.5, stretcherW: 1.5, brand: 'Jerry\'s Artarama', sku: '63498' },
+    { name: 'Edge Pro 18×24" 1½" Deep', width: 18, height: 24, thickness: 1.5, stretcherW: 1.5, brand: 'Jerry\'s Artarama', sku: '57238' },
+    { name: 'Edge Pro 18×18" 11/16" Deep', width: 18, height: 18, thickness: 0.6875, stretcherW: 0.75, brand: 'Jerry\'s Artarama', sku: '63490' },
+  ];
+
+  // Z-clip catalog: fixed flange sizes, variable offset (liner depth)
+  const Z_CLIP_CATALOG = [
+    { offset: 0.5,  flangeLiner: 0.5,  flangeCanvas: 0.5,  thickness: 0.06 },
+    { offset: 0.75, flangeLiner: 0.625, flangeCanvas: 0.625, thickness: 0.06 },
+    { offset: 1.0,  flangeLiner: 0.75, flangeCanvas: 0.75, thickness: 0.06 }
+  ];
+
+  function getZClipByOffset(offset){
+    if(!isFinite(offset)) return null;
+    const tol = 1/32;
+    return Z_CLIP_CATALOG.find(c => Math.abs(c.offset - offset) < tol) || null;
+  }
+
+  function zClipFits(clipDef, s, linerDepth){
+    const reasons = [];
+    if(!clipDef) return { ok: false, reasons: ['No clip definition'] };
+    
+    // Check 1: liner depth must match clip offset
+    const offsetTol = 1/32;
+    if(isFinite(linerDepth) && Math.abs(linerDepth - clipDef.offset) > offsetTol){
+      reasons.push(`Liner depth ${fmt(linerDepth, s.unit)} ≠ clip offset ${fmt(clipDef.offset, s.unit)}`);
+    }
+    
+    // Check 2: liner width must leave room for canvas flange on stretcher
+    const minStretcherExposed = clipDef.flangeCanvas + 1/16;
+    if(isFinite(s.linerW) && isFinite(s.stretcherW)){
+      if(s.linerW > s.stretcherW - minStretcherExposed){
+        reasons.push(`Liner too wide for clip flange (max ${fmt(s.stretcherW - minStretcherExposed, s.unit)})`);
+      }
+    }
+    
+    // Check 3: edge distance (Option A: 1" minimum from canvas edge to clip center)
+    const edgeDistMin = 1.0;
+    const clipCenterFromEdge = isFinite(s.stretcherW) ? s.stretcherW / 2 : NaN;
+    if(isFinite(clipCenterFromEdge) && clipCenterFromEdge < edgeDistMin){
+      reasons.push(`Clip too close to canvas edge (min ${fmt(edgeDistMin, s.unit)})`);
+    }
+    
+    return { ok: reasons.length === 0, reasons };
+  }
+
+  // ...
+  function reflect(){
+    // ...
+    if(qdom && qdom.canvasW){
+      qdom.canvasW.value = String(state.canvasW);
+      qdom.canvasH.value = String(state.canvasH);
+      qdom.canvasT.value = String(state.canvasT);
+      qdom.stretcherW.value = String(state.stretcherW);
+      qdom.outerW.value = String(state.outerW || (state.canvasW + 2*(state.face + state.reveal)));
+      qdom.outerH.value = String(state.outerH || (state.canvasH + 2*(state.face + state.reveal)));
+      qdom.face.value = String(state.face);
+      qdom.reveal.value = String(state.reveal);
+      qdom.depth.value = String(state.depth);
+      qdom.vCanvasW.textContent = fmt(state.canvasW, state.unit);
+      qdom.vCanvasH.textContent = fmt(state.canvasH, state.unit);
+      qdom.vCanvasT.textContent = fmt(state.canvasT, state.unit);
+      qdom.vStretcherW.textContent = fmt(state.stretcherW, state.unit);
+      qdom.vFace.textContent = fmt(state.face, state.unit);
+      qdom.vReveal.textContent = fmt(state.reveal, state.unit);
+      qdom.vDepth.textContent = fmt(state.depth, state.unit);
+      qdom.vOuterW.textContent = fmt(state.outerW || (state.canvasW + 2*(state.face + state.reveal)), state.unit);
+      qdom.vOuterH.textContent = fmt(state.outerH || (state.canvasH + 2*(state.face + state.reveal)), state.unit);
+      updateQuickLocksUI();
+      updateQuickRanges();
+    }
+    // stage reflect
+    if(dom.stageSlider){
+      const labels = getStageLabels();
+      dom.stageSlider.max = (labels.length-1);
+      if(state.stage>labels.length-1) state.stage = labels.length-1;
+      dom.stageSlider.value = state.stage;
+      dom.stageLabel.textContent = labels[state.stage]||'Plan';
+    }
+    updateDimsKV();
+    updateSolveUI();
+    updateDepthSolveUI();
+    updateMountingUI();
+  }
+  const stfmt = v => state.unit==='mm' ? (v*25.4).toFixed(1) : v;
+
+  function updateMountingUI(){
+    if(!dom.mountWarn) return;
+    dom.mountWarn.style.display = 'none';
+    const clip = state.mountClip ?? 'none';
+    if(clip === 'none') return;
+    const offset = parseFloat(clip);
+    if(!isFinite(offset) || offset < 0) return;
+    const linerDepth = (isFinite(state.depth) && isFinite(state.canvasT) && isFinite(state.backGap))
+      ? (state.depth - (state.canvasT + state.backGap))
+      : NaN;
+    const delta = Math.abs((linerDepth ?? NaN) - offset);
+    const tol = 1/32; // inches
+    if(!isFinite(delta)) return;
+    if(delta > tol){
+      dom.mountWarn.style.display = '';
+      dom.mountWarn.textContent = `Selected Z-clip offset is ${fmt(offset, state.unit)} but Liner Depth (support) is ${fmt(linerDepth, state.unit)}. Click Apply to make them match.`;
+    }
+  }
+
+  function readInputs(){
+    const u = state.unit;
+    const v = (el)=>{
+      let x = (u==='mm')? parseFloat(el.value)/25.4 : parseInches(el.value);
+      return isFinite(x)? x : NaN;
+    };
+    const solveMode = dom.inSolve ? dom.inSolve.value : (state.solve || 'outer');
+    const depthSolveMode = dom.inDepthSolve ? dom.inDepthSolve.value : (state.depthSolve || 'depth');
+    const outerW = dom.inOuterW ? v(dom.inOuterW) : NaN;
+    const outerH = dom.inOuterH ? v(dom.inOuterH) : NaN;
+    const vals = {
+      canvasW: v(dom.inCanvasW), canvasH: v(dom.inCanvasH), canvasT: v(dom.inCanvasT),
+      stretcherW: dom.inStretcherW ? v(dom.inStretcherW) : state.stretcherW,
+      reveal: v(dom.inReveal), face: v(dom.inFace), depth: v(dom.inDepth), stock: v(dom.inStock),
+      join: $('#inJoin').value, kerf: v(dom.inKerf), backGap: 0,
+      build: dom.inBuild ? dom.inBuild.value : 'one', linerW: v(dom.inLinerW),
+      mountClip: dom.inMountClip ? dom.inMountClip.value : (state.mountClip ?? 'none'),
+      clipFlange: dom.inClipFlange ? v(dom.inClipFlange) : (state.clipFlange ?? 0.625),
+      finishColor: dom.inFinishColor ? dom.inFinishColor.value : (state.finishColor || 'stain_dark_brown'),
+      finishSheen: dom.inFinishSheen ? dom.inFinishSheen.value : (state.finishSheen || 'satin'),
+      solve: solveMode,
+      depthSolve: depthSolveMode
+    };
+
+    if(solveMode==='reveal'){
+      const revealW = isFinite(outerW) && isFinite(vals.canvasW) && isFinite(vals.face) ? ((outerW - vals.canvasW) / 2 - vals.face) : NaN;
+      const revealH = isFinite(outerH) && isFinite(vals.canvasH) && isFinite(vals.face) ? ((outerH - vals.canvasH) / 2 - vals.face) : NaN;
+      const use = (isFinite(revealW) && isFinite(revealH)) ? (revealW + revealH)/2 : (isFinite(revealW) ? revealW : revealH);
+      if(isFinite(use)) vals.reveal = use;
+    }
+    if(solveMode==='face'){
+      const faceW = isFinite(outerW) && isFinite(vals.canvasW) && isFinite(vals.reveal) ? ((outerW - vals.canvasW) / 2 - vals.reveal) : NaN;
+      const faceH = isFinite(outerH) && isFinite(vals.canvasH) && isFinite(vals.reveal) ? ((outerH - vals.canvasH) / 2 - vals.reveal) : NaN;
+      const use = (isFinite(faceW) && isFinite(faceH)) ? (faceW + faceH)/2 : (isFinite(faceW) ? faceW : faceH);
+      if(isFinite(use)) vals.face = use;
+    }
+
+    if(depthSolveMode==='depth'){
+      const d = (isFinite(vals.stock) && isFinite(vals.canvasT) && isFinite(vals.backGap)) ? (vals.stock + vals.canvasT + vals.backGap) : NaN;
+      if(isFinite(d)) vals.depth = d;
+    }
+    if(depthSolveMode==='stock'){
+      const s = (isFinite(vals.depth) && isFinite(vals.canvasT) && isFinite(vals.backGap)) ? (vals.depth - vals.canvasT - vals.backGap) : NaN;
+      if(isFinite(s)) vals.stock = s;
+    }
+    // backGap is always 0 (canvas back flush to liner/wall-side plane)
+    vals.backGap = 0;
+    Object.assign(state, vals);
+    state.backGap = 0;
+  }
+
+  function updateDepthSolveUI(){
+    if(!dom.inDepthSolve || !dom.inDepth || !dom.inStock || !dom.inBackGap) return;
+    let mode = dom.inDepthSolve.value || 'depth';
+    if(mode === 'backGap'){
+      mode = 'depth';
+      dom.inDepthSolve.value = 'depth';
+      if(dom.depthSolveToggle){
+        Array.from(dom.depthSolveToggle.querySelectorAll('button')).forEach(b=>{
+          b.classList.toggle('active', b.dataset.depthsolve===mode);
+        });
+      }
+    }
+    dom.inDepth.disabled = (mode==='depth');
+    dom.inStock.disabled = (mode==='stock');
+    dom.inBackGap.disabled = true;
+
+    [dom.inDepth, dom.inStock, dom.inBackGap].forEach(el=>{
+      if(!el) return;
+      el.classList.toggle('lockedField', el.disabled);
+      el.classList.toggle('editableField', !el.disabled);
+    });
+
+    if(dom.wrapDepth) dom.wrapDepth.classList.toggle('locked', dom.inDepth.disabled);
+    if(dom.wrapStock) dom.wrapStock.classList.toggle('locked', dom.inStock.disabled);
+    if(dom.wrapBackGap) dom.wrapBackGap.classList.toggle('locked', true);
+
+    if(dom.depthSolveToggle){
+      Array.from(dom.depthSolveToggle.querySelectorAll('button')).forEach(b=>{
+        b.classList.toggle('active', b.dataset.depthsolve===mode);
+      });
+    }
+
+    updateDepthGrouping();
+
+    updateDerivedDepthSolveValues();
+  }
+
+  function moveRow(rowId, targetId){
+    const row = document.getElementById(rowId);
+    const target = document.getElementById(targetId);
+    if(!row || !target) return;
+    if(row.parentElement !== target) target.appendChild(row);
+  }
+
+  function updateAestheticGrouping(){
+    // Disabled fields are calculated outputs. Enabled fields are editable inputs.
+    const inContainer = document.getElementById('aestheticInputs');
+    const outContainer = document.getElementById('aestheticOutputs');
+    if(!inContainer || !outContainer) return;
+
+    const map = [
+      {row:'rowReveal', el: dom.inReveal},
+      {row:'rowFace', el: dom.inFace},
+      {row:'rowOuterW', el: dom.inOuterW},
+      {row:'rowOuterH', el: dom.inOuterH}
+    ];
+    map.forEach(({row, el})=>{
+      if(!el) return;
+      moveRow(row, el.disabled ? 'aestheticOutputs' : 'aestheticInputs');
+    });
+  }
+
+  function updateDepthGrouping(){
+    const inContainer = document.getElementById('depthInputs');
+    const outContainer = document.getElementById('depthOutputs');
+    if(!inContainer || !outContainer) return;
+
+    const map = [
+      {row:'rowDepth', el: dom.inDepth},
+      {row:'rowStock', el: dom.inStock},
+      {row:'rowBackGap', el: dom.inBackGap}
+    ];
+    map.forEach(({row, el})=>{
+      if(!el) return;
+      moveRow(row, el.disabled ? 'depthOutputs' : 'depthInputs');
+    });
+  }
+
+  function updateDerivedDepthSolveValues(){
+    if(!dom.inDepthSolve || !dom.inDepth || !dom.inStock || !dom.inBackGap || !dom.inCanvasT) return;
+    const u = state.unit;
+    const v = (el)=>{
+      let x = (u==='mm')? parseFloat(el.value)/25.4 : parseInches(el.value);
+      return isFinite(x)? x : NaN;
+    };
+    const mode = dom.inDepthSolve.value || 'depth';
+    const canvasT = v(dom.inCanvasT);
+    const depth = v(dom.inDepth);
+    const stock = v(dom.inStock);
+    const backGap = v(dom.inBackGap);
+
+    if(mode==='depth'){
+      const d = (isFinite(stock) && isFinite(canvasT) && isFinite(backGap)) ? (stock + canvasT + backGap) : NaN;
+      if(isFinite(d)) { dom.inDepth.value = stfmt(d); flash(dom.inDepth); }
+      return;
+    }
+    if(mode==='stock'){
+      const s = (isFinite(depth) && isFinite(canvasT) && isFinite(backGap)) ? (depth - canvasT - backGap) : NaN;
+      if(isFinite(s)) { dom.inStock.value = stfmt(s); flash(dom.inStock); }
+      return;
+    }
+    if(mode==='backGap'){
+      const bg = (isFinite(depth) && isFinite(canvasT) && isFinite(stock)) ? (depth - canvasT - stock) : NaN;
+      if(isFinite(bg)) { dom.inBackGap.value = stfmt(bg); flash(dom.inBackGap); }
+    }
+  }
+
+  function updateSolveUI(){
+    if(!dom.inSolve || !dom.inOuterW || !dom.inOuterH || !dom.inReveal || !dom.inFace) return;
+    const mode = dom.inSolve.value;
+    dom.inOuterW.disabled = (mode==='outer');
+    dom.inOuterH.disabled = (mode==='outer');
+    dom.inReveal.disabled = (mode==='reveal');
+    dom.inFace.disabled = (mode==='face');
+
+    [dom.inOuterW, dom.inOuterH, dom.inReveal, dom.inFace].forEach(el=>{
+      if(!el) return;
+      el.classList.toggle('lockedField', el.disabled);
+      el.classList.toggle('editableField', !el.disabled);
+    });
+
+    if(dom.wrapOuterW) dom.wrapOuterW.classList.toggle('locked', dom.inOuterW.disabled);
+    if(dom.wrapOuterH) dom.wrapOuterH.classList.toggle('locked', dom.inOuterH.disabled);
+    if(dom.wrapReveal) dom.wrapReveal.classList.toggle('locked', dom.inReveal.disabled);
+    if(dom.wrapFace) dom.wrapFace.classList.toggle('locked', dom.inFace.disabled);
+
+    if(dom.solveToggle){
+      Array.from(dom.solveToggle.querySelectorAll('button')).forEach(b=>{
+        b.classList.toggle('active', b.dataset.solve===mode);
+      });
+    }
+
+    if(dom.solveHelp){
+      if(mode==='outer') dom.solveHelp.textContent = 'Outer dimensions are calculated. Edit reveal gap and face width.';
+      else if(mode==='reveal') dom.solveHelp.textContent = 'Reveal gap is calculated. Edit face width and outer width/height.';
+      else if(mode==='face') dom.solveHelp.textContent = 'Face width is calculated. Edit reveal gap and outer width/height.';
+    }
+
+    if(dom.solveEq){
+      const eq = 'Outer = Canvas + 2 × (Reveal gap + Face width)';
+      if(mode==='outer') dom.solveEq.innerHTML = '<b>Outer</b> = Canvas + 2 × (Reveal gap + Face width)';
+      else if(mode==='reveal') dom.solveEq.innerHTML = 'Outer = Canvas + 2 × (<b>Reveal gap</b> + Face width)';
+      else if(mode==='face') dom.solveEq.innerHTML = 'Outer = Canvas + 2 × (Reveal gap + <b>Face width</b>)';
+      else dom.solveEq.textContent = eq;
+    }
+
+    updateAestheticGrouping();
+
+    updateDerivedSolveValues();
+  }
+
+  function updateDerivedSolveValues(){
+    if(!dom.inSolve || !dom.inOuterW || !dom.inOuterH || !dom.inReveal || !dom.inFace || !dom.inCanvasW || !dom.inCanvasH) return;
+    const u = state.unit;
+    const v = (el)=>{
+      let x = (u==='mm')? parseFloat(el.value)/25.4 : parseInches(el.value);
+      return isFinite(x)? x : NaN;
+    };
+    const mode = dom.inSolve.value;
+    const canvasW = v(dom.inCanvasW);
+    const canvasH = v(dom.inCanvasH);
+    const reveal = v(dom.inReveal);
+    const face = v(dom.inFace);
+    const outerWIn = v(dom.inOuterW);
+    const outerHIn = v(dom.inOuterH);
+
+    if(dom.solveWarn) dom.solveWarn.style.display = 'none';
+    if(dom.aestheticWarn) dom.aestheticWarn.style.display = 'none';
+
+    if(dom.aestheticWarn && isFinite(reveal) && isFinite(face)){
+      if(face <= reveal){
+        dom.aestheticWarn.textContent = 'Face width is less than or equal to the reveal gap. This may look odd or leave little material around the opening.';
+        dom.aestheticWarn.style.display = '';
+      }
+    }
+
+    if(mode==='outer'){
+      const ow = (isFinite(canvasW) && isFinite(reveal) && isFinite(face)) ? (canvasW + 2*reveal + 2*face) : NaN;
+      const oh = (isFinite(canvasH) && isFinite(reveal) && isFinite(face)) ? (canvasH + 2*reveal + 2*face) : NaN;
+      if(isFinite(ow)) { dom.inOuterW.value = stfmt(ow); flash(dom.inOuterW); }
+      if(isFinite(oh)) { dom.inOuterH.value = stfmt(oh); flash(dom.inOuterH); }
+      return;
+    }
+
+    if(mode==='reveal'){
+      const rw = (isFinite(outerWIn) && isFinite(canvasW) && isFinite(face)) ? ((outerWIn - canvasW)/2 - face) : NaN;
+      const rh = (isFinite(outerHIn) && isFinite(canvasH) && isFinite(face)) ? ((outerHIn - canvasH)/2 - face) : NaN;
+      const use = (isFinite(rw) && isFinite(rh)) ? (rw+rh)/2 : (isFinite(rw) ? rw : rh);
+      if(isFinite(use)) { dom.inReveal.value = stfmt(use); flash(dom.inReveal); }
+      if(isFinite(rw) && isFinite(rh) && Math.abs(rw-rh) > (1/64) && dom.solveWarn){
+        dom.solveWarn.textContent = 'Outer width/height imply different reveal gaps. Using the average.';
+        dom.solveWarn.style.display = '';
+      }
+      return;
+    }
+
+    if(mode==='face'){
+      const fw = (isFinite(outerWIn) && isFinite(canvasW) && isFinite(reveal)) ? ((outerWIn - canvasW)/2 - reveal) : NaN;
+      const fh = (isFinite(outerHIn) && isFinite(canvasH) && isFinite(reveal)) ? ((outerHIn - canvasH)/2 - reveal) : NaN;
+      const use = (isFinite(fw) && isFinite(fh)) ? (fw+fh)/2 : (isFinite(fw) ? fw : fh);
+      if(isFinite(use)) { dom.inFace.value = stfmt(use); flash(dom.inFace); }
+      if(isFinite(fw) && isFinite(fh) && Math.abs(fw-fh) > (1/64) && dom.solveWarn){
+        dom.solveWarn.textContent = 'Outer width/height imply different face widths. Using the average.';
+        dom.solveWarn.style.display = '';
+      }
+    }
+  }
+
+  function getFinishParams(){
+    const c = state.finishColor || 'stain_dark_brown';
+    const sheen = state.finishSheen || 'satin';
+
+    let colorHex = 0x8b5e3c;
+    if(c==='paint_white') colorHex = 0xf8fafc;
+    else if(c==='paint_gray') colorHex = 0x9ca3af;
+    else if(c==='paint_black') colorHex = 0x111827;
+    else if(c==='stain_light_brown') colorHex = 0xb08968;
+    else if(c==='stain_dark_brown') colorHex = 0x7a4f2a;
+    else if(c==='stain_red') colorHex = 0x8b2c2c;
+
+    let roughness = 0.75, metalness = 0.03;
+    if(sheen==='matte'){ roughness = 0.88; metalness = 0.02; }
+    else if(sheen==='satin'){ roughness = 0.62; metalness = 0.04; }
+    else if(sheen==='gloss'){ roughness = 0.28; metalness = 0.06; }
+
+    return { colorHex, roughness, metalness };
+  }
+
+  function updateDimsKV(){
+    if(!dom.kvDims) return;
+    const f = (val)=> isFinite(val) ? fmt(val, state.unit) : '—';
+    const innerW = isFinite(state.canvasW) && isFinite(state.reveal) ? (state.canvasW + 2*state.reveal) : NaN;
+    const innerH = isFinite(state.canvasH) && isFinite(state.reveal) ? (state.canvasH + 2*state.reveal) : NaN;
+    const outerW = isFinite(innerW) && isFinite(state.face) ? (innerW + 2*state.face) : NaN;
+    const outerH = isFinite(innerH) && isFinite(state.face) ? (innerH + 2*state.face) : NaN;
+    const linerDepth = (isFinite(state.depth) && isFinite(state.canvasT) && isFinite(state.backGap))
+      ? (state.depth - (state.canvasT + state.backGap))
+      : NaN;
+
+    const rows = [
+      ['Canvas Width', f(state.canvasW)],
+      ['Canvas Height', f(state.canvasH)],
+      ['Canvas Thickness', f(state.canvasT)],
+      ['Stretcher Width', f(state.stretcherW)],
+      ['Reveal Gap (each side)', f(state.reveal)],
+      ['Face Width', f(state.face)],
+      ['Inner Opening (W×H)', `${f(innerW)} × ${f(innerH)}`],
+      ['Outer Size (W×H)', `${f(outerW)} × ${f(outerH)}`],
+      ['Frame Depth (rabbet)', f(state.depth)],
+      ['Liner Depth (support)', f(linerDepth)],
+      ['Material Thickness', f(state.stock)],
+      ['Back Clearance', f(state.backGap)],
+      ['Build Method', state.build==='two' ? 'Two-piece rails' : 'One-piece rabbet'],
+      ['Liner Width', state.build==='two' ? f(state.linerW) : '—'],
+      ['Mounting Clip', (state.mountClip && state.mountClip!=='none') ? `Z-clip ${fmt(parseFloat(state.mountClip), state.unit)} offset` : '—'],
+      ['Joinery', state.join==='butt' ? 'Butt joints' : '45° miter'],
+      ['Finish', `${(state.finishColor||'').replace(/_/g,' ')} · ${(state.finishSheen||'')}`]
+    ];
+    dom.kvDims.innerHTML = rows.map(([k,v])=>`<div class="kvitem"><div class="kvk">${k}</div><div class="kvv">${v}</div></div>`).join('');
+  }
+
+  // Update slider error states (red highlight for problematic sliders)
+  function updateSliderErrors(errors){
+    // Canvas thickness slider
+    if(qdom.canvasT){
+      const row = qdom.canvasT.closest('.qRow') || qdom.canvasT.parentElement;
+      if(errors.canvasTError){
+        qdom.canvasT.classList.add('hasError');
+        if(row) row.classList.add('hasError');
+      }else{
+        qdom.canvasT.classList.remove('hasError');
+        if(row) row.classList.remove('hasError');
+      }
+    }
+    // Frame depth slider
+    if(qdom.depth){
+      const row = qdom.depth.closest('.qRow') || qdom.depth.parentElement;
+      if(errors.depthError){
+        qdom.depth.classList.add('hasError');
+        if(row) row.classList.add('hasError');
+      }else{
+        qdom.depth.classList.remove('hasError');
+        if(row) row.classList.remove('hasError');
+      }
+    }
+  }
+
+  // ---------- Calculations ----------
+  function compute(){
+    const s = state;
+    const errs = [];
+    const warns = [];
+    if([s.canvasW,s.canvasH,s.canvasT,s.face,s.stock].some(x=>!isFinite(x)||x<=0)) errs.push('Please provide positive numeric values for required fields.');
+    if(s.reveal<0) errs.push('Reveal cannot be negative.');
+    if(!isFinite(s.stretcherW) || s.stretcherW<=0) errs.push('Please provide a positive Stretcher Width.');
+    if(!isFinite(s.depth) || s.depth<=0) errs.push('Please provide a positive Frame Depth (rabbet).');
+    const depthError = s.depth < s.canvasT + s.backGap;
+    if(depthError) errs.push('Frame depth (rabbet) is shallower than canvas thickness + back clearance. Increase depth or reduce thickness.');
+    const linerDepth = s.depth - (s.canvasT + s.backGap);
+    const linerDepthError = isFinite(linerDepth) && linerDepth < 0.5;
+    if(linerDepthError) errs.push('Liner depth (support) is less than 1/2". Increase frame depth, reduce clearance behind, or use a thinner canvas.');
+    
+    // Update slider error states
+    updateSliderErrors({ depthError: depthError || linerDepthError, canvasTError: depthError || linerDepthError });
+    if(s.build==='two' && (!isFinite(s.linerW) || s.linerW<=0)) errs.push('Please provide a positive Liner Width for the two-piece method.');
+    if(isFinite(s.stretcherW) && (s.stretcherW*2 >= s.canvasW || s.stretcherW*2 >= s.canvasH)) errs.push('Stretcher width is too large for the given canvas size. Reduce stretcher width.');
+
+    // Mounting method selection + warnings (do not block compute)
+    let mountMethod = '—';
+    const clipSelected = (s.mountClip && s.mountClip !== 'none' && s.build === 'two');
+    const clipOffsetIn = clipSelected ? parseFloat(s.mountClip) : NaN;
+    const clipDef = clipSelected ? getZClipByOffset(clipOffsetIn) : null;
+    const clipFit = clipSelected ? zClipFits(clipDef, s, linerDepth) : { ok:false, reasons:[] };
+    const mountMode = clipSelected ? (clipFit.ok ? 'clip' : 'screw') : 'none';
+    if(mountMode === 'clip') mountMethod = 'Z-clips';
+    else if(mountMode === 'screw') mountMethod = 'Screws';
+
+    // Expose for status bar / other UI (non-authoritative but convenient)
+    state.mountMethod = mountMethod;
+
+    if(mountMode === 'clip'){
+      // Clip-specific warnings
+      if(isFinite(clipOffsetIn)){
+        const tol = zClipTolIn;
+        if(isFinite(linerDepth) && Math.abs(linerDepth - clipOffsetIn) > tol){
+          warns.push(`Z-clip offset (${fmt(clipOffsetIn,s.unit)}) does not match liner depth (support) (${fmt(linerDepth,s.unit)}). Use Mounting hardware → Apply, or adjust depth/back clearance.`);
+        }
+      }
+      if(!clipFit.ok){
+        // In practice this shouldn't happen because mountMode would become screw, but keep as a safety net.
+        warns.push('Selected Z-clip is not compatible with the current dimensions.');
+      }
+    }else if(mountMode === 'screw'){
+      // Screw-specific warnings (avoid showing clip warnings when screws are the active method).
+      // Desired screw centerline from liner inner face is stretcherW/2 (targets stretcher center).
+      const minEdge = zClipMinEdgeDistLinerIn;
+      const screwFromInner = (isFinite(s.stretcherW) ? (s.stretcherW/2) : NaN);
+      if(!isFinite(s.linerW) || !isFinite(screwFromInner)){
+        warns.push('Screw mounting selected, but liner width or stretcher width is missing for screw placement checks.');
+      }else{
+        const toOuter = s.linerW - screwFromInner;
+        if(screwFromInner < minEdge || toOuter < minEdge){
+          warns.push(`Screw mounting: the target screw line is centered on the stretcher (${fmt(screwFromInner,s.unit)} in from the liner inner edge). With liner width ${fmt(s.linerW,s.unit)}, that leaves ${fmt(toOuter,s.unit)} to the outer edge. Recommended minimum edge distance is ${fmt(minEdge,s.unit)}.`);
+        }
+      }
+    }
+    // Legacy single-flange warning (fallback if no catalog clip): keep for now to avoid breaking existing expectations.
+    // Suppress when the active method is screw mounting.
+    if(mountMode !== 'screw' && s.build==='two' && isFinite(s.clipFlange) && s.clipFlange > 0 && isFinite(s.stretcherW) && isFinite(s.linerW)){
+      const maxLinerW = s.stretcherW - s.clipFlange;
+      if(isFinite(maxLinerW) && maxLinerW >= 0 && s.linerW > maxLinerW + 1/64){
+        warns.push(`Liner width (${fmt(s.linerW,s.unit)}) leaves less than ${fmt(s.clipFlange,s.unit)} of stretcher exposed for the clip flange. Max liner width is ${fmt(maxLinerW,s.unit)}.`);
+      }
+    }
+
+    if(errs.length){
+      showStatus(errs.map(e=>`<span class="badge" style="border-color:var(--err); color:#ffd3d3">${e}</span>`).join(''));
+      return null;
+    }
+
+    // The floating frame inner opening is canvas + 2*reveal
+    const innerW = s.canvasW + 2*s.reveal;
+    const innerH = s.canvasH + 2*s.reveal;
+
+    // Outer size (to long edge) depends on joinery
+    const outerW = innerW + 2*s.face;
+    const outerH = innerH + 2*s.face;
+
+    // Cut lengths
+    let parts = [];
+    let cubicInches = 0;
+    if(s.build==='one'){
+      if(s.join==='miter'){
+        parts.push({part:'Long Sides', qty:2, length: outerH, width:s.depth, thickness:s.face, notes:'45° miter, measure to long point'});
+        parts.push({part:'Short Sides', qty:2, length: outerW, width:s.depth, thickness:s.face, notes:'45° miter, measure to long point'});
+      }else{
+        const longLen = outerH;
+        const shortLen = (outerW - s.stock*2);
+        parts.push({part:'Long Sides', qty:2, length: longLen, width:s.depth, thickness:s.face, notes:'Square cut'});
+        parts.push({part:'Short Sides', qty:2, length: shortLen, width:s.depth, thickness:s.face, notes:'Between long sides (deduct 2× thickness)'});
+      }
+      // volume for faces only
+      cubicInches += 2*outerH*s.stock*s.face + 2*outerW*s.stock*s.face;
+    } else {
+      // Two-piece rails (8 pcs): 4 face pieces (miter), 4 liner pieces (also mitered)
+      parts.push({part:'Face - Long', qty:2, length: outerH, width:s.depth, thickness:s.face, notes:'45° miter, measure to long point'});
+      parts.push({part:'Face - Short', qty:2, length: outerW, width:s.depth, thickness:s.face, notes:'45° miter, measure to long point'});
+      const linerLong = innerH; // long-point length
+      const linerShort = innerW; // long-point length
+      parts.push({part:'Liner - Long', qty:2, length: linerLong, width:s.linerW, thickness:s.stock, notes:'45° miter, measure to long point'});
+      parts.push({part:'Liner - Short', qty:2, length: linerShort, width:s.linerW, thickness:s.stock, notes:'45° miter, measure to long point'});
+      // volume faces + liners (approximate)
+      cubicInches += 2*outerH*s.stock*s.face + 2*outerW*s.stock*s.face;
+      cubicInches += 2*linerLong*s.stock*s.linerW + 2*linerShort*s.stock*s.linerW;
+    }
+
+    // Optional spacer blocks
+    const spacer = Math.min(1.0, s.reveal);
+    parts.push({part:'Spacer Blocks', qty:8, length: spacer, width: spacer, thickness: spacer, notes:'Optional: maintain reveal during glue-up'});
+
+    const boardFeet = cubicInches / 144;
+
+    const results = { innerW, innerH, outerW, outerH, parts, boardFeet, effDepth: s.depth };
+    state.results = results;
+    populateTable();
+    if(typeof updatePieceFromSelection === 'function') updatePieceFromSelection();
+    const warnBadges = warns.map(w=>`<span class="badge" style="border-color:var(--warn); color:#ffe1b7">${escapeHTML(w)}</span>`).join('');
+    const mountBadge = (state.mountMethod && state.mountMethod !== '—')
+      ? `<span class="badge" style="border-color:#2e3b52; color:#c7d2fe">Mounting Method: <b>${escapeHTML(state.mountMethod)}</b></span>`
+      : '';
+    showStatus(`<span class="badge" style="border-color:#2e3b52; color:#b1c7ff">Inner opening: <b>${fmt(innerW,state.unit)}</b> × <b>${fmt(innerH,state.unit)}</b></span>
+                <span class="badge">Outer size: <b>${fmt(outerW,state.unit)}</b> × <b>${fmt(outerH,state.unit)}</b></span>
+                ${mountBadge}
+                <span class="badge" style="background:#0d1a12; border-color:#1d3b27; color:#9ae6b4">Est. board feet: ${boardFeet.toFixed(2)}</span>
+                ${warnBadges}`);
+    updateSummary();
+    build3D();
+    // Reapply opacity if dimmed during slider adjustment
+    if(window.applyFaceOpacity) window.applyFaceOpacity();
+    if(window.applyCanvasOpacity) window.applyCanvasOpacity();
+    // Ensure canvas resizes after compute updates layout
+    if(renderer) requestAnimationFrame(()=> resize());
+    return results;
+  }
+
+  function updateSummary(){
+    if(!dom.summary) return;
+    const r = state.results; if(!r){ dom.summary.textContent=''; return; }
+    const depthStr = fmt(state.depth,state.unit);
+    dom.summary.innerHTML = `Canvas ${fmt(state.canvasW,state.unit)} × ${fmt(state.canvasH,state.unit)} × ${fmt(state.canvasT,state.unit)} · Stretcher ${fmt(state.stretcherW,state.unit)} · Reveal ${fmt(state.reveal,state.unit)} · Face ${fmt(state.face,state.unit)} · Depth ${depthStr} · Stock ${fmt(state.stock,state.unit)} · Build: ${state.build==='two'?'Two-piece (8 pcs)':'One-piece (4 pcs)'}${state.build==='two'?` · Liner ${fmt(state.linerW,state.unit)}`:''} · ${state.join==='miter'?'Miters':'Butt joints'}`;
+  }
+
+  function populateTable(){
+    const tb = dom.cutTable; if(!tb) return; tb.innerHTML='';
+    if(!state.results) return;
+    let i=1; state.results.parts.forEach((p,idx)=>{
+      const tr = document.createElement('tr');
+      tr.dataset.index = idx;
+      tr.innerHTML = `<td>${i++}</td><td>${p.part}</td><td>${p.qty}</td><td>${fmt(p.length,state.unit)}</td><td>${fmt(p.width??0,state.unit)}</td><td>${fmt(p.thickness??0,state.unit)}</td><td>${p.notes||''}</td>`;
+      tr.addEventListener('click', ()=> selectPart(idx));
+      if(state.selectedPartIdx===idx) tr.classList.add('selected');
+      tb.appendChild(tr);
+    });
+  }
+
+  function showStatus(html){ if(dom.statusBar) dom.statusBar.innerHTML = html; }
+
+  // ---------- Presets & Share Link ----------
+  function applyPreset(p){
+    if(!p) return;
+    state.canvasW = p.w;
+    state.canvasH = p.h;
+    if(typeof p.t === 'number' && isFinite(p.t)) state.canvasT = p.t;
+    if(typeof p.sw === 'number' && isFinite(p.sw)) state.stretcherW = p.sw;
+    if(typeof p.reveal === 'number' && isFinite(p.reveal)) state.reveal = p.reveal;
+    if(typeof p.face === 'number' && isFinite(p.face)) state.face = p.face;
+    if(typeof p.linerW === 'number' && isFinite(p.linerW)) state.linerW = p.linerW;
+    const presetHasDepth = (typeof p.depth === 'number' && isFinite(p.depth));
+    if(presetHasDepth) state.depth = p.depth;
+    if(typeof p.stock === 'number' && isFinite(p.stock)) state.stock = p.stock;
+    // Enforce invariant: canvas back flush to liner (no clearance behind)
+    state.backGap = 0;
+
+    if(typeof p.clipFlange === 'number' && isFinite(p.clipFlange) && p.clipFlange > 0) state.clipFlange = p.clipFlange;
+    if(typeof p.mountClip === 'string') state.mountClip = p.mountClip;
+
+    // Do not override preset depth. If a preset doesn't specify depth but does specify a clip,
+    // we can default to a compatible depth (linerDepth = depth - canvasT).
+    if(!presetHasDepth && state.mountClip && state.mountClip !== 'none'){
+      const off = parseFloat(state.mountClip);
+      if(isFinite(off) && isFinite(state.canvasT)) state.depth = state.canvasT + off;
+    }
+    reflect();
+    compute();
+  }
+
+  function updateQuickLocksUI(){
+    const locks = state.quickLocks || (state.quickLocks = { canvas:false, outer:false, mount:false });
+    if(qdom.btnLockCanvas) qdom.btnLockCanvas.textContent = locks.canvas ? '🔒' : '🔓';
+    if(qdom.btnLockOuter) qdom.btnLockOuter.textContent = locks.outer ? '🔒' : '🔓';
+    if(qdom.btnLockMount) qdom.btnLockMount.textContent = locks.mount ? '🔒' : '🔓';
+    const canvasDisabled = !!locks.canvas;
+    ['canvasW','canvasH','canvasT','stretcherW'].forEach(k=>{ if(qdom[k]) qdom[k].disabled = canvasDisabled; });
+    const outerDisabled = !!locks.outer;
+    ['outerW','outerH'].forEach(k=>{ if(qdom[k]) qdom[k].disabled = outerDisabled; });
+    
+    // Update mounting method UI
+    const method = state.quickMountMethod || 'screws';
+    if(qdom.btnMountScrews) qdom.btnMountScrews.classList.toggle('active', method === 'screws');
+    if(qdom.btnMountClips) qdom.btnMountClips.classList.toggle('active', method === 'clips');
+    if(qdom.clipOptions) qdom.clipOptions.style.display = (method === 'clips') ? '' : 'none';
+    if(qdom.clipOffset && state.mountClip && state.mountClip !== 'none'){
+      qdom.clipOffset.value = state.mountClip;
+    }
+    
+    // Update mount status
+    updateQuickMountStatus();
+  }
+  
+  function updateQuickMountStatus(){
+    if(!qdom.mountStatus) return;
+    const method = state.quickMountMethod || 'screws';
+    if(method === 'screws'){
+      qdom.mountStatus.textContent = 'Screws through liner into stretcher';
+      qdom.mountStatus.style.color = '#8899aa';
+    }else{
+      // Check if clip fits
+      const clipOffset = parseFloat(state.mountClip);
+      const linerDepth = isFinite(state.depth) && isFinite(state.canvasT) ? (state.depth - state.canvasT) : NaN;
+      if(!isFinite(clipOffset) || state.mountClip === 'none'){
+        qdom.mountStatus.textContent = 'Select a clip offset';
+        qdom.mountStatus.style.color = '#ffaa44';
+      }else{
+        const clipDef = getZClipByOffset(clipOffset);
+        const fit = clipDef ? zClipFits(clipDef, state, linerDepth) : { ok:false, reasons:['Unknown clip'] };
+        if(fit.ok){
+          qdom.mountStatus.textContent = `✓ Z-clip ${fmt(clipOffset, state.unit)} fits`;
+          qdom.mountStatus.style.color = '#9ae6b4';
+          if(qdom.btnFixClip) qdom.btnFixClip.style.display = 'none';
+        }else{
+          qdom.mountStatus.textContent = `✗ ${fit.reasons[0] || 'Clip does not fit'}`;
+          qdom.mountStatus.style.color = '#ffa0a0';
+          if(qdom.btnFixClip) qdom.btnFixClip.style.display = '';
+        }
+      }
+    }
+    // Hide fix button when using screws
+    if((state.quickMountMethod || 'screws') === 'screws' && qdom.btnFixClip){
+      qdom.btnFixClip.style.display = 'none';
+    }
+  }
+
+  function openFixClipModal(){
+    if(!dom.fixClipModal) return;
+    
+    const clipOffset = parseFloat(state.mountClip);
+    const clipDef = getZClipByOffset(clipOffset);
+    const linerDepth = isFinite(state.depth) && isFinite(state.canvasT) ? (state.depth - state.canvasT) : NaN;
+    const fit = clipDef ? zClipFits(clipDef, state, linerDepth) : { ok:false, reasons:['Unknown clip'] };
+    const locks = state.quickLocks || { canvas:false, outer:false, mount:false };
+    
+    // Update summary
+    if(dom.fixClipSummary){
+      dom.fixClipSummary.innerHTML = `The selected Z-clip (${fmt(clipOffset, state.unit)} offset) does not fit:<br><span style="color:#ffa0a0">${fit.reasons.join('<br>')}</span>`;
+    }
+    
+    // Hide all options first
+    [dom.fixOptionDepth, dom.fixOptionLiner, dom.fixOptionStretcher, dom.fixOptionClip].forEach(el => {
+      if(el) el.style.display = 'none';
+    });
+    
+    // Analyze issues and show relevant options
+    const depthMismatch = isFinite(linerDepth) && isFinite(clipOffset) && Math.abs(linerDepth - clipOffset) > zClipTolIn;
+    const linerTooWide = clipDef && isFinite(state.linerW) && isFinite(state.stretcherW) && 
+                         state.linerW > (state.stretcherW - clipDef.flangeCanvas - 1/16);
+    const stretcherTooNarrow = clipDef && isFinite(state.stretcherW) && 
+                               state.stretcherW < (clipDef.flangeCanvas + 0.5);
+    
+    // Option 1: Adjust depth
+    if(depthMismatch && dom.fixOptionDepth){
+      dom.fixOptionDepth.style.display = '';
+      const newDepth = state.canvasT + clipOffset;
+      if(dom.fixDepthDesc){
+        dom.fixDepthDesc.innerHTML = `Change frame depth from <b>${fmt(state.depth, state.unit)}</b> to <b>${fmt(newDepth, state.unit)}</b> to match clip offset.`;
+      }
+      if(dom.fixDepthLockWarn){
+        dom.fixDepthLockWarn.style.display = locks.outer ? '' : 'none';
+      }
+      if(dom.btnFixDepth){
+        dom.btnFixDepth.disabled = locks.outer;
+      }
+    }
+    
+    // Option 2: Adjust liner width
+    if(linerTooWide && dom.fixOptionLiner){
+      dom.fixOptionLiner.style.display = '';
+      const maxLinerW = state.stretcherW - clipDef.flangeCanvas - 1/16;
+      if(dom.fixLinerDesc){
+        dom.fixLinerDesc.innerHTML = `Reduce liner width from <b>${fmt(state.linerW, state.unit)}</b> to <b>${fmt(Math.max(0.5, maxLinerW), state.unit)}</b> for clip flange clearance.`;
+      }
+      if(dom.fixLinerLockWarn){
+        dom.fixLinerLockWarn.style.display = locks.canvas ? '' : 'none';
+      }
+      if(dom.btnFixLiner){
+        dom.btnFixLiner.disabled = locks.canvas;
+      }
+    }
+    
+    // Option 3: Adjust stretcher width
+    if((linerTooWide || stretcherTooNarrow) && dom.fixOptionStretcher){
+      dom.fixOptionStretcher.style.display = '';
+      const minStretcherW = clipDef ? (state.linerW + clipDef.flangeCanvas + 1/16) : (state.linerW + 0.75);
+      if(dom.fixStretcherDesc){
+        dom.fixStretcherDesc.innerHTML = `Increase stretcher width from <b>${fmt(state.stretcherW, state.unit)}</b> to <b>${fmt(Math.max(state.stretcherW, minStretcherW), state.unit)}</b> for more flange landing area.`;
+      }
+      if(dom.fixStretcherLockWarn){
+        dom.fixStretcherLockWarn.style.display = locks.canvas ? '' : 'none';
+      }
+      if(dom.btnFixStretcher){
+        dom.btnFixStretcher.disabled = locks.canvas;
+      }
+    }
+    
+    // Option 4: Use different clip
+    if(dom.fixOptionClip && dom.fixClipSelect){
+      // Find clips that would fit current geometry
+      const fittingClips = Z_CLIP_CATALOG.filter(c => {
+        const testFit = zClipFits(c, state, linerDepth);
+        return testFit.ok || (isFinite(linerDepth) && Math.abs(linerDepth - c.offset) < zClipTolIn);
+      });
+      
+      if(fittingClips.length > 0){
+        dom.fixOptionClip.style.display = '';
+        dom.fixClipSelect.innerHTML = fittingClips.map(c => 
+          `<option value="${c.offset}">${fmt(c.offset, state.unit)} offset</option>`
+        ).join('');
+        if(dom.fixClipDesc){
+          dom.fixClipDesc.textContent = `Switch to a clip that better fits the current geometry.`;
+        }
+      }else{
+        // No clips fit - suggest the closest match
+        const closestClip = Z_CLIP_CATALOG.reduce((best, c) => {
+          const diff = Math.abs((linerDepth || 0) - c.offset);
+          return (!best || diff < best.diff) ? { clip: c, diff } : best;
+        }, null);
+        if(closestClip){
+          dom.fixOptionClip.style.display = '';
+          dom.fixClipSelect.innerHTML = `<option value="${closestClip.clip.offset}">${fmt(closestClip.clip.offset, state.unit)} offset (closest match)</option>`;
+          if(dom.fixClipDesc){
+            dom.fixClipDesc.textContent = `No clips perfectly fit. This is the closest match (may still require geometry adjustments).`;
+          }
+        }
+      }
+    }
+    
+    dom.fixClipModal.classList.add('open');
+  }
+
+  function closeFixClipModal(){
+    if(dom.fixClipModal) dom.fixClipModal.classList.remove('open');
+  }
+
+  // Canvas Selection Modal
+  function openCanvasSelectModal(){
+    if(!dom.canvasSelectModal || !dom.canvasCatalogList) return;
+    
+    // Populate the catalog list
+    dom.canvasCatalogList.innerHTML = CANVAS_CATALOG.map((c, idx) => `
+      <div class="canvasItem" data-idx="${idx}" style="background:#1a1f2a; border:1px solid #2a3142; border-radius:6px; padding:12px; cursor:pointer; transition:border-color 0.15s">
+        <div style="display:flex; justify-content:space-between; align-items:center">
+          <div style="font-weight:500; color:#e0e6ed">${c.name}</div>
+          <button class="btn" type="button" style="font-size:12px; padding:4px 12px">Select</button>
+        </div>
+        <div style="color:#8899aa; font-size:12px; margin-top:4px">
+          ${c.width}" × ${c.height}" • ${c.thickness}" thick • Stretcher: ${c.stretcherW}"
+        </div>
+        <div style="color:#667788; font-size:11px; margin-top:2px">${c.brand} #${c.sku}</div>
+      </div>
+    `).join('');
+    
+    // Add click handlers
+    dom.canvasCatalogList.querySelectorAll('.canvasItem').forEach(item => {
+      item.addEventListener('click', () => {
+        const idx = parseInt(item.dataset.idx);
+        applyCanvasFromCatalog(idx);
+      });
+      item.addEventListener('mouseenter', () => {
+        item.style.borderColor = '#4a5568';
+      });
+      item.addEventListener('mouseleave', () => {
+        item.style.borderColor = '#2a3142';
+      });
+    });
+    
+    dom.canvasSelectModal.classList.add('open');
+  }
+
+  function closeCanvasSelectModal(){
+    if(dom.canvasSelectModal) dom.canvasSelectModal.classList.remove('open');
+  }
+
+  function applyCanvasFromCatalog(idx){
+    const canvas = CANVAS_CATALOG[idx];
+    if(!canvas) return;
+    
+    state.canvasW = canvas.width;
+    state.canvasH = canvas.height;
+    state.canvasT = canvas.thickness;
+    state.stretcherW = canvas.stretcherW;
+    
+    // Auto-adjust frame depth if canvas is thicker than current depth allows
+    const minDepth = canvas.thickness + (state.backGap || 0) + 0.5; // canvas + backGap + min liner depth
+    if(state.depth < minDepth){
+      state.depth = minDepth;
+    }
+    
+    closeCanvasSelectModal();
+    reflect();
+    compute();
+  }
+
+  function applyFixDepth(){
+    const clipOffset = parseFloat(state.mountClip);
+    if(!isFinite(clipOffset)) return;
+    state.depth = state.canvasT + clipOffset;
+    closeFixClipModal();
+    reflect();
+    compute();
+  }
+
+  function applyFixLiner(){
+    const clipDef = getZClipByOffset(parseFloat(state.mountClip));
+    if(!clipDef) return;
+    const maxLinerW = state.stretcherW - clipDef.flangeCanvas - 1/16;
+    state.linerW = Math.max(0.5, maxLinerW);
+    closeFixClipModal();
+    reflect();
+    compute();
+  }
+
+  function applyFixStretcher(){
+    const clipDef = getZClipByOffset(parseFloat(state.mountClip));
+    if(!clipDef) return;
+    const minStretcherW = state.linerW + clipDef.flangeCanvas + 1/16;
+    state.stretcherW = Math.max(state.stretcherW, minStretcherW);
+    closeFixClipModal();
+    reflect();
+    compute();
+  }
+
+  function applyFixClipChange(){
+    if(!dom.fixClipSelect) return;
+    const newOffset = dom.fixClipSelect.value;
+    state.mountClip = newOffset;
+    if(qdom.clipOffset) qdom.clipOffset.value = newOffset;
+    closeFixClipModal();
+    reflect();
+    compute();
+  }
+
+  function applyMountingConstraints(){
+    // When mounting is locked to Z-clips, adjust depth to match clip offset
+    // and constrain liner width to allow clip flange landing.
+    const method = state.quickMountMethod || 'screws';
+    if(method !== 'clips') return;
+    
+    const clipOffset = parseFloat(state.mountClip);
+    if(!isFinite(clipOffset) || state.mountClip === 'none') return;
+    
+    const clipDef = getZClipByOffset(clipOffset);
+    if(!clipDef) return;
+    
+    // Constraint 1: depth must equal canvasT + clipOffset (so liner depth = clip offset)
+    const requiredDepth = state.canvasT + clipOffset;
+    if(Math.abs(state.depth - requiredDepth) > 1/32){
+      state.depth = requiredDepth;
+    }
+    
+    // Constraint 2: liner width must leave room for clip canvas flange on stretcher
+    // linerW <= stretcherW - clipDef.flangeCanvas (with small safety margin)
+    const maxLinerW = state.stretcherW - clipDef.flangeCanvas - 1/16;
+    if(state.linerW > maxLinerW && maxLinerW > 0){
+      state.linerW = Math.max(0.5, maxLinerW);
+    }
+    
+    reflect();
+    compute();
+  }
+
+  function updateQuickRanges(){
+    // Option 1 solver policy: face/reveal changes push outer (canvas stays fixed).
+    // When outer is locked, face+reveal must fit the ring thickness implied by current outer and canvas.
+    const locks = state.quickLocks || { canvas:false, outer:false, mount:false };
+    const cw = state.canvasW, ch = state.canvasH;
+    const faceMin = parseFloat(qdom.face?.min ?? '0.25') || 0.25;
+    const revealMin = parseFloat(qdom.reveal?.min ?? '0') || 0;
+
+    if(locks.outer && isFinite(state.outerW) && isFinite(cw)){
+      const ringW = (state.outerW - cw) / 2;
+      const ringH = isFinite(state.outerH) && isFinite(ch) ? (state.outerH - ch) / 2 : ringW;
+      const ring = Math.min(ringW, ringH);
+      if(isFinite(ring)){
+        if(qdom.face) qdom.face.max = String(Math.max(faceMin, ring - revealMin));
+        if(qdom.reveal) qdom.reveal.max = String(Math.max(revealMin, ring - faceMin));
+      }
+    }else{
+      if(qdom.face) qdom.face.max = qdom.face.getAttribute('max') || '4';
+      if(qdom.reveal) qdom.reveal.max = qdom.reveal.getAttribute('max') || '1';
+    }
+
+    // Outer min must always be >= canvas + 2*(faceMin+revealMin)
+    const minOuterW = cw + 2*(faceMin + revealMin);
+    const minOuterH = ch + 2*(faceMin + revealMin);
+    if(qdom.outerW) qdom.outerW.min = String(Math.max(parseFloat(qdom.outerW.getAttribute('min')||'0'), minOuterW));
+    if(qdom.outerH) qdom.outerH.min = String(Math.max(parseFloat(qdom.outerH.getAttribute('min')||'0'), minOuterH));
+  }
+
+  function quickClamp(val, min, max){
+    if(!isFinite(val)) return min;
+    return Math.min(max, Math.max(min, val));
+  }
+
+  function quickApply(driver){
+    const locks = state.quickLocks || (state.quickLocks = { canvas:false, outer:false });
+    // Pull values from sliders
+    const cw = parseFloat(qdom.canvasW?.value); const ch = parseFloat(qdom.canvasH?.value);
+    const ct = parseFloat(qdom.canvasT?.value); const sw = parseFloat(qdom.stretcherW?.value);
+    const ow = parseFloat(qdom.outerW?.value); const oh = parseFloat(qdom.outerH?.value);
+    const face = parseFloat(qdom.face?.value); const reveal = parseFloat(qdom.reveal?.value);
+    const depth = parseFloat(qdom.depth?.value);
+
+    if(!locks.canvas){
+      if(isFinite(cw)) state.canvasW = cw;
+      if(isFinite(ch)) state.canvasH = ch;
+      if(isFinite(ct)) state.canvasT = ct;
+      if(isFinite(sw)) state.stretcherW = sw;
+    }
+    if(isFinite(depth)) state.depth = depth;
+    
+    // Auto-increase frame depth if canvas thickness exceeds it (unless outer is locked)
+    if(!locks.outer && driver === 'canvasT'){
+      const minDepth = state.canvasT + 0.125; // canvas thickness + small margin
+      if(state.depth < minDepth){
+        state.depth = minDepth;
+        if(qdom.depth) qdom.depth.value = state.depth;
+      }
+    }
+
+    if(!locks.outer){
+      if(driver==='face' || driver==='reveal'){
+        state.face = face; state.reveal = reveal;
+        state.outerW = state.canvasW + 2*(state.face + state.reveal);
+        state.outerH = state.canvasH + 2*(state.face + state.reveal);
+      }else if(driver==='outerW' || driver==='outerH'){
+        // When outer width or height changes, compute new face from the changed dimension
+        // then update BOTH outer dimensions to maintain uniform face around the frame
+        if(driver==='outerW' && isFinite(ow)){
+          state.outerW = ow;
+          const ringW = (state.outerW - state.canvasW) / 2;
+          state.reveal = reveal;
+          state.face = quickClamp(ringW - state.reveal, parseFloat(qdom.face.min||'0.25'), parseFloat(qdom.face.max||'4'));
+          // Update outer height to match the new face
+          state.outerH = state.canvasH + 2*(state.face + state.reveal);
+        } else if(driver==='outerH' && isFinite(oh)){
+          state.outerH = oh;
+          const ringH = (state.outerH - state.canvasH) / 2;
+          state.reveal = reveal;
+          state.face = quickClamp(ringH - state.reveal, parseFloat(qdom.face.min||'0.25'), parseFloat(qdom.face.max||'4'));
+          // Update outer width to match the new face
+          state.outerW = state.canvasW + 2*(state.face + state.reveal);
+        }
+      }else{
+        state.face = face; state.reveal = reveal;
+        state.outerW = state.canvasW + 2*(state.face + state.reveal);
+        state.outerH = state.canvasH + 2*(state.face + state.reveal);
+      }
+    }else{
+      if(!isFinite(state.outerW)) state.outerW = state.canvasW + 2*(state.face + state.reveal);
+      if(!isFinite(state.outerH)) state.outerH = state.canvasH + 2*(state.face + state.reveal);
+      const ringW = (state.outerW - state.canvasW) / 2;
+      const ringH = (state.outerH - state.canvasH) / 2;
+      const ring = Math.min(ringW, ringH);
+      if(isFinite(ring)){
+        const faceMin = parseFloat(qdom.face.min||'0.25') || 0.25;
+        const revealMin = parseFloat(qdom.reveal.min||'0') || 0;
+        const faceMax = Math.max(faceMin, ring - revealMin);
+        const revealMax = Math.max(revealMin, ring - faceMin);
+        if(driver==='reveal'){
+          state.reveal = quickClamp(reveal, revealMin, revealMax);
+          state.face = quickClamp(ring - state.reveal, faceMin, faceMax);
+        }else{
+          state.face = quickClamp(face, faceMin, faceMax);
+          state.reveal = quickClamp(ring - state.face, revealMin, revealMax);
+        }
+      }else{
+        state.face = face; state.reveal = reveal;
+      }
+    }
+
+    // Ensure stage is set to show mounting (clips/screws) during quick adjustments
+    const labels = getStageLabels();
+    const mountingStage = labels.indexOf('Mounting');
+    if(mountingStage >= 0 && state.stage < mountingStage){
+      state.stage = labels.length - 1; // Set to final stage to show everything including mounting
+    }
+
+    // When mounting is locked to Z-clips, enforce constraints after other changes
+    if(state.quickLocks.mount && state.quickMountMethod === 'clips'){
+      const clipOffset = parseFloat(state.mountClip);
+      if(isFinite(clipOffset) && state.mountClip !== 'none'){
+        const clipDef = getZClipByOffset(clipOffset);
+        if(clipDef){
+          // If user changed canvasT, adjust depth to maintain clip offset = liner depth
+          if(driver === 'canvasT'){
+            state.depth = state.canvasT + clipOffset;
+          }
+          // If user changed depth directly, warn but don't override (they may be exploring)
+          // But clamp depth min to canvasT + some minimum liner depth
+          const minDepth = state.canvasT + 0.25;
+          if(state.depth < minDepth) state.depth = minDepth;
+          
+          // Constrain liner width to allow clip flange
+          const maxLinerW = state.stretcherW - clipDef.flangeCanvas - 1/16;
+          if(state.linerW > maxLinerW && maxLinerW > 0.25){
+            state.linerW = Math.max(0.5, maxLinerW);
+          }
+        }
+      }
+    }
+
+    reflect();
+    compute();
+  }
+
+  function initQuickSliders(){
+    if(!qdom || !qdom.panel || !qdom.canvasW) return;
+    if(!state.quickLocks) state.quickLocks = { canvas:false, outer:false, mount:false };
+
+    // Collapse
+    if(qdom.btnCollapse){
+      qdom.btnCollapse.addEventListener('click', (e)=>{
+        e.stopPropagation(); // Prevent panel click handler from immediately re-expanding
+        qdom.panel.classList.toggle('collapsed');
+      });
+    }
+    // Click on collapsed panel to expand
+    if(qdom.panel){
+      qdom.panel.addEventListener('click', (e)=>{
+        if(qdom.panel.classList.contains('collapsed')){
+          qdom.panel.classList.remove('collapsed');
+        }
+      });
+    }
+
+    // Advanced modal
+    if(qdom.btnAdv){
+      qdom.btnAdv.addEventListener('click', ()=>{
+        openDimsModal();
+      });
+    }
+
+    // Select Canvas button
+    if(qdom.btnSelectCanvas){
+      qdom.btnSelectCanvas.addEventListener('click', ()=>{
+        openCanvasSelectModal();
+      });
+    }
+
+    // Locks
+    if(qdom.btnLockCanvas){
+      qdom.btnLockCanvas.addEventListener('click', ()=>{
+        state.quickLocks.canvas = !state.quickLocks.canvas;
+        updateQuickLocksUI();
+      });
+    }
+    if(qdom.btnLockOuter){
+      qdom.btnLockOuter.addEventListener('click', ()=>{
+        state.quickLocks.outer = !state.quickLocks.outer;
+        // Capture the current derived outer when locking so it becomes the constraint.
+        if(state.quickLocks.outer){
+          state.outerW = state.canvasW + 2*(state.face + state.reveal);
+          state.outerH = state.canvasH + 2*(state.face + state.reveal);
+        }
+        updateQuickLocksUI();
+        updateQuickRanges();
+      });
+    }
+    if(qdom.btnLockMount){
+      qdom.btnLockMount.addEventListener('click', ()=>{
+        state.quickLocks.mount = !state.quickLocks.mount;
+        updateQuickLocksUI();
+        updateQuickRanges();
+        // Re-apply constraints when mounting is locked
+        if(state.quickLocks.mount) applyMountingConstraints();
+      });
+    }
+
+    // Mounting method buttons
+    if(qdom.btnMountScrews){
+      qdom.btnMountScrews.addEventListener('click', ()=>{
+        state.quickMountMethod = 'screws';
+        state.mountClip = 'none';
+        updateQuickLocksUI();
+        updateMountingDiagramView();
+        reflect();
+        compute();
+      });
+    }
+    if(qdom.btnMountClips){
+      qdom.btnMountClips.addEventListener('click', ()=>{
+        state.quickMountMethod = 'clips';
+        // Set a default clip offset if none selected
+        if(!state.mountClip || state.mountClip === 'none'){
+          state.mountClip = '0.75'; // default 3/4"
+        }
+        updateQuickLocksUI();
+        updateMountingDiagramView();
+        if(state.quickLocks.mount) applyMountingConstraints();
+        reflect();
+        compute();
+      });
+    }
+    if(qdom.clipOffset){
+      qdom.clipOffset.addEventListener('change', ()=>{
+        state.mountClip = qdom.clipOffset.value;
+        if(state.quickLocks.mount) applyMountingConstraints();
+        updateQuickLocksUI();
+        reflect();
+        compute();
+      });
+    }
+    
+    // Fix button
+    if(qdom.btnFixClip){
+      qdom.btnFixClip.addEventListener('click', ()=>{
+        openFixClipModal();
+      });
+    }
+
+    // Slider input handlers (rAF throttled)
+    let raf = 0;
+    const schedule = (driver)=>{
+      if(raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(()=>{ raf=0; quickApply(driver); });
+    };
+
+    const bind = (el, driver)=>{
+      if(!el) return;
+      el.addEventListener('input', ()=> schedule(driver));
+      el.addEventListener('change', ()=> schedule(driver));
+    };
+
+    bind(qdom.canvasW, 'canvasW');
+    bind(qdom.canvasH, 'canvasH');
+    bind(qdom.canvasT, 'canvasT');
+    bind(qdom.stretcherW, 'stretcherW');
+    bind(qdom.outerW, 'outerW');
+    bind(qdom.outerH, 'outerH');
+    bind(qdom.face, 'face');
+    bind(qdom.reveal, 'reveal');
+    bind(qdom.depth, 'depth');
+    
+    // Temporary transparency for obscuring components while adjusting certain sliders
+    // Use global flags so they persist across frame rebuilds
+    window._faceDimmed = window._faceDimmed || false;
+    window._canvasDimmed = window._canvasDimmed || false;
+    
+    const applyFaceOpacity = ()=>{
+      if(!faceGroup) return;
+      const opacity = window._faceDimmed ? 0.25 : 1.0;
+      faceGroup.traverse(child => {
+        if(child.material){
+          child.material.transparent = true;
+          child.material.opacity = opacity;
+          child.material.needsUpdate = true;
+        }
+      });
+    };
+    
+    const applyCanvasOpacity = ()=>{
+      if(!canvasMesh) return;
+      const opacity = window._canvasDimmed ? 0.25 : 1.0;
+      if(Array.isArray(canvasMesh.material)){
+        canvasMesh.material.forEach(m => {
+          if(m){
+            m.transparent = true;
+            m.opacity = opacity;
+            m.needsUpdate = true;
+          }
+        });
+      } else if(canvasMesh.material){
+        canvasMesh.material.transparent = true;
+        canvasMesh.material.opacity = opacity;
+        canvasMesh.material.needsUpdate = true;
+      }
+    };
+    
+    // Expose globally so they can be called after frame rebuilds
+    window.applyFaceOpacity = applyFaceOpacity;
+    window.applyCanvasOpacity = applyCanvasOpacity;
+    
+    const startFaceDim = ()=>{
+      window._faceDimmed = true;
+      applyFaceOpacity();
+    };
+    const endFaceDim = ()=>{
+      window._faceDimmed = false;
+      applyFaceOpacity();
+    };
+    
+    const startCanvasDim = ()=>{
+      window._canvasDimmed = true;
+      applyCanvasOpacity();
+    };
+    const endCanvasDim = ()=>{
+      window._canvasDimmed = false;
+      applyCanvasOpacity();
+    };
+    
+    // Use document-level mouseup/touchend to catch release anywhere
+    document.addEventListener('mouseup', ()=>{ endFaceDim(); endCanvasDim(); });
+    document.addEventListener('touchend', ()=>{ endFaceDim(); endCanvasDim(); });
+    
+    // Canvas thickness slider: make face semi-transparent while adjusting
+    if(qdom.canvasT){
+      qdom.canvasT.addEventListener('mousedown', startFaceDim);
+      qdom.canvasT.addEventListener('touchstart', startFaceDim);
+    }
+    // Stretcher width slider: make canvas semi-transparent to reveal stretchers
+    if(qdom.stretcherW){
+      qdom.stretcherW.addEventListener('mousedown', startCanvasDim);
+      qdom.stretcherW.addEventListener('touchstart', startCanvasDim);
+    }
+
+    // Helper diagram system
+    initHelperDiagrams();
+
+    updateQuickLocksUI();
+    updateQuickRanges();
+  }
+
+  // Helper Diagram System
+  function initHelperDiagrams(){
+    const helperContainer = document.getElementById('helperDiagram');
+    const helperCanvas = document.getElementById('helperCanvas');
+    const helperDepth = document.getElementById('helperDepth');
+    const helperMount = document.getElementById('helperMount');
+    const helperTitle = document.getElementById('helperTitle');
+    const helperTooltip = document.getElementById('helperTooltip');
+    const btnHelperCanvas = document.getElementById('btnHelperCanvas');
+    const btnHelperOuter = document.getElementById('btnHelperOuter');
+    const btnHelperMount = document.getElementById('btnHelperMount');
+    const btnHelperClose = document.getElementById('btnHelperClose');
+    const sizeBtns = document.querySelectorAll('.helperSizeBtn');
+    
+    if(!helperContainer) return;
+    
+    let activeHelper = null;
+    
+    const titles = {
+      canvas: 'Canvas View',
+      outer: 'Frame View', 
+      depth: 'Depth Profile',
+      mount: 'Mounting'
+    };
+    
+    function showHelper(type){
+      // Hide all helpers first
+      if(helperCanvas) helperCanvas.style.display = 'none';
+      if(helperDepth) helperDepth.style.display = 'none';
+      if(helperMount) helperMount.style.display = 'none';
+      
+      // Toggle buttons
+      [btnHelperCanvas, btnHelperOuter, btnHelperMount].forEach(btn => {
+        if(btn) btn.classList.remove('active');
+      });
+      
+      if(activeHelper === type){
+        // Toggle off
+        helperContainer.style.display = 'none';
+        activeHelper = null;
+        return;
+      }
+      
+      activeHelper = type;
+      helperContainer.style.display = '';
+      if(helperTitle) helperTitle.textContent = titles[type] || 'Diagram';
+      
+      if(type === 'canvas' || type === 'outer'){
+        if(helperCanvas) helperCanvas.style.display = '';
+        if(type === 'canvas' && btnHelperCanvas) btnHelperCanvas.classList.add('active');
+        if(type === 'outer' && btnHelperOuter) btnHelperOuter.classList.add('active');
+      }else if(type === 'depth'){
+        if(helperDepth) helperDepth.style.display = '';
+      }else if(type === 'mount'){
+        if(helperMount) helperMount.style.display = '';
+        if(btnHelperMount) btnHelperMount.classList.add('active');
+      }
+    }
+    
+    function closeHelper(){
+      helperContainer.style.display = 'none';
+      activeHelper = null;
+      [btnHelperCanvas, btnHelperOuter, btnHelperMount].forEach(btn => {
+        if(btn) btn.classList.remove('active');
+      });
+    }
+    
+    // Toggle button handlers
+    if(btnHelperCanvas) btnHelperCanvas.addEventListener('click', ()=> showHelper('canvas'));
+    if(btnHelperOuter) btnHelperOuter.addEventListener('click', ()=> showHelper('outer'));
+    if(btnHelperMount) btnHelperMount.addEventListener('click', ()=> showHelper('mount'));
+    if(btnHelperClose) btnHelperClose.addEventListener('click', closeHelper);
+    
+    // Size controls
+    sizeBtns.forEach(btn => {
+      btn.addEventListener('click', ()=>{
+        const size = btn.dataset.size;
+        helperContainer.classList.remove('small', 'medium', 'large');
+        helperContainer.classList.add(size);
+        sizeBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+    
+    // Hover tooltips on SVG regions
+    const regions = document.querySelectorAll('.helperRegion[data-label]');
+    regions.forEach(region => {
+      region.addEventListener('mouseenter', ()=>{
+        const label = region.dataset.label;
+        if(helperTooltip && label){
+          helperTooltip.textContent = label;
+          helperTooltip.style.display = '';
+        }
+        region.classList.add('highlight');
+      });
+      region.addEventListener('mouseleave', ()=>{
+        if(helperTooltip) helperTooltip.style.display = 'none';
+        region.classList.remove('highlight');
+      });
+    });
+    
+    // Hover highlighting for sliders
+    const sliders = document.querySelectorAll('#quickPanel input[type="range"][data-dim]');
+    const allRegions = document.querySelectorAll('.helperRegion');
+    
+    sliders.forEach(slider => {
+      const dimId = slider.dataset.dim;
+      const regionName = slider.dataset.region;
+      
+      slider.addEventListener('mouseenter', ()=>{
+        // Highlight dimension line
+        const dimEl = document.getElementById(dimId);
+        if(dimEl) dimEl.classList.add('show');
+        
+        // Dim all regions first, then highlight the active ones
+        allRegions.forEach(r => {
+          if(r.dataset.region === regionName){
+            r.classList.add('highlight');
+            r.classList.remove('dimmed');
+          } else {
+            r.classList.add('dimmed');
+            r.classList.remove('highlight');
+          }
+        });
+      });
+      
+      slider.addEventListener('mouseleave', ()=>{
+        // Remove highlights and dimming
+        const dimEl = document.getElementById(dimId);
+        if(dimEl) dimEl.classList.remove('show');
+        
+        allRegions.forEach(r => {
+          r.classList.remove('highlight', 'dimmed');
+        });
+      });
+    });
+    
+    // Mounting method hover handlers for helper diagram
+    const btnScrews = document.getElementById('btnMountScrews');
+    const btnZClips = document.getElementById('btnMountClips');
+    const mountClipGroup = document.getElementById('mountClipGroup');
+    const mountScrewGroup = document.getElementById('mountScrewGroup');
+    const mountLinerClip = document.getElementById('mountLinerClip');
+    const mountLinerScrew = document.getElementById('mountLinerScrew');
+    
+    function showMountingView(method){
+      if(!mountClipGroup || !mountScrewGroup) return;
+      if(method === 'zclips'){
+        mountClipGroup.style.display = '';
+        mountScrewGroup.style.display = 'none';
+        if(mountLinerClip) mountLinerClip.style.display = '';
+        if(mountLinerScrew) mountLinerScrew.style.display = 'none';
+      } else {
+        mountClipGroup.style.display = 'none';
+        mountScrewGroup.style.display = '';
+        if(mountLinerClip) mountLinerClip.style.display = 'none';
+        if(mountLinerScrew) mountLinerScrew.style.display = '';
+      }
+    }
+    
+    function showDefaultMountingView(){
+      showMountingView(state.quickMountMethod === 'clips' ? 'zclips' : 'screws');
+    }
+    
+    if(btnScrews){
+      btnScrews.addEventListener('mouseenter', ()=> showMountingView('screws'));
+      btnScrews.addEventListener('mouseleave', showDefaultMountingView);
+    }
+    if(btnZClips){
+      btnZClips.addEventListener('mouseenter', ()=> showMountingView('zclips'));
+      btnZClips.addEventListener('mouseleave', showDefaultMountingView);
+    }
+    
+    // Set initial view based on current mounting method
+    showDefaultMountingView();
+    
+    // Expose function globally for use by mounting button click handlers
+    window.updateMountingDiagramView = showDefaultMountingView;
+  }
+
+  function initPresets(){
+    const sel = document.getElementById('presetSelect');
+    if(!sel) return;
+    sel.innerHTML = '';
+    const opt0 = document.createElement('option');
+    opt0.value = '';
+    opt0.textContent = 'Select a preset…';
+    sel.appendChild(opt0);
+    presets.forEach((p, idx)=>{
+      const opt = document.createElement('option');
+      opt.value = String(idx);
+      opt.textContent = p.label;
+      sel.appendChild(opt);
+    });
+  }
+
+  function shareLink(){
+    const params = new URLSearchParams();
+    ['canvasW','canvasH','canvasT','stretcherW','reveal','face','depth','stock','join','kerf','backGap','unit','stage','build','linerW','solve','depthSolve','finishColor','finishSheen','mountClip','clipFlange'].forEach(k=> params.set(k, state[k]));
+    const url = location.origin + location.pathname + '?' + params.toString();
+    navigator.clipboard.writeText(url)
+      .then(()=>{ showStatus(`<span class="badge" style="border-color:var(--ok); color:#c8f7d1">Share link copied</span>`); })
+      .catch(()=>{ showStatus(`<span class="badge" style="border-color:var(--warn); color:#ffe1b7">Could not access clipboard</span>`); prompt('Copy share link:', url); });
+  }
+
+  function loadFromURL(){
+    const q = new URLSearchParams(location.search);
+    let stageFromURL = null;
+    q.forEach((v,k)=>{
+      if(!(k in state)) return;
+      if(k==='unit') state.unit = (v==='mm')?'mm':'in';
+      else if(k==='join') state.join = (v==='butt')?'butt':'miter';
+      else if(k==='solve') state.solve = (v==='reveal'||v==='face'||v==='outer') ? v : 'outer';
+      else if(k==='depthSolve') state.depthSolve = (v==='depth'||v==='stock'||v==='backGap') ? v : 'depth';
+      else if(k==='build') state.build = (v==='two')?'two':'one';
+      else if(k==='finishColor') state.finishColor = String(v||'stain_dark_brown');
+      else if(k==='finishSheen') state.finishSheen = String(v||'satin');
+      else if(k==='mountClip') state.mountClip = String(v||'none');
+      else if(k==='clipFlange') state.clipFlange = parseFloat(v);
+      else if(k==='stage') stageFromURL = parseInt(v,10);
+      else state[k] = parseFloat(v);
+    });
+    // If no explicit stage is provided, start on the final stage for the selected build method.
+    if(stageFromURL===null || !isFinite(stageFromURL)){
+      state.stage = getStageLabels().length - 1;
+    }else{
+      state.stage = stageFromURL;
+    }
+  }
+
+  // ---------- CSV / Copy / Print ----------
+  function exportCSV(){
+    if(!state.results) return; const r = state.results;
+    const rows = [
+      ['Part','Qty',`Length (${state.unit})`, `Width (${state.unit})`, `Thickness (${state.unit})`, 'Notes'],
+      ...r.parts.map(p=>[
+        p.part,
+        p.qty,
+        state.unit==='mm'?(p.length*25.4).toFixed(1):(p.length.toFixed(3)),
+        state.unit==='mm'?((p.width??0)*25.4).toFixed(1):((p.width??0).toFixed(3)),
+        state.unit==='mm'?((p.thickness??0)*25.4).toFixed(1):((p.thickness??0).toFixed(3)),
+        p.notes||''
+      ])
+    ];
+    const csv = rows.map(r=>r.map(x=>`"${x}"`).join(',')).join('\n');
+    const blob = new Blob([csv], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='floating-frame-cut-list.csv'; a.click(); URL.revokeObjectURL(url);
+  }
+  function copyList(){
+    if(!state.results) return;
+    const lines = state.results.parts.map(p=>`${p.part}: ${p.qty} × ${fmt(p.length,state.unit)} (W ${fmt(p.width??0,state.unit)}, T ${fmt(p.thickness??0,state.unit)}) ${p.notes?('— '+p.notes):''}`);
+    navigator.clipboard.writeText(lines.join('\n')).then(()=> showStatus('<span class="badge" style="border-color:#2e3b52; color:#b1c7ff">Cut list copied!</span>'));
+  }
+  const escapeHTML = (s)=> String(s??'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+
+  function getSummaryText(){
+    const r = state.results;
+    if(!r) return '';
+    const depthStr = fmt(state.depth,state.unit);
+    return `Canvas ${fmt(state.canvasW,state.unit)} × ${fmt(state.canvasH,state.unit)} × ${fmt(state.canvasT,state.unit)} · `+
+      `Stretcher ${fmt(state.stretcherW,state.unit)} · Reveal ${fmt(state.reveal,state.unit)} · Face ${fmt(state.face,state.unit)} · `+
+      `Depth ${depthStr} · Stock ${fmt(state.stock,state.unit)} · `+
+      `Build: ${state.build==='two'?'Two-piece (8 pcs)':'One-piece (4 pcs)'}${state.build==='two'?` · Liner ${fmt(state.linerW,state.unit)}`:''} · `+
+      `${state.join==='miter'?'Miters':'Butt joints'}`;
+  }
+
+  function capture3DToDataURL({
+    cameraPos,
+    target,
+    vis,
+    stage,
+    width=980,
+    height=620,
+    background=0xffffff,
+    hideGrid=true,
+    fit=true,
+    fitMargin=1.18
+  }){
+    if(!renderer || !camera || !scene) return null;
+
+    const old = {
+      stage: state.stage,
+      vis: {...(state.vis||{})},
+      camPos: camera.position.clone(),
+      camUp: camera.up.clone(),
+      camTarget: (controls && controls.target) ? controls.target.clone() : new THREE.Vector3(0,0,0),
+      bg: scene.background,
+      gridVisible: gridHelper ? gridHelper.visible : null,
+      size: renderer.getSize(new THREE.Vector2()),
+      suppressGizmo
+    };
+
+    try{
+      suppressGizmo = true;
+      if(isFinite(stage)) state.stage = stage;
+      if(vis) state.vis = {...old.vis, ...vis};
+      build3D();
+
+      if(gridHelper && hideGrid) gridHelper.visible = false;
+      scene.background = new THREE.Color(background);
+
+      renderer.setSize(width, height, false);
+      camera.aspect = width/height;
+      camera.updateProjectionMatrix();
+
+      const t = target ? new THREE.Vector3(target.x, target.y, target.z) : new THREE.Vector3(0,0,0);
+
+      // If requested, auto-fit camera distance so the model fills the image area.
+      // We treat cameraPos as a direction hint (from target/center toward camera).
+      if(fit){
+        const box = new THREE.Box3().setFromObject(frameGroup);
+        const size = new THREE.Vector3();
+        const center = new THREE.Vector3();
+        box.getSize(size);
+        box.getCenter(center);
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const safeMax = isFinite(maxDim) && maxDim>1e-6 ? maxDim : 1;
+
+        const dir = (cameraPos)
+          ? new THREE.Vector3(cameraPos.x, cameraPos.y, cameraPos.z).sub(t)
+          : new THREE.Vector3(1,1,1);
+        if(dir.lengthSq() < 1e-8) dir.set(0.001, 1, 0.001);
+        dir.normalize();
+
+        const vFov = THREE.MathUtils.degToRad(camera.fov);
+        const hFov = 2 * Math.atan(Math.tan(vFov/2) * camera.aspect);
+        const distV = (safeMax/2) / Math.tan(vFov/2);
+        const distH = (safeMax/2) / Math.tan(hFov/2);
+        const dist = Math.max(distV, distH) * (isFinite(fitMargin)?fitMargin:1.18);
+
+        const camPos = center.clone().add(dir.multiplyScalar(dist));
+        camera.position.copy(camPos);
+        // keep a consistent up axis
+        camera.up.set(0, (dir.y < 0 ? -1 : 1), 0);
+        camera.lookAt(center);
+        if(controls){
+          controls.target.copy(center);
+          controls.update();
+        }
+        camera.near = Math.max(0.01, dist/100);
+        camera.far = Math.max(50, dist*20);
+        camera.updateProjectionMatrix();
+      }else{
+        if(cameraPos){
+          camera.position.set(cameraPos.x, cameraPos.y, cameraPos.z);
+        }
+        // If looking from below, flip up so the view isn't rotated 180°.
+        const dirHint = cameraPos
+          ? new THREE.Vector3(cameraPos.x, cameraPos.y, cameraPos.z).sub(t)
+          : new THREE.Vector3(1,1,1);
+        camera.up.set(0, (dirHint.y < 0 ? -1 : 1), 0);
+        camera.lookAt(t);
+        if(controls){
+          controls.target.copy(t);
+          controls.update();
+        }
+      }
+      if(controls){
+        // already updated above
+      }
+
+      renderer.setScissorTest(false);
+      renderer.render(scene, camera);
+      return renderer.domElement.toDataURL('image/png');
+    }catch(e){
+      return null;
+    }finally{
+      try{
+        state.stage = old.stage;
+        state.vis = old.vis;
+        if(gridHelper && old.gridVisible !== null) gridHelper.visible = old.gridVisible;
+        scene.background = old.bg;
+        camera.position.copy(old.camPos);
+        camera.up.copy(old.camUp);
+        if(controls){
+          controls.target.copy(old.camTarget);
+          controls.update();
+        }
+        renderer.setSize(old.size.x, old.size.y, false);
+        camera.aspect = old.size.x/old.size.y;
+        camera.updateProjectionMatrix();
+        suppressGizmo = old.suppressGizmo;
+        build3D();
+        if(typeof resize==='function') requestAnimationFrame(()=> resize());
+      }catch(e){}
+    }
+  }
+
+  function wrapAsSVG(imgDataUrl, width=980, height=620){
+    if(!imgDataUrl) return '';
+    const safe = imgDataUrl.replace(/\"/g,'%22');
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`+
+      `<rect width="100%" height="100%" fill="#fff"/>`+
+      `<image href="${safe}" x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="xMidYMid slice"/>`+
+      `</svg>`
+    )}`;
+  }
+
+  function printPlan(){
+    if(!state.results) return;
+    const summaryText = getSummaryText();
+
+    // Capture views (top-down + 45°) in two visibility presets.
+    // Note: model lies on XZ plane with +Y up.
+    const allVis = { face:true, liner:true, spacers:true, canvas:true };
+    const frameOnlyVis = { face:true, liner:true, spacers:true, canvas:false };
+    const stageAll = 999;
+
+    const topDownPos = {x:0, y:10, z:0.001};
+    const topDownTarget = {x:0, y:0, z:0};
+    const tablePos = {x:6, y:4.5, z:7};
+    const bottomUpPos = {x:0, y:-10, z:0.001};
+    const bottomAngledPos = {x:6, y:-4.5, z:7};
+
+    const shotW = 980;
+    const shotH = 520;
+    const shots = [
+      {title:'3D view (top-down, all components)', data: wrapAsSVG(capture3DToDataURL({cameraPos:topDownPos, target:topDownTarget, vis:allVis, stage:stageAll, width:shotW, height:shotH}), shotW, shotH)},
+      {title:'3D view (45° on table, all components)', data: wrapAsSVG(capture3DToDataURL({cameraPos:tablePos, target:topDownTarget, vis:allVis, stage:stageAll, width:shotW, height:shotH}), shotW, shotH)},
+      {title:'3D view (top-down, frame + liner + spacers)', data: wrapAsSVG(capture3DToDataURL({cameraPos:topDownPos, target:topDownTarget, vis:frameOnlyVis, stage:stageAll, width:shotW, height:shotH}), shotW, shotH)},
+      {title:'3D view (45° on table, frame + liner + spacers)', data: wrapAsSVG(capture3DToDataURL({cameraPos:tablePos, target:topDownTarget, vis:frameOnlyVis, stage:stageAll, width:shotW, height:shotH}), shotW, shotH)},
+      {title:'3D view (from below, all components)', data: wrapAsSVG(capture3DToDataURL({cameraPos:bottomUpPos, target:topDownTarget, vis:allVis, stage:stageAll, width:shotW, height:shotH}), shotW, shotH)},
+      {title:'3D view (from below, angled, all components)', data: wrapAsSVG(capture3DToDataURL({cameraPos:bottomAngledPos, target:topDownTarget, vis:allVis, stage:stageAll, width:shotW, height:shotH}), shotW, shotH)}
+    ].filter(s=>!!s.data);
+
+    const thumb = wrapAsSVG(capture3DToDataURL({
+      cameraPos: tablePos,
+      target: topDownTarget,
+      vis: frameOnlyVis,
+      stage: stageAll,
+      width: 520,
+      height: 360,
+      fitMargin: 1.12
+    }), 520, 360);
+
+    const shotsHtml = shots.map((s, i)=>{
+      const pageBreak = (i > 0 && (i % 2) === 0) ? '<div class="pageBreak"></div>' : '';
+      return `${pageBreak}<div class="shot"><div class="shotTitle">${escapeHTML(s.title)}</div><img alt="${escapeHTML(s.title)}" src="${s.data}" /></div>`;
+    }).join('');
+
+    const rowsHtml = state.results.parts.map((p, idx)=>{
+      return `<tr>`+
+        `<td>${idx+1}</td>`+
+        `<td>${escapeHTML(p.part)}</td>`+
+        `<td style="text-align:right">${escapeHTML(p.qty)}</td>`+
+        `<td>${escapeHTML(fmt(p.length,state.unit))}</td>`+
+        `<td>${escapeHTML(fmt(p.width??0,state.unit))}</td>`+
+        `<td>${escapeHTML(fmt(p.thickness??0,state.unit))}</td>`+
+        `<td>${escapeHTML(p.notes||'')}</td>`+
+      `</tr>`;
+    }).join('');
+
+    const miterParts = state.results.parts
+      .map(p=>{
+        const mitered = /miter/i.test(p.notes||'');
+        if(!mitered) return null;
+        const isLiner = /^Liner\b/i.test(p.part||'');
+        const boardW = isLiner ? state.linerW : state.face;
+        const shortLen = Math.max(0, (p.length||0) - 2*(boardW||0));
+        return {
+          part: p.part,
+          qty: p.qty,
+          longLen: p.length,
+          shortLen,
+          boardW
+        };
+      })
+      .filter(Boolean);
+
+    const miterRowsHtml = miterParts.map((p, idx)=>{
+      return `<tr>`+
+        `<td>${idx+1}</td>`+
+        `<td>${escapeHTML(p.part)}</td>`+
+        `<td style="text-align:right">${escapeHTML(p.qty)}</td>`+
+        `<td>${escapeHTML(fmt(p.longLen,state.unit))}</td>`+
+        `<td>${escapeHTML(fmt(p.shortLen,state.unit))}</td>`+
+        `<td>${escapeHTML(fmt(p.boardW,state.unit))}</td>`+
+      `</tr>`;
+    }).join('');
+
+    const page = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Floating Frame Planner — Print Plan</title>
+  <style>
+    @page { margin: 0.55in; }
+    body{ font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color:#0b0d11; background:#fff; }
+    h1{ font-size:18px; margin:0; }
+    .meta{ margin-top:6px; font-size:12px; color:#334155; }
+    .header{ display:grid; grid-template-columns: 1fr 220px; gap:14px; align-items:start; }
+    .thumb{ border:1px solid #cbd5e1; border-radius:10px; padding:8px; }
+    .thumbTitle{ font-size:11px; color:#475569; margin:0 0 6px; }
+    .thumb img{ width:100%; height:auto; display:block; border-radius:8px; }
+    .section{ margin-top:18px; }
+    .section h2{ font-size:14px; margin:0 0 8px; color:#0b0d11; }
+    .shots{ display:grid; grid-template-columns: 1fr; gap:12px; }
+    .shot{ border:1px solid #cbd5e1; border-radius:10px; padding:8px; }
+    .shotTitle{ font-size:12px; color:#334155; margin:0 0 8px; }
+    .shot img{ width:100%; height:auto; max-height: 4.0in; display:block; border-radius:8px; }
+    .pageBreak{ break-before: page; page-break-before: always; }
+    .shot{ break-inside: avoid; page-break-inside: avoid; }
+    table{ width:100%; border-collapse:collapse; font-size:12px; }
+    th, td{ border:1px solid #cbd5e1; padding:6px 8px; vertical-align:top; }
+    th{ background:#f1f5f9; text-align:left; }
+    .small{ font-size:11px; color:#475569; }
+    .nowrap{ white-space:nowrap; }
+    .noprint{ display:none; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>Floating Frame Planner</h1>
+      <div class="meta">${escapeHTML(new Date().toLocaleString())}</div>
+      <div class="meta">${escapeHTML(summaryText)}</div>
+    </div>
+    ${thumb ? `<div class="thumb"><div class="thumbTitle">3D thumb (45° frame + liner + spacers)</div><img alt="3D thumb" src="${thumb}" /></div>` : ''}
+  </div>
+
+  <div class="section">
+    <h2>Cut List</h2>
+    <table>
+      <thead>
+        <tr>
+          <th class="nowrap">#</th>
+          <th>Part</th>
+          <th class="nowrap" style="text-align:right">Qty</th>
+          <th class="nowrap">Length</th>
+          <th class="nowrap">Width</th>
+          <th class="nowrap">Thickness</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rowsHtml}
+      </tbody>
+    </table>
+    <div class="small" style="margin-top:8px">Units: ${escapeHTML(state.unit)}</div>
+  </div>
+
+  ${miterParts.length ? `
+  <div class="section">
+    <h2>Miter Helper</h2>
+    <div class="small" style="margin-bottom:8px">Long side = long point. Short side = long point − 2×board width (face or liner).</div>
+    <table>
+      <thead>
+        <tr>
+          <th class="nowrap">#</th>
+          <th>Part</th>
+          <th class="nowrap" style="text-align:right">Qty</th>
+          <th class="nowrap">Long side</th>
+          <th class="nowrap">Short side</th>
+          <th class="nowrap">Board width</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${miterRowsHtml}
+      </tbody>
+    </table>
+  </div>
+  ` : ''}
+
+  <div class="pageBreak"></div>
+
+  <div class="section">
+    <h2>3D Views</h2>
+    <div class="shots">
+      ${shotsHtml}
+    </div>
+  </div>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank');
+    if(!win) return;
+    win.document.open();
+    win.document.write(page);
+    win.document.close();
+    // Give the browser a beat to decode data URLs before printing.
+    win.addEventListener('load', ()=>{
+      win.focus();
+      win.print();
+    });
+  }
+
+  // ---------- 3D Scene ----------
+  let scene, camera, renderer, controls, frameGroup, faceGroup, linerGroup, clipGroup, canvasMesh, canvasUndersideMesh, spacerGroup, stretcherGroup;
+  // Axes gizmo mini scene
+  let gizmoScene, gizmoCamera, axesGroup;
+  let gridHelper;
+  let suppressGizmo = false;
+
+  let canvasArtTexture = null;
+  let canvasArtSeed = null;
+
+  function mulberry32(a){
+    return function(){
+      let t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function makeCanvasArtTexture(seed){
+    const size = 1024;
+    const c = document.createElement('canvas');
+    c.width = size; c.height = size;
+    const ctx = c.getContext('2d');
+    const rnd = mulberry32((seed|0) >>> 0);
+
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(0,0,size,size);
+
+    // soft vignette
+    const g = ctx.createRadialGradient(size/2,size/2,size*0.15, size/2,size/2,size*0.75);
+    g.addColorStop(0,'rgba(15,23,42,0.02)');
+    g.addColorStop(1,'rgba(15,23,42,0.08)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,size,size);
+
+    const palette = ['#ef4444','#f97316','#f59e0b','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#111827'];
+    const N = 26 + Math.floor(rnd()*18);
+    for(let i=0;i<N;i++){
+      const col = palette[Math.floor(rnd()*palette.length)];
+      const a = 0.18 + rnd()*0.30;
+      ctx.fillStyle = col;
+      ctx.globalAlpha = a;
+      const x = rnd()*size;
+      const y = rnd()*size;
+      const w = size*(0.10 + rnd()*0.50);
+      const h = size*(0.08 + rnd()*0.45);
+      const rot = (rnd()*Math.PI*2);
+
+      ctx.save();
+      ctx.translate(x,y);
+      ctx.rotate(rot);
+      const shape = Math.floor(rnd()*3);
+      if(shape===0){
+        // rounded rect
+        const rx = w*0.12;
+        const ry = h*0.12;
+        const r = Math.max(6, Math.min(rx,ry));
+        const x0 = -w/2, y0 = -h/2;
+        ctx.beginPath();
+        ctx.moveTo(x0+r, y0);
+        ctx.arcTo(x0+w, y0, x0+w, y0+h, r);
+        ctx.arcTo(x0+w, y0+h, x0, y0+h, r);
+        ctx.arcTo(x0, y0+h, x0, y0, r);
+        ctx.arcTo(x0, y0, x0+w, y0, r);
+        ctx.closePath();
+        ctx.fill();
+      }else if(shape===1){
+        // triangle
+        ctx.beginPath();
+        ctx.moveTo(0, -h/2);
+        ctx.lineTo(-w/2, h/2);
+        ctx.lineTo(w/2, h/2);
+        ctx.closePath();
+        ctx.fill();
+      }else{
+        // circle/ellipse
+        ctx.beginPath();
+        ctx.ellipse(0,0, w/2, h/2, 0, 0, Math.PI*2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+
+    // subtle "canvas weave" noise
+    const img = ctx.getImageData(0,0,size,size);
+    const d = img.data;
+    for(let i=0;i<d.length;i+=4){
+      const n = (rnd()-0.5) * 10;
+      d[i]   = Math.max(0, Math.min(255, d[i]   + n));
+      d[i+1] = Math.max(0, Math.min(255, d[i+1] + n));
+      d[i+2] = Math.max(0, Math.min(255, d[i+2] + n));
+    }
+    ctx.putImageData(img,0,0);
+
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = renderer ? Math.min(8, renderer.capabilities.getMaxAnisotropy()) : 1;
+    tex.needsUpdate = true;
+    return tex;
+  }
+
+  function getCanvasArtMaterials(){
+    canvasArtSeed = (canvasArtSeed==null) ? (Math.floor(Math.random()*1e9)>>>0) : canvasArtSeed;
+    canvasArtTexture = canvasArtTexture || makeCanvasArtTexture(canvasArtSeed);
+    // Ensure wrapping so the art can continue onto the sides without clamping.
+    canvasArtTexture.wrapS = THREE.RepeatWrapping;
+    canvasArtTexture.wrapT = THREE.RepeatWrapping;
+    canvasArtTexture.repeat.set(1,1);
+
+    const artMat = new THREE.MeshStandardMaterial({color:0xffffff, map: canvasArtTexture, metalness:0.02, roughness:0.95});
+    // Art/paint should only show on the front.
+    artMat.side = THREE.FrontSide;
+    // Canvas is fabric on top + wrapped sides; underside is open so stretchers/hollow interior are visible.
+    const backMat = new THREE.MeshStandardMaterial({color:0xffffff, metalness:0.0, roughness:1.0, transparent:true, opacity:0.0});
+    backMat.depthWrite = false;
+    // Help avoid z-fighting where the canvas touches/overlaps neighboring geometry.
+    [artMat, backMat].forEach(m=>{
+      m.polygonOffset = true;
+      m.polygonOffsetFactor = -1;
+      m.polygonOffsetUnits = -1;
+    });
+    // BoxGeometry material order: +X, -X, +Y, -Y, +Z, -Z
+    return [artMat, artMat, artMat, backMat, artMat, artMat];
+  }
+
+  // ---------- Piece 2D Viewer ----------
+  let pieceCtx;
+
+  let layoutRO;
+  function init3D(){
+    const canvas = $('#viewport');
+    renderer = new THREE.WebGLRenderer({canvas, antialias:true, preserveDrawingBuffer:true});
+    const isSmallScreen = window.matchMedia('(max-width: 700px)').matches;
+    const dpr = Math.min(window.devicePixelRatio||1, isSmallScreen ? 1.5 : 2);
+    renderer.setPixelRatio(dpr);
+    // Prevent the page from scrolling when using touch gestures on the canvas
+    if(renderer.domElement) renderer.domElement.style.touchAction = 'none';
+    resize();
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0b0d11);
+    camera = new THREE.PerspectiveCamera(45, canvas.clientWidth/canvas.clientHeight, 0.1, 1000);
+    camera.position.set(6,6,9);
+    controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true; controls.dampingFactor=0.08; controls.target.set(0,0,0);
+
+    // Axes gizmo setup
+    gizmoScene = new THREE.Scene();
+    // Use orthographic camera so axes stays centered regardless of orientation
+    gizmoCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 10);
+    gizmoCamera.position.set(0,0,2);
+    gizmoCamera.lookAt(0,0,0);
+    axesGroup = new THREE.Group();
+    const axes = new THREE.AxesHelper(0.8); // X=red, Y=green, Z=blue
+    axesGroup.add(axes);
+    gizmoScene.add(axesGroup);
+
+    const hemi = new THREE.HemisphereLight(0xffffff,0x222233, 0.8); scene.add(hemi);
+    const dir = new THREE.DirectionalLight(0xffffff, 0.8); dir.position.set(3,5,4); scene.add(dir);
+    const under = new THREE.DirectionalLight(0xffffff, 0.45); under.position.set(0,-6,0); under.target.position.set(0,0,0); scene.add(under); scene.add(under.target);
+
+    // ground
+    gridHelper = new THREE.GridHelper(50, 50, 0x223046, 0x162132);
+    gridHelper.position.y=-0.38;
+    scene.add(gridHelper);
+
+    frameGroup = new THREE.Group(); scene.add(frameGroup);
+    faceGroup = new THREE.Group(); frameGroup.add(faceGroup);
+    linerGroup = new THREE.Group(); frameGroup.add(linerGroup);
+    canvasMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(1,1,1),
+      getCanvasArtMaterials()
+    );
+    canvasMesh.visible=false; scene.add(canvasMesh);
+
+    // Underside of the fabric plane should be white (paint doesn't show through).
+    // This plane is only visible from below (BackSide), and sits just under the canvas top surface.
+    canvasUndersideMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(1,1),
+      new THREE.MeshStandardMaterial({color:0xffffff, roughness:1.0, metalness:0.0, side:THREE.BackSide})
+    );
+    canvasUndersideMesh.visible = false;
+    canvasUndersideMesh.renderOrder = 2000;
+    scene.add(canvasUndersideMesh);
+    spacerGroup = new THREE.Group(); scene.add(spacerGroup);
+    stretcherGroup = new THREE.Group(); scene.add(stretcherGroup);
+
+    window.addEventListener('resize', resize);
+    // React to column width changes (e.g., when cards above/below change height)
+    try{
+      const rightCol = document.querySelector('.right');
+      if(rightCol && 'ResizeObserver' in window){
+        layoutRO = new ResizeObserver(()=> resize());
+        layoutRO.observe(rightCol);
+      }
+    }catch(e){}
+    animate();
+  }
+
+  function initPiece2D(){
+    const canvas = document.getElementById('pieceViewport'); if(!canvas) return;
+    const el = document.querySelector('.piece-wrap');
+    const dpr = Math.min(window.devicePixelRatio||1, 2);
+    const w = el.clientWidth, h = el.clientHeight;
+    canvas.width = Math.max(1, Math.floor(w*dpr));
+    canvas.height = Math.max(1, Math.floor(h*dpr));
+    pieceCtx = canvas.getContext('2d');
+    pieceCtx.setTransform(dpr,0,0,dpr,0,0);
+    window.addEventListener('resize', resizePiece2D);
+  }
+
+  function resizePiece2D(){
+    const canvas = document.getElementById('pieceViewport'); const el = document.querySelector('.piece-wrap');
+    if(!canvas||!el) return;
+    const dpr = Math.min(window.devicePixelRatio||1, 2);
+    const w = el.clientWidth, h = el.clientHeight;
+    canvas.width = Math.max(1, Math.floor(w*dpr));
+    canvas.height = Math.max(1, Math.floor(h*dpr));
+    if(pieceCtx){ pieceCtx.setTransform(dpr,0,0,dpr,0,0); drawPiece2DFromState(); }
+  }
+
+  function clearPiece2D(){
+    const canvas = document.getElementById('pieceViewport'); if(!canvas||!pieceCtx) return;
+    pieceCtx.clearRect(0,0,canvas.clientWidth, canvas.clientHeight);
+  }
+
+  function selectPart(idx){
+    state.selectedPartIdx = idx;
+    populateTable(); // refresh selection highlight
+    updatePieceFromSelection();
+  }
+
+  function updatePieceFromSelection(){
+    const label = document.getElementById('pieceLabel');
+    if(!state.results || state.selectedPartIdx<0){ clearPiece2D(); if(label) label.textContent=''; return; }
+    const p = state.results.parts[state.selectedPartIdx];
+    drawPiece2D(p);
+    if(label){ label.textContent = `${p.part} · ${p.qty} × ${fmt(p.length,state.unit)}${p.notes?(' · '+p.notes):''}`; }
+  }
+
+  // ---------- 2D Drawing Helpers ----------
+  function drawArrow(ctx, x1,y1,x2,y2){
+    const head=6; const ang=Math.atan2(y2-y1,x2-x1);
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x2,y2);
+    ctx.lineTo(x2-head*Math.cos(ang-Math.PI/6), y2-head*Math.sin(ang-Math.PI/6));
+    ctx.lineTo(x2-head*Math.cos(ang+Math.PI/6), y2-head*Math.sin(ang+Math.PI/6));
+    ctx.closePath(); ctx.fill();
+  }
+
+  function drawDimText(ctx, txt, x,y){
+    ctx.save(); ctx.fillStyle='#e8eef8'; ctx.strokeStyle='rgba(255,255,255,0.15)';
+    ctx.lineWidth=3; ctx.font='12px Inter, Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.strokeText(txt, x,y); ctx.fillText(txt, x,y); ctx.restore();
+  }
+
+  function drawPiece2DFromState(){
+    if(!state.results || state.selectedPartIdx<0) { clearPiece2D(); return; }
+    drawPiece2D(state.results.parts[state.selectedPartIdx]);
+  }
+
+  function drawPiece2D(p){
+    const canvas = document.getElementById('pieceViewport'); if(!canvas) return;
+    const ctx = pieceCtx || canvas.getContext('2d');
+    const W = canvas.clientWidth, H = canvas.clientHeight; ctx.clearRect(0,0,W,H);
+    const pad = 32;
+    const units = state.unit;
+    const lengthIn = p.length; // inches
+    const widthIn = /^Liner/i.test(p.part) ? state.linerW : state.face;
+    const mitered = /miter/i.test(p.notes||'');
+
+    // Scale to fit
+    const sX = (W - pad*2) / Math.max(1e-6, lengthIn);
+    const sY = (H - pad*2) / Math.max(1e-6, widthIn*2.2); // extra space for dims
+    const S = Math.min(sX, sY);
+    const L = lengthIn * S; const Wd = widthIn * S;
+    const cx = W/2, cy = H/2;
+    const hl = L/2, hw = Wd/2;
+
+    // Board polygon
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.fillStyle = /^Liner/i.test(p.part) ? '#d8c3a5' : '#8b5e3c';
+    ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    if(mitered){
+      ctx.moveTo(-hl, +hw);
+      ctx.lineTo(-hl + Wd, -hw);
+      ctx.lineTo( hl - Wd, -hw);
+      ctx.lineTo( hl, +hw);
+      ctx.closePath();
+    }else{
+      ctx.rect(-hl, -hw, L, Wd);
+    }
+    ctx.fill(); ctx.stroke();
+
+    // Dimension lines
+    ctx.fillStyle='#e8eef8'; ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=1;
+    // Overall length BELOW piece
+    const yLen = hw + 18; drawArrow(ctx, -hl, yLen, hl, yLen); drawArrow(ctx, hl, yLen, -hl, yLen);
+    drawDimText(ctx, `L = ${fmt(lengthIn, units)}`, 0, yLen+10);
+    // Short-point length ABOVE piece (for mitered)
+    if(mitered){
+      const shortIn = Math.max(0, lengthIn - 2*widthIn);
+      const yShort = -hw - 14;
+      // arrows from inner short points
+      drawArrow(ctx, -hl + Wd, yShort, hl - Wd, yShort);
+      drawArrow(ctx, hl - Wd, yShort, -hl + Wd, yShort);
+      drawDimText(ctx, `Ls = ${fmt(shortIn, units)}`, 0, yShort-10);
+    }
+    // Width on LEFT to avoid clipping
+    const xWid = -hl - (pad - 6);
+    drawArrow(ctx, xWid, -hw, xWid, hw); drawArrow(ctx, xWid, hw, xWid, -hw);
+    drawDimText(ctx, `W = ${fmt(widthIn, units)}`, xWid-24, 0);
+    ctx.restore();
+
+    // Thickness note
+    const label = document.getElementById('pieceLabel');
+    if(label){ label.textContent = `${p.part} · ${p.qty} × ${fmt(p.length,units)} · W ${fmt(widthIn,units)} · T ${fmt(state.stock,units)}${p.notes?(' · '+p.notes):''}`; }
+  }
+
+  function renderPiece(p){
+    if(!pieceScene) return; clearPiece();
+    const s = state; const scale = 0.1; const stock = s.stock*scale;
+    let width = s.face*scale; let length = p.length*scale; let isLiner=false;
+    if(/^Liner/i.test(p.part)) { width = s.linerW*scale; isLiner=true; }
+    const mitered = /miter/i.test(p.notes||'');
+    // Build shape in XZ and extrude along Y = stock
+    const sh = new THREE.Shape();
+    if(mitered){
+      const f = width; const halfL = length/2;
+      sh.moveTo(-halfL,  f/2);
+      sh.lineTo(-halfL + f, -f/2);
+      sh.lineTo( halfL - f, -f/2);
+      sh.lineTo( halfL,  f/2);
+      sh.lineTo(-halfL,  f/2);
+    }else{
+      sh.moveTo(-length/2,  width/2);
+      sh.lineTo( length/2,  width/2);
+      sh.lineTo( length/2, -width/2);
+      sh.lineTo(-length/2, -width/2);
+      sh.lineTo(-length/2,  width/2);
+    }
+    const geo = new THREE.ExtrudeGeometry(sh, {depth: stock, bevelEnabled:false, curveSegments:1});
+    const mat = new THREE.MeshStandardMaterial({color: isLiner?0xd8c3a5:0x8b5e3c, roughness:0.8, metalness:0.05});
+    const mesh = new THREE.Mesh(geo, mat); mesh.rotation.x = -Math.PI/2; mesh.position.y = stock/2; pieceGroup.add(mesh);
+    // Edges
+    const edgeMat = new THREE.LineBasicMaterial({color:0x1a1a1a, transparent:true, opacity:0.9});
+    const eg = new THREE.EdgesGeometry(mesh.geometry, 1); pieceGroup.add(new THREE.LineSegments(eg, edgeMat));
+
+    // Dimension sprites
+    const Lstr = `L = ${fmt(p.length, state.unit)}`;
+    const Wstr = `W = ${fmt(width/scale, state.unit)}`;
+    const Tstr = `T = ${fmt(s.stock, state.unit)}`;
+    const sL = makeTextSprite(Lstr); sL.position.set(0, stock*1.2, -width*0.9); pieceGroup.add(sL);
+    const sW = makeTextSprite(Wstr); sW.position.set(-length*0.55, stock*1.2, 0); pieceGroup.add(sW);
+    const sT = makeTextSprite(Tstr); sT.position.set(length*0.55, stock*1.2, 0); pieceGroup.add(sT);
+
+    // Frame piece in view
+    pieceControls.target.set(0, stock/2, 0);
+    pieceCamera.position.set(length*0.8, length*0.5, length*0.8);
+    pieceCamera.lookAt(0, stock/2, 0);
+    pieceControls.update();
+    pieceRenderer.render(pieceScene, pieceCamera);
+  }
+
+  function resize(){
+    const el = $('.canvas-wrap');
+    if(!renderer || !el) return;
+    const rect = el.getBoundingClientRect();
+    const w = Math.max(1, Math.floor(rect.width));
+    const h = Math.max(360, Math.floor(el.clientHeight || rect.height));
+    renderer.setSize(w, h, false);
+    if(camera){ camera.aspect = w/h; camera.updateProjectionMatrix(); }
+  }
+
+  function build3D(){
+    // keep canvas height synced with layout
+    if(renderer) resize();
+    // Clear previous
+    while(frameGroup.children.length) frameGroup.remove(frameGroup.children[0]);
+    faceGroup = new THREE.Group(); frameGroup.add(faceGroup);
+    linerGroup = new THREE.Group(); frameGroup.add(linerGroup);
+    clipGroup = new THREE.Group(); frameGroup.add(clipGroup);
+    while(spacerGroup.children.length) spacerGroup.remove(spacerGroup.children[0]);
+    while(stretcherGroup.children.length) stretcherGroup.remove(stretcherGroup.children[0]);
+    canvasMesh.visible=false;
+    if(canvasUndersideMesh) canvasUndersideMesh.visible = false;
+
+    const s = state; const r = state.results; if(!r) return;
+
+    // Scale model so 1 unit = 1 inch, but normalize into view
+    const scale = 0.1; // 10 inches = 1 unit
+
+    // Materials: stronger contrast between frame and liner
+    const fin = getFinishParams();
+    const materialWood = new THREE.MeshStandardMaterial({color:fin.colorHex, roughness:fin.roughness, metalness:fin.metalness});
+    // Liner tint: keep it slightly lighter so you can still visually distinguish it.
+    const linerCol = new THREE.Color(fin.colorHex).lerp(new THREE.Color(0xffffff), 0.35);
+    const materialLiner = new THREE.MeshStandardMaterial({color:linerCol, roughness:Math.min(1, fin.roughness+0.10), metalness:Math.max(0, fin.metalness-0.01)});
+    const edgeMat = new THREE.LineBasicMaterial({color:0x1a1a1a, transparent:true, opacity:0.85});
+    // Ensure the canvas uses the procedural art texture (front + sides).
+    if(canvasMesh){
+      const mats = getCanvasArtMaterials();
+      try{
+        if(Array.isArray(canvasMesh.material)) canvasMesh.material.forEach(m=>{ try{ m.dispose(); }catch(e){} });
+        else if(canvasMesh.material) canvasMesh.material.dispose();
+      }catch(e){}
+      canvasMesh.material = mats;
+    }
+    const materialSpacer = new THREE.MeshStandardMaterial({color:0x9ca3af, roughness:1.0});
+    const materialStretcher = new THREE.MeshStandardMaterial({color:0xb0916a, roughness:0.85, metalness:0.02});
+
+    const innerW = r.innerW * scale, innerH = r.innerH * scale;
+    const face   = s.face * scale, stock = s.stock * scale, depth = s.depth * scale;
+    const reveal = s.reveal * scale, canvasT = s.canvasT * scale;
+    const effDepth = depth;
+    const linerDepthIn = (isFinite(s.depth) && isFinite(s.canvasT) && isFinite(s.backGap)) ? (s.depth - (s.canvasT + s.backGap)) : NaN;
+    const linerDepthY = (isFinite(linerDepthIn) ? Math.max(0.001, linerDepthIn) : 0.001) * scale;
+
+    const clipSelected = (s.mountClip && s.mountClip !== 'none');
+    const clipOffsetIn = clipSelected ? parseFloat(s.mountClip) : NaN;
+    const clipLegacyFlangeIn = isFinite(s.clipFlange) ? s.clipFlange : 0.625;
+    const clipDef = clipSelected ? getZClipByOffset(clipOffsetIn) : null;
+    const clipFit = clipSelected ? zClipFits(clipDef, s, linerDepthIn) : { ok:false, reasons:[] };
+    const mountMode = (clipSelected && (s.build === 'two')) ? (clipFit.ok ? 'clip' : 'screw') : 'none';
+    const clipValid = (mountMode === 'clip');
+
+    const materialClipOk = new THREE.MeshStandardMaterial({color:0x22c55e, roughness:0.35, metalness:0.65});
+    const materialClipBad = new THREE.MeshStandardMaterial({color:0xef4444, roughness:0.55, metalness:0.35});
+    const materialScrew = new THREE.MeshStandardMaterial({color:0x93c5fd, roughness:0.35, metalness:0.75});
+    const materialScrewHead = new THREE.MeshStandardMaterial({color:0xe5e7eb, roughness:0.45, metalness:0.65});
+
+
+    // Helper to add edge outlines
+    function addEdgesFor(mesh){
+      const eg = new THREE.EdgesGeometry(mesh.geometry, 1);
+      const lines = new THREE.LineSegments(eg, edgeMat);
+      lines.renderOrder = 999;
+      mesh.add(lines);
+    }
+
+    const addClips = ()=>{
+      if(!clipSelected) return;
+      if(state.build !== 'two') return;
+      if(!state.vis.clips) return;
+      if(mountMode !== 'clip') return;
+
+      const mat = clipValid ? materialClipOk : materialClipBad;
+      // Simple Z-clip made from 3 boxes: wall flange, web, canvas flange.
+      // Geometry is approximate, but oriented to look like a Z/S in cross-section.
+      // Coordinate system: X left-right, Z front-back (in plane), Y depth (frame back -> front).
+      const tIn = clamp((clipDef?.thickness ?? 0.06), 0.03, 0.12); // metal thickness
+      const flangeLinerIn = clamp((clipDef?.flangeLiner ?? clipLegacyFlangeIn), 0.25, 1.25);
+      const flangeCanvasIn = clamp((clipDef?.flangeCanvas ?? clipLegacyFlangeIn), 0.25, 1.25);
+      const flangeWidIn = 0.6;    // along the rail direction
+
+      const t = tIn * scale;
+      const flangeLiner = flangeLinerIn * scale;
+      const flangeCanvas = flangeCanvasIn * scale;
+      const flangeWid = flangeWidIn * scale;
+      const webLen = Math.max(t*2, linerDepthY);
+      // How far the two flanges are offset from the web plane (gives a Z profile)
+      const flangeLenMax = Math.max(flangeLiner, flangeCanvas);
+      const flangeOffset = Math.min(flangeLenMax*0.7, Math.max(t*1.2, (s.linerW*scale)*0.35));
+
+      const wallFlangeGeo = new THREE.BoxGeometry(flangeWid, t, flangeLiner);
+      const webGeo = new THREE.BoxGeometry(flangeWid, webLen, t);
+      const canvasFlangeGeo = new THREE.BoxGeometry(flangeWid, t, flangeCanvas);
+
+      function makeClip(){
+        const g = new THREE.Group();
+        const wall = new THREE.Mesh(wallFlangeGeo, mat);
+        // Wall flange sits behind the liner back plane so it doesn't clip through the wood.
+        wall.position.set(0, -t/2, -flangeOffset);
+        g.add(wall);
+
+        const web = new THREE.Mesh(webGeo, mat);
+        // Web runs from the liner back plane (y=0) to the canvas back plane (y=linerDepthY)
+        // and is flush to the liner back plane.
+        web.position.set(0, webLen/2, 0);
+        g.add(web);
+
+        const canvas = new THREE.Mesh(canvasFlangeGeo, mat);
+        // Canvas flange lands on the canvas back / liner front plane.
+        // The canvas is a box whose BACK face is at y=linerDepthY. Put the flange behind it (not inside it).
+        canvas.position.set(0, webLen - t/2, +flangeOffset);
+        g.add(canvas);
+
+        // Outline edges
+        [wall, web, canvas].forEach(addEdgesFor);
+        return g;
+      }
+
+      // Place one clip on each side, centered.
+      // Coordinate system: X left-right, Z front-back (canvas height axis), Y depth (frame back -> front).
+      const lw = s.linerW * scale;
+      const outerLW = r.innerW * scale;
+      const outerLH = r.innerH * scale;
+      const innerLW = Math.max(0.01, outerLW - 2*lw);
+      const innerLH = Math.max(0.01, outerLH - 2*lw);
+
+      // We want the clip web to sit tight against the liner's inward-facing surface (the surface that faces the opening).
+      // In clip local coordinates, the web's opening-facing face is local +Z.
+      // We orient each clip so that local -Z points outward; local +Z points toward the center/opening.
+      // Therefore, we place the clip so web's +Z face is flush with the liner inner face plane.
+      const zInnerFace = innerLH/2;
+      const xInnerFace = innerLW/2;
+      const y0 = yBase; // liner back plane
+
+      // Bottom (along X, near -Z)
+      const c1 = makeClip();
+      c1.rotation.y = 0;
+      c1.position.set(0, y0, -zInnerFace + t/2);
+      clipGroup.add(c1);
+
+      // Top
+      const c2 = makeClip();
+      c2.rotation.y = Math.PI;
+      c2.position.set(0, y0, +zInnerFace - t/2);
+      clipGroup.add(c2);
+
+      // Left (rotate 90°, near -X)
+      const c3 = makeClip();
+      c3.rotation.y = Math.PI/2;
+      c3.position.set(-xInnerFace + t/2, y0, 0);
+      clipGroup.add(c3);
+
+      // Right
+      const c4 = makeClip();
+      c4.rotation.y = -Math.PI/2;
+      c4.position.set(+xInnerFace - t/2, y0, 0);
+      clipGroup.add(c4);
+    };
+
+    const addScrews = ()=>{
+      if(state.build !== 'two') return;
+      if(!state.vis.clips) return;
+      // Show screws when: (a) a clip is selected but doesn't fit (mountMode==='screw'), OR (b) no clip selected at all
+      if(clipSelected && mountMode !== 'screw') return;
+
+      // Visualize the screw-through-liner method when a selected clip doesn't fit.
+      // Screws are shown on the liner BACK face (parallel to the wall) and driven along +Y (depth)
+      // through the liner into the stretcher/canvas assembly.
+      const lw = s.linerW * scale;
+      const outerLW = r.innerW * scale;
+      const outerLH = r.innerH * scale;
+      const innerLW = Math.max(0.01, outerLW - 2*lw);
+      const innerLH = Math.max(0.01, outerLH - 2*lw);
+      const zRailCenter = (innerLH/2) + (lw/2);
+      const xRailCenter = (innerLW/2) + (lw/2);
+
+      const screwR = 0.06 * scale;
+      const headR = 0.10 * scale;
+      const headT = 0.06 * scale;
+      // Length along depth: at least across the liner support depth so it reads clearly.
+      const shaftLen = Math.max(0.08 * scale, linerDepthY * 0.9);
+
+      const shaftGeo = new THREE.CylinderGeometry(screwR, screwR, shaftLen, 12, 1);
+      const headGeo = new THREE.CylinderGeometry(headR, headR, headT, 16, 1);
+
+      // Place screws at the midpoints of each side.
+      // Anchor on the liner back face.
+      const yScrew = yBase;
+
+      function addOne(pos){
+        const g = new THREE.Group();
+        const shaft = new THREE.Mesh(shaftGeo, materialScrew);
+        const head = new THREE.Mesh(headGeo, materialScrewHead);
+        // Cylinder is along Y by default. Place the head on the back face and the shaft going into the assembly.
+        const eps = 0.01 * scale;       // tiny offset so the head sits just outside the back face (toward wall)
+        const shaftInset = 0.002 * scale; // tiny inset so the shaft starts just inside the liner (avoid overlap)
+        head.position.set(0, -(eps + headT/2), 0);
+        shaft.position.set(0, shaftInset + shaftLen/2, 0);
+        g.add(shaft);
+        g.add(head);
+        g.position.copy(pos);
+        addEdgesFor(shaft);
+        addEdgesFor(head);
+        clipGroup.add(g);
+      }
+
+      // Bottom / Top screws on the back face of the liner rails.
+      addOne(new THREE.Vector3(0, yScrew, -zRailCenter));
+      addOne(new THREE.Vector3(0, yScrew, +zRailCenter));
+      // Left / Right
+      addOne(new THREE.Vector3(-xRailCenter, yScrew, 0));
+      addOne(new THREE.Vector3(+xRailCenter, yScrew, 0));
+    };
+
+    function drawLine(x1,y,z1,x2,z2){
+      const g = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(x1,y,z1), new THREE.Vector3(x2,y,z2)
+      ]);
+      const ln = new THREE.Line(g, edgeMat); ln.renderOrder=1000; faceGroup.add(ln);
+    }
+
+    function addRailMiterLines(mesh, sx, sy, sz){
+      const yTop = mesh.position.y + sy/2 + 0.001;
+      const cx = mesh.position.x, cz = mesh.position.z;
+      if(sx >= sz){
+        // horizontal rail (length in X)
+        const xL = cx - sx/2, xR = cx + sx/2; const z0 = cz - sz/2, z1 = cz + sz/2;
+        drawLine(xL, yTop, z0, xL + sz, yTop, z1);
+        drawLine(xR, yTop, z1, xR - sz, yTop, z0);
+      }else{
+        // vertical rail (length in Z)
+        const zL = cz - sz/2, zR = cz + sz/2; const x0 = cx - sx/2, x1 = cx + sx/2;
+        drawLine(x0, yTop, zL, x1, yTop, zL + sx);
+        drawLine(x1, yTop, zR, x0, yTop, zR - sx);
+      }
+    }
+
+    // Helper: add a rectangular box (rail)
+    function addBox(x,y,z, sx,sy,sz, withMiters=false){
+      const g = new THREE.BoxGeometry(sx, sy, sz);
+      const m = new THREE.Mesh(g, materialWood);
+      m.position.set(x,y,z); addEdgesFor(m); frameGroup.add(m);
+      if(withMiters) addRailMiterLines(m, sx, sy, sz);
+      return m;
+    }
+
+    // Helpers to create true mitered rails as extrusions
+    function makeHorzRail(L, faceW, depthY, flip=false){
+      const f = faceW; const halfL = L/2;
+      const sh = new THREE.Shape();
+      // Plan view points (x, plan-y -> Z after rotation). flip toggles diagonal orientation
+      if(!flip){
+        sh.moveTo(-halfL,  f/2);
+        sh.lineTo(-halfL + f, -f/2);
+        sh.lineTo( halfL - f, -f/2);
+        sh.lineTo( halfL,  f/2);
+        sh.lineTo(-halfL,  f/2);
+      }else{
+        sh.moveTo(-halfL, -f/2);
+        sh.lineTo(-halfL + f,  f/2);
+        sh.lineTo( halfL - f,  f/2);
+        sh.lineTo( halfL, -f/2);
+        sh.lineTo(-halfL, -f/2);
+      }
+      const g = new THREE.ExtrudeGeometry(sh, { depth: depthY, bevelEnabled:false, curveSegments:1 });
+      const m = new THREE.Mesh(g, materialWood);
+      m.rotation.x = -Math.PI/2; // extrude depth -> +Y
+      addEdgesFor(m);
+      return m;
+    }
+
+    function makeVertRail(L, faceW, depthY){
+      const f = faceW; const halfL = L/2;
+      const sh = new THREE.Shape();
+      // Plan view points for vertical rail so that the diagonal at each end matches the horizontal rail miter line
+      // Top end: (-f/2, +halfL) -> ( +f/2, +halfL - f )
+      // Bottom end: (-f/2, -halfL) -> ( +f/2, -halfL + f )
+      sh.moveTo(-f/2,  halfL);
+      sh.lineTo( +f/2,  halfL - f);
+      sh.lineTo( +f/2, -halfL + f);
+      sh.lineTo(-f/2, -halfL);
+      sh.lineTo(-f/2,  halfL);
+      const g = new THREE.ExtrudeGeometry(sh, { depth: depthY, bevelEnabled:false, curveSegments:1 });
+      const m = new THREE.Mesh(g, materialWood);
+      m.rotation.x = -Math.PI/2;
+      addEdgesFor(m);
+      return m;
+    }
+
+    const yBase = 0; // frame sits on ground
+    const stage = state.stage|0;
+
+    // Helpers to add face and liner rails by side
+    const addFaceRail = (side)=>{
+      const outerW = innerW + 2*face, outerH = innerH + 2*face;
+      const eopt = { depth: effDepth, bevelEnabled:false, curveSegments:1 };
+      let sh = new THREE.Shape();
+      if(side==='top'){
+        sh.moveTo(-outerW/2,  outerH/2); sh.lineTo( outerW/2,  outerH/2); sh.lineTo( innerW/2,  innerH/2); sh.lineTo(-innerW/2,  innerH/2);
+      }else if(side==='bottom'){
+        sh.moveTo(-outerW/2, -outerH/2); sh.lineTo(-innerW/2, -innerH/2); sh.lineTo( innerW/2, -innerH/2); sh.lineTo( outerW/2, -outerH/2);
+      }else if(side==='left'){
+        sh.moveTo(-outerW/2,  outerH/2); sh.lineTo(-innerW/2,  innerH/2); sh.lineTo(-innerW/2, -innerH/2); sh.lineTo(-outerW/2, -outerH/2);
+      }else if(side==='right'){
+        sh.moveTo( outerW/2,  outerH/2); sh.lineTo( outerW/2, -outerH/2); sh.lineTo( innerW/2, -innerH/2); sh.lineTo( innerW/2,  innerH/2);
+      }
+      const m = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, eopt), materialWood);
+      m.rotation.x = -Math.PI/2; m.position.y = yBase; addEdgesFor(m); faceGroup.add(m);
+    };
+
+    const addLinerRail = (side)=>{
+      const lw = s.linerW * scale; const lt = stock;
+      const outerLW = innerW, outerLH = innerH;
+      const innerLW = Math.max(0.01, outerLW - 2*lw);
+      const innerLH = Math.max(0.01, outerLH - 2*lw);
+      const xL = -outerLW/2, xR = outerLW/2, zT = outerLH/2, zB = -outerLH/2;
+      const ixL = -innerLW/2, ixR = innerLW/2, izT = innerLH/2, izB = -innerLH/2;
+      const eopt = { depth: linerDepthY, bevelEnabled:false, curveSegments:1 };
+      let sh = new THREE.Shape();
+      if(side==='top'){
+        sh.moveTo(xL, zT); sh.lineTo(xR, zT); sh.lineTo(ixR, izT); sh.lineTo(ixL, izT);
+      }else if(side==='bottom'){
+        sh.moveTo(xL, zB); sh.lineTo(ixL, izB); sh.lineTo(ixR, izB); sh.lineTo(xR, zB);
+      }else if(side==='left'){
+        sh.moveTo(xL, zT); sh.lineTo(ixL, izT); sh.lineTo(ixL, izB); sh.lineTo(xL, zB);
+      }else if(side==='right'){
+        sh.moveTo(xR, zT); sh.lineTo(xR, zB); sh.lineTo(ixR, izB); sh.lineTo(ixR, izT);
+      }
+      const m = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, eopt), materialLiner);
+      m.rotation.x = -Math.PI/2; m.position.y = yBase; addEdgesFor(m); linerGroup.add(m);
+    };
+
+    const addSpacers = ()=>{
+      // Spacers live in the reveal gap at the canvas corners.
+      // Best behavior is when spacer size matches the reveal gap.
+      const spSize = Math.min(face, stock, Math.max(0.01, reveal));
+      const cw = s.canvasW * scale, ch = s.canvasH * scale;
+      const inset = spSize/2;
+      const spots = [
+        [-(cw/2 + inset), -(ch/2 + inset)],
+        [ +(cw/2 + inset), -(ch/2 + inset)],
+        [-(cw/2 + inset),  +(ch/2 + inset)],
+        [ +(cw/2 + inset),  +(ch/2 + inset)]
+      ];
+      spots.forEach(([x,z])=>{
+        const m = new THREE.Mesh(new THREE.BoxGeometry(spSize, spSize, spSize), materialSpacer);
+        const linerTop = (state.build==='two') ? (yBase + linerDepthY) : (yBase + effDepth);
+        m.position.set(x, linerTop + spSize/2 - 0.001, z); spacerGroup.add(m);
+      });
+    };
+
+    const addCanvas = ()=>{
+      const cw = s.canvasW * scale, ch = s.canvasH * scale;
+      // Use the full canvas thickness so the art can be seen wrapping onto the outside edges.
+      const ct = Math.max(0.01, s.canvasT * scale);
+      // Keep the full outer X/Z so the wrapped art stays visible on the edges.
+      // Use a tiny thickness inset to reduce coplanar overlap with nearby planes.
+      const insetY = 0.005 * scale; // ~0.005" in model units
+      const ct2 = Math.max(0.001, ct - insetY*2);
+      canvasMesh.geometry.dispose(); canvasMesh.geometry = new THREE.BoxGeometry(cw, ct2, ch);
+      // Place the skin at the front face of the canvas (flush to the front).
+      canvasMesh.position.set(0, yBase + effDepth - ct2/2, 0);
+      canvasMesh.visible = true;
+
+      // White underside for the fabric plane. Use BackSide so it renders only when viewed from below.
+      if(canvasUndersideMesh){
+        canvasUndersideMesh.geometry.dispose();
+        canvasUndersideMesh.geometry = new THREE.PlaneGeometry(cw, ch);
+        canvasUndersideMesh.rotation.set(-Math.PI/2, 0, 0);
+        // Place just under the canvas top surface to avoid z-fighting with the box top face.
+        canvasUndersideMesh.position.set(0, yBase + effDepth - 0.0008, 0);
+        canvasUndersideMesh.visible = true;
+      }
+    };
+
+    const addStretchers = ()=>{
+      // Simple stretcher frame on the back side of the canvas to aid attachment visualization.
+      const cw = s.canvasW * scale, ch = s.canvasH * scale;
+      const sw = clamp(s.stretcherW, 0.01, Math.min(s.canvasW, s.canvasH)/2 - 0.01) * scale;
+      const canvasTFull = Math.max(0.01, s.canvasT);
+      const skinIn = Math.min(canvasTFull, 0.125);
+      const skinT = skinIn * scale;
+      const stretcherDepthIn = Math.max(0, canvasTFull - skinIn);
+      const stretcherT = stretcherDepthIn * scale;
+      // If the canvas is thinner than the skin visualization, skip stretchers.
+      if(stretcherT <= 0.0001) return;
+      const railT = Math.max(stretcherT, 0.02);
+      const inset = sw/2;
+      // Place stretchers directly behind the canvas skin so they touch.
+      const yBack = (yBase + effDepth - skinT) - railT/2 - 0.001;
+
+      // Slightly inset stretcher outline so it doesn't peek out past the wrapped canvas edges.
+      const edgeInset = 0.03 * scale; // ~0.03"
+      const cw2 = Math.max(0.001, cw - edgeInset*2);
+      const ch2 = Math.max(0.001, ch - edgeInset*2);
+
+      // Top/bottom rails (along X)
+      const top = new THREE.Mesh(new THREE.BoxGeometry(cw2, railT, sw), materialStretcher);
+      top.position.set(0, yBack, (ch2/2) - inset);
+      const bot = top.clone(); bot.position.set(0, yBack, (-ch2/2) + inset);
+      // Left/right rails (along Z)
+      const left = new THREE.Mesh(new THREE.BoxGeometry(sw, railT, ch2), materialStretcher);
+      left.position.set((-cw2/2) + inset, yBack, 0);
+      const right = left.clone(); right.position.set((cw2/2) - inset, yBack, 0);
+
+      [top, bot, left, right].forEach(m=>{ addEdgesFor(m); stretcherGroup.add(m); });
+    };
+
+    // Build step list
+    const steps = [];
+    if(state.build==='two'){
+      steps.push(()=>addLinerRail('bottom'));
+      steps.push(()=>addLinerRail('top'));
+      steps.push(()=>addLinerRail('left'));
+      steps.push(()=>addLinerRail('right'));
+    }
+    steps.push(()=>addFaceRail('bottom'));
+    steps.push(()=>addFaceRail('top'));
+    steps.push(()=>addFaceRail('left'));
+    steps.push(()=>addFaceRail('right'));
+    steps.push(addSpacers);
+    steps.push(addCanvas);
+    steps.push(()=>{ addClips(); addScrews(); });
+    steps.push(addStretchers);
+
+    // Execute up to current stage (stage 0 is Plan)
+    const n = Math.min(stage, steps.length);
+    for(let i=0;i<n;i++) steps[i]();
+
+    // Visibility toggles
+    const vis = state.vis || {};
+    if(faceGroup) faceGroup.visible = (vis.face !== false);
+    if(linerGroup) linerGroup.visible = (vis.liner !== false);
+    if(clipGroup) clipGroup.visible = (vis.clips !== false);
+    if(spacerGroup) spacerGroup.visible = (vis.spacers !== false);
+    canvasMesh.visible = canvasMesh.visible && (vis.canvas !== false);
+    if(canvasUndersideMesh) canvasUndersideMesh.visible = canvasUndersideMesh.visible && (vis.canvas !== false);
+    if(stretcherGroup) stretcherGroup.visible = (vis.canvas !== false) && stretcherGroup.children.length > 0;
+  }
+
+  function animate(){
+    requestAnimationFrame(animate);
+    if(controls) controls.update();
+    if(renderer && camera && scene){
+      // Main render
+      renderer.setScissorTest(false);
+      renderer.setViewport(0,0,renderer.domElement.width, renderer.domElement.height);
+      renderer.render(scene, camera);
+
+      // Axes gizmo render in bottom-left corner
+      if(!suppressGizmo){
+        const size = renderer.getSize(new THREE.Vector2());
+        const px = 88, py = 88;
+        renderer.clearDepth();
+        renderer.setScissorTest(true);
+        renderer.setScissor(8, 8, px, py);
+        renderer.setViewport(8, 8, px, py);
+        // Rotate axes to match the main camera orientation; keep camera fixed
+        if(axesGroup) axesGroup.quaternion.copy(camera.quaternion);
+        gizmoCamera.updateProjectionMatrix();
+        renderer.render(gizmoScene, gizmoCamera);
+        renderer.setScissorTest(false);
+      }
+    }
+  }
+
+  // ---------- Events ----------
+  function openDimsModal(){
+    if(!dom.dimsModal) return;
+    reflect();
+    modalSnapshot = JSON.parse(JSON.stringify(state));
+    setModalDirty(false);
+    dom.dimsModal.classList.add('open');
+    updateSolveUI();
+    updateDepthSolveUI();
+  }
+  function closeDimsModal(){
+    if(!dom.dimsModal) return;
+    dom.dimsModal.classList.remove('open');
+  }
+  function cancelDimsModal(){
+    if(modalDirty){
+      const ok = confirm('Discard unsaved changes?');
+      if(!ok) return;
+    }
+    if(modalSnapshot) Object.assign(state, modalSnapshot);
+    reflect();
+    closeDimsModal();
+  }
+  function saveDimsModal(){
+    readInputs();
+    reflect();
+    compute();
+    setModalDirty(false);
+    closeDimsModal();
+  }
+  function revertDimsModal(){
+    if(!modalSnapshot) return;
+    Object.assign(state, modalSnapshot);
+    reflect();
+    updateSolveUI();
+    setModalDirty(false);
+  }
+
+  if(dom.btnEditDims) dom.btnEditDims.addEventListener('click', openDimsModal);
+  if(dom.dimsModal){
+    dom.dimsModal.addEventListener('click', (e)=>{ if(e.target===dom.dimsModal) cancelDimsModal(); });
+    dom.dimsModal.addEventListener('keydown', (e)=>{
+      if(e.key==='Escape'){ e.preventDefault(); cancelDimsModal(); }
+      if(e.key==='Enter'){
+        const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+        if(tag==='textarea') return;
+        e.preventDefault();
+        saveDimsModal();
+      }
+    });
+  }
+  if(dom.btnDimsClose) dom.btnDimsClose.addEventListener('click', cancelDimsModal);
+  if(dom.btnDimsCancelBottom) dom.btnDimsCancelBottom.addEventListener('click', cancelDimsModal);
+  if(dom.btnDimsSaveBottom) dom.btnDimsSaveBottom.addEventListener('click', saveDimsModal);
+  if(dom.btnDimsRevert) dom.btnDimsRevert.addEventListener('click', revertDimsModal);
+
+  // Modal section navigator
+  $$('#dimsModal .modalNav a[data-target]').forEach(a=> a.addEventListener('click', (e)=>{
+    e.preventDefault();
+    const id = a.dataset.target;
+    const el = id ? document.getElementById(id) : null;
+    if(!el) return;
+    el.scrollIntoView({behavior:'smooth', block:'start'});
+    el.classList.remove('sectionFlash');
+    void el.offsetWidth;
+    el.classList.add('sectionFlash');
+    setTimeout(()=> el.classList.remove('sectionFlash'), 950);
+    $$('#dimsModal .modalNav a').forEach(x=> x.classList.toggle('active', x===a));
+  }));
+
+  if(dom.solveToggle){
+    Array.from(dom.solveToggle.querySelectorAll('button')).forEach(btn=> btn.addEventListener('click', ()=>{
+      const mode = btn.dataset.solve;
+      if(!mode) return;
+      if(dom.inSolve) dom.inSolve.value = mode;
+      updateSolveUI();
+      setModalDirty(true);
+    }));
+  }
+
+  if(dom.depthSolveToggle){
+    Array.from(dom.depthSolveToggle.querySelectorAll('button')).forEach(btn=> btn.addEventListener('click', ()=>{
+      const mode = btn.dataset.depthsolve;
+      if(!mode) return;
+      if(dom.inDepthSolve) dom.inDepthSolve.value = mode;
+      updateDepthSolveUI();
+      setModalDirty(true);
+    }));
+  }
+
+  $('#btnCalc').addEventListener('click',()=>{ readInputs(); compute(); });
+  $('#btnReset').addEventListener('click',()=>{ Object.assign(state,{
+    unit:'in', canvasW:24, canvasH:18, canvasT:0.75, stretcherW:1.5, reveal:0.125, face:1.5, depth:1.25, stock:0.75, join:'miter', kerf:0.125, backGap:0, build:'two', linerW:0.75, mountClip:'none', clipFlange:0.625, stage:0
+  }); reflect(); compute(); });
+  const presetSelect = document.getElementById('presetSelect');
+  const btnPresetApply = document.getElementById('btnPresetApply');
+  if(btnPresetApply){
+    btnPresetApply.addEventListener('click', ()=>{
+      if(!presetSelect) return;
+      const idx = parseInt(presetSelect.value, 10);
+      if(!Number.isFinite(idx) || idx < 0 || idx >= presets.length) return;
+      applyPreset(presets[idx]);
+    });
+  }
+  const btnCSV = $('#btnCSV');
+  if(btnCSV) btnCSV.addEventListener('click', exportCSV);
+  const btnCopy = $('#btnCopy');
+  if(btnCopy) btnCopy.addEventListener('click', copyList);
+  const btnPrint = $('#btnPrint');
+  if(btnPrint) btnPrint.addEventListener('click', printPlan);
+  // Tabs: Builder / Cut List
+  const cardBuilder = document.getElementById('cardBuilder');
+  const cardCutlist = document.getElementById('cardCutlist');
+  const tabBuilder = document.getElementById('tabBuilder');
+  const tabCut = document.getElementById('tabCut');
+  if(tabBuilder && tabCut){
+    tabBuilder.addEventListener('click', ()=>{
+      tabBuilder.classList.add('active'); tabCut.classList.remove('active');
+      if(cardBuilder) cardBuilder.style.display='';
+      if(cardCutlist) cardCutlist.style.display='none';
+      // ensure 3D fits when switching back
+      if(typeof resize==='function') requestAnimationFrame(()=> resize());
+    });
+    tabCut.addEventListener('click', ()=>{
+      tabCut.classList.add('active'); tabBuilder.classList.remove('active');
+      if(cardBuilder) cardBuilder.style.display='none';
+      if(cardCutlist) cardCutlist.style.display='';
+      if(typeof resizePiece2D==='function') requestAnimationFrame(()=> resizePiece2D());
+    });
+  }
+  const btnShare = $('#btnShare');
+  if(btnShare) btnShare.addEventListener('click', shareLink);
+
+  const stageSlider = $('#stageSlider');
+  if(stageSlider) stageSlider.addEventListener('input', e=>{
+    state.stage = +e.target.value;
+    const labels = getStageLabels();
+    $('#stageLabel').textContent = labels[state.stage]||'Plan';
+    build3D();
+  });
+
+  $$('#unitsToggle button').forEach(btn=> btn.addEventListener('click', ()=>{
+    const newUnit = btn.dataset.unit; if(state.unit===newUnit) return;
+    // Convert displayed numbers preserving actual size
+    if(newUnit==='mm' && state.unit==='in'){
+      // switch to mm
+    }else if(newUnit==='in' && state.unit==='mm'){
+      // switch to inches
+    }
+    state.unit = newUnit; reflect(); updateSummary(); populateTable(); updatePieceFromSelection();
+  }));
+
+  // Z-clip liner width helper
+  const btnZClip = document.getElementById('btnZClip');
+  if(btnZClip){
+    btnZClip.addEventListener('click', ()=>{
+      readInputs();
+      const off = (state.mountClip && state.mountClip !== 'none') ? parseFloat(state.mountClip) : NaN;
+      const clip = isFinite(off) ? getZClipByOffset(off) : null;
+      const flangeCanvas = clip ? clip.flangeCanvas : (isFinite(state.clipFlange) ? state.clipFlange : 0.625);
+      if(!isFinite(state.stretcherW) || state.stretcherW <= flangeCanvas) return;
+      // Rule (clip method): linerW = (stretcherW - requiredCanvasFlange) + reveal
+      state.linerW = (state.stretcherW - flangeCanvas) + (isFinite(state.reveal) ? state.reveal : 0);
+      reflect();
+      compute();
+    });
+  }
+
+  // Mounting hardware apply
+  if(dom.btnMountApply){
+    dom.btnMountApply.addEventListener('click', ()=>{
+      readInputs();
+      const clip = state.mountClip ?? 'none';
+      if(clip === 'none'){
+        reflect();
+        compute();
+        return;
+      }
+      const offset = parseFloat(clip);
+      if(!isFinite(offset) || offset < 0) return;
+      // Interpret clip offset as required liner depth (support) behind the canvas:
+      // linerDepth = depth - (canvasT + backGap)
+      // Keep the canvas resting flush on the liner by default (backGap = 0).
+      if(!isFinite(state.canvasT)) return;
+      state.backGap = 0;
+      state.depth = state.canvasT + state.backGap + offset;
+      reflect();
+      compute();
+      setModalDirty(true);
+    });
+  }
+
+  // Fix Clip Modal event handlers
+  if(dom.btnFixClipClose){
+    dom.btnFixClipClose.addEventListener('click', closeFixClipModal);
+  }
+  if(dom.btnFixClipCancel){
+    dom.btnFixClipCancel.addEventListener('click', closeFixClipModal);
+  }
+  if(dom.btnFixDepth){
+    dom.btnFixDepth.addEventListener('click', applyFixDepth);
+  }
+  if(dom.btnFixLiner){
+    dom.btnFixLiner.addEventListener('click', applyFixLiner);
+  }
+  if(dom.btnFixStretcher){
+    dom.btnFixStretcher.addEventListener('click', applyFixStretcher);
+  }
+  if(dom.btnFixClip2){
+    dom.btnFixClip2.addEventListener('click', applyFixClipChange);
+  }
+  // Close modal on backdrop click
+  if(dom.fixClipModal){
+    dom.fixClipModal.addEventListener('click', (e)=>{
+      if(e.target === dom.fixClipModal) closeFixClipModal();
+    });
+  }
+
+  // Canvas Selection Modal event handlers
+  if(dom.btnCanvasSelectClose){
+    dom.btnCanvasSelectClose.addEventListener('click', closeCanvasSelectModal);
+  }
+  if(dom.btnCanvasSelectCancel){
+    dom.btnCanvasSelectCancel.addEventListener('click', closeCanvasSelectModal);
+  }
+  if(dom.canvasSelectModal){
+    dom.canvasSelectModal.addEventListener('click', (e)=>{
+      if(e.target === dom.canvasSelectModal) closeCanvasSelectModal();
+    });
+  }
+
+  // Visibility toggles (3D)
+  const visToggle = document.getElementById('visToggle');
+  if(visToggle){
+    Array.from(visToggle.querySelectorAll('button')).forEach(btn=> btn.addEventListener('click', ()=>{
+      const key = btn.dataset.vis;
+      if(!key) return;
+      state.vis[key] = !state.vis[key];
+      btn.classList.toggle('active', !!state.vis[key]);
+      build3D();
+    }));
+  }
+
+  // Live recompute on blur
+  $$('#inCanvasW,#inCanvasH,#inCanvasT,#inStretcherW,#inReveal,#inFace,#inDepth,#inStock,#inKerf,#inBackGap,#inLinerW'.replaceAll('#', '').split(',').map(id=>`#${id}`).join(',')).forEach(el=>{
+    el.addEventListener('change', ()=>{ readInputs(); compute(); });
+  });
+  if(dom.inBuild){ dom.inBuild.addEventListener('change', ()=>{ readInputs(); reflect(); compute(); }); }
+  if(dom.inSolve){ dom.inSolve.addEventListener('change', ()=>{ updateSolveUI(); setModalDirty(true); }); }
+  if(dom.inDepthSolve){ dom.inDepthSolve.addEventListener('change', ()=>{ updateDepthSolveUI(); setModalDirty(true); }); }
+  ['inCanvasW','inCanvasH','inReveal','inFace','inOuterW','inOuterH'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.addEventListener('input', ()=>{ updateDerivedSolveValues(); setModalDirty(true); });
+    el.addEventListener('change', ()=>{ updateDerivedSolveValues(); setModalDirty(true); });
+  });
+
+  ['inCanvasT','inDepth','inStock','inBackGap'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.addEventListener('input', ()=>{ updateDerivedDepthSolveValues(); setModalDirty(true); });
+    el.addEventListener('change', ()=>{ updateDerivedDepthSolveValues(); setModalDirty(true); });
+  });
+
+  ['inCanvasT','inStretcherW','inDepth','inStock','inBackGap','inKerf','inJoin','inBuild','inLinerW'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.addEventListener('input', ()=>{ setModalDirty(true); });
+  });
+
+  if(dom.inMountClip){
+    dom.inMountClip.addEventListener('change', ()=>{ readInputs(); updateMountingUI(); setModalDirty(true); });
+  }
+
+  if(dom.inClipFlange){
+    dom.inClipFlange.addEventListener('input', ()=>{ readInputs(); setModalDirty(true); });
+    dom.inClipFlange.addEventListener('change', ()=>{ readInputs(); setModalDirty(true); });
+  }
+
+  // ---------- Init ----------
+  initPresets();
+  loadFromURL();
+  reflect();
+  initQuickSliders();
+  init3D();
+  initPiece2D();
+  compute();
+  updatePieceFromSelection();
+</script>
+</body>
+</html>

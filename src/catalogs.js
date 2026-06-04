@@ -1,0 +1,51 @@
+export const CANVAS_CATALOG = [
+  { name: 'Edge Pro 10 x 10 in, 1.5 in deep', width: 10, height: 10, thickness: 1.5, stretcherW: 1.5, brand: "Jerry's Artarama", sku: '65518' },
+  { name: 'Edge Pro 18 x 18 in, 1.5 in deep', width: 18, height: 18, thickness: 1.5, stretcherW: 1.5, brand: "Jerry's Artarama", sku: '63498' },
+  { name: 'Edge Pro 18 x 24 in, 1.5 in deep', width: 18, height: 24, thickness: 1.5, stretcherW: 1.5, brand: "Jerry's Artarama", sku: '57238' },
+  { name: 'Edge Pro 18 x 18 in, 11/16 in deep', width: 18, height: 18, thickness: 0.6875, stretcherW: 0.75, brand: "Jerry's Artarama", sku: '63490' }
+];
+
+export const Z_CLIP_CATALOG = [
+  { offset: 0.5, flangeLiner: 0.5, flangeCanvas: 0.5, thickness: 0.06 },
+  { offset: 0.75, flangeLiner: 0.625, flangeCanvas: 0.625, thickness: 0.06 },
+  { offset: 1, flangeLiner: 0.75, flangeCanvas: 0.75, thickness: 0.06 }
+];
+
+export const DEFAULT_PLAN = {
+  unit: 'in',
+  canvasW: 24,
+  canvasH: 18,
+  canvasT: 0.75,
+  stretcherW: 1.5,
+  reveal: 0.125,
+  face: 1.5,
+  depth: 1.25,
+  faceLip: 0.125,
+  stock: 0.75,
+  join: 'miter',
+  kerf: 0.125,
+  rabbet: 0.125,
+  strainerDepth: 0.5,
+  backGap: 0,
+  build: 'liner',
+  linerW: 1.625,
+  finishColor: 'stain_dark_brown',
+  finishSheen: 'satin',
+  canvasAppearance: 'art_translucent',
+  modelPalette: 'natural',
+  modelOpacity: 'opaque',
+  modelScene: 'dark',
+  mountMethod: 'screws',
+  mountClip: 'none',
+  shelfW: 96,
+  shelfH: 72,
+  shelfD: 24,
+  shelfLevels: 4,
+  shelfBays: 3,
+  shelfSlats: 5,
+  shelfPost: 3.5,
+  shelfRail: 3.5,
+  shelfDeck: 3.5,
+  vis: { face: true, liner: true, spacers: true, canvas: true, hardware: true },
+  stage: 0
+};

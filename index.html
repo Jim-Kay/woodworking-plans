@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0d11" />
+    <title>Floating Frame Planner</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./src/styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div class="fileWarning hidden" id="fileWarning">
+      <div class="card">
+        <h1>Open This App Through The Local Server</h1>
+        <p>This planner is now split into modules, and Chrome blocks module files when the page is opened directly from disk.</p>
+        <p>Use the local app URL instead: <b>http://127.0.0.1:5173/</b></p>
+      </div>
+    </div>
+
+    <main class="planCatalog hidden" id="planCatalog">
+      <header class="catalogHero">
+        <div>
+          <p class="eyebrow">Workshop plans</p>
+          <h1>Choose a build plan</h1>
+          <p>Select a plan to open an adjustable builder with dimensions, 3D previews, cut lists, and print-ready diagrams.</p>
+        </div>
+        <button class="btn ghost hidden" id="btnResumePlan" type="button">Resume Last Plan</button>
+      </header>
+      <section class="planGrid" id="planGrid" aria-label="Available plans"></section>
+    </main>
+
+    <main class="app hidden" id="plannerApp">
+      <section class="left">
+        <div class="card">
+          <div class="card-title">
+            <h1 id="appTitle">Floating Frame Planner</h1>
+            <div class="segmented" id="unitsToggle" aria-label="Units">
+              <button class="active" data-unit="in" type="button">In</button>
+              <button data-unit="mm" type="button">mm</button>
+            </div>
+          </div>
+          <div class="kvlist" id="dimensionSummary"></div>
+          <div class="toolbar">
+            <button class="btn ghost" id="btnPlanCatalog" type="button">Plans</button>
+            <button class="btn primary" id="btnCalculate" type="button">Calculate</button>
+            <button class="btn" id="btnReset" type="button">Reset</button>
+            <button class="btn ghost" id="btnShare" type="button">Copy Share Link</button>
+          </div>
+          <div class="status" id="statusBar" aria-live="polite"></div>
+        </div>
+
+        <div class="card">
+          <h2>Build Stages</h2>
+          <div class="stage">
+            <label for="stageSlider">Stage</label>
+            <input id="stageSlider" type="range" min="0" max="12" value="0" />
+            <span class="badge" id="stageLabel">Plan</span>
+          </div>
+          <div class="legend">
+            <span class="chip"><span class="swatch frame"></span><span data-stage-part="primary">Frame</span></span>
+            <span class="chip"><span class="swatch liner"></span><span data-vis-label="liner" data-stage-part="support">Liner</span></span>
+            <span class="chip"><span class="swatch canvas"></span><span data-stage-part="surface">Canvas</span></span>
+            <span class="chip"><span class="swatch hardware"></span><span data-stage-part="hardware">Hardware</span></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="right">
+        <div class="tabs" role="tablist">
+          <button class="active" id="tabBuilder" type="button">3D Builder</button>
+          <button id="tabCutList" type="button">Cut List</button>
+          <button id="tabOpenScad" type="button">OpenSCAD</button>
+          <button id="tabPhysics" type="button">Physics</button>
+        </div>
+        <div class="planNav">
+          <button class="catalogBack" id="btnPlanCatalogTop" type="button">&larr; Back to Plans</button>
+        </div>
+
+        <div class="builderView" id="builderView">
+          <div class="card builder-card">
+            <div class="builder-header">
+              <h2>3D Builder</h2>
+              <div class="builder-tools">
+                <div class="view-controls">
+                  <label><input type="checkbox" data-vis="face" checked /> <span data-vis-label>Face</span></label>
+                  <label><input type="checkbox" data-vis="liner" checked /> <span data-vis-label="liner">Liner</span></label>
+                  <label><input type="checkbox" data-vis="spacers" checked /> <span data-vis-label>Spacers</span></label>
+                  <label><input type="checkbox" data-vis="canvas" checked /> <span data-vis-label>Canvas</span></label>
+                  <label><input type="checkbox" data-vis="hardware" checked /> <span data-vis-label>Hardware</span></label>
+                </div>
+                <div class="visual-controls" aria-label="3D visual style">
+                  <label>Color
+                    <select id="modelPalette">
+                      <option value="natural">Natural wood</option>
+                      <option value="component">Component colors</option>
+                    </select>
+                  </label>
+                  <label>Scene
+                    <select id="modelScene">
+                      <option value="dark">Dark</option>
+                      <option value="light">Light</option>
+                    </select>
+                  </label>
+                  <label class="compactCheck"><input type="checkbox" id="modelTransparent" /> 50% opacity</label>
+                </div>
+                <details class="orientationPanel">
+                  <summary>View</summary>
+                  <div class="orientationGrid">
+                    <label>X<input id="cameraX" type="number" step="0.1" /></label>
+                    <label>Y<input id="cameraY" type="number" step="0.1" /></label>
+                    <label>Z<input id="cameraZ" type="number" step="0.1" /></label>
+                    <label>Target X<input id="targetX" type="number" step="0.1" /></label>
+                    <label>Target Y<input id="targetY" type="number" step="0.1" /></label>
+                    <label>Target Z<input id="targetZ" type="number" step="0.1" /></label>
+                    <button class="btn" id="btnCameraApply" type="button">Apply</button>
+                    <button class="btn ghost" id="btnTargetReset" type="button">Reset Target</button>
+                    <button class="btn ghost" data-camera-preset="top" type="button">Top</button>
+                    <button class="btn ghost" data-camera-preset="back" type="button">Back</button>
+                    <button class="btn ghost" data-camera-preset="below" type="button">Below</button>
+                    <button class="btn ghost" id="btnProjectionToggle" type="button">Iso</button>
+                  </div>
+                </details>
+              </div>
+            </div>
+            <div class="canvas-wrap">
+              <canvas id="viewport"></canvas>
+            </div>
+          </div>
+
+          <aside class="quickPanel">
+            <div class="quickHeader">
+              <h2>Quick Controls</h2>
+              <button class="btn ghost" id="btnOpenAdvanced" type="button">Advanced</button>
+            </div>
+
+            <div class="quickSection" data-frame-controls>
+              <div class="quickSectionTitle">
+                <span>Canvas</span>
+                <button class="iconBtn" id="btnSelectCanvas" type="button" title="Choose canvas preset">Select</button>
+              </div>
+              <div class="controlGrid two">
+                <label><span class="labelRow">Width<span class="fieldHelp" tabindex="0" aria-label="Canvas width help"><span class="infoIcon">i</span><span class="helpCard">The left-to-right size of the canvas face.<svg class="helpSketch measureX" viewBox="0 0 120 64" aria-hidden="true"><rect x="25" y="18" width="70" height="28"/><line class="measurePulse" x1="25" y1="52" x2="95" y2="52"/></svg></span></span></span><input id="canvasW" type="number" step="0.125" min="1" /></label>
+                <label><span class="labelRow">Height<span class="fieldHelp" tabindex="0" aria-label="Canvas height help"><span class="infoIcon">i</span><span class="helpCard">The top-to-bottom size of the canvas face.<svg class="helpSketch measureZ" viewBox="0 0 120 64" aria-hidden="true"><rect x="35" y="12" width="50" height="40"/><line class="measurePulse" x1="96" y1="12" x2="96" y2="52"/></svg></span></span></span><input id="canvasH" type="number" step="0.125" min="1" /></label>
+                <label><span class="labelRow">Thickness<span class="fieldHelp" tabindex="0" aria-label="Canvas thickness help"><span class="infoIcon">i</span><span class="helpCard">The canvas depth from front face to back edge.<svg class="helpSketch measureY" viewBox="0 0 120 64" aria-hidden="true"><path d="M28 18h56l14 12v24H42L28 42z"/><line class="measurePulse" x1="100" y1="30" x2="100" y2="54"/></svg></span></span></span><input id="canvasT" type="number" step="0.0625" min="0.125" /></label>
+                <label><span class="labelRow">Stretcher<span class="fieldHelp" tabindex="0" aria-label="Stretcher width help"><span class="infoIcon">i</span><span class="helpCard">The width of the wooden stretcher rail on the back of the canvas.<svg class="helpSketch measureRail" viewBox="0 0 120 64" aria-hidden="true"><rect x="20" y="14" width="80" height="38"/><rect x="30" y="24" width="60" height="18"/><line class="measurePulse" x1="30" y1="49" x2="46" y2="49"/></svg></span></span></span><input id="stretcherW" type="number" step="0.0625" min="0.25" /></label>
+              </div>
+            </div>
+
+            <div class="quickSection hidden" data-shelf-controls>
+              <div class="quickSectionTitle"><span>Shelf Size</span></div>
+              <div class="controlGrid two">
+                <label><span class="labelRow">Width</span><input id="shelfW" type="number" step="1" min="12" /></label>
+                <label><span class="labelRow">Height</span><input id="shelfH" type="number" step="1" min="12" /></label>
+                <label><span class="labelRow">Depth</span><input id="shelfD" type="number" step="1" min="6" /></label>
+                <label><span class="labelRow">Levels</span><input id="shelfLevels" type="number" step="1" min="1" /></label>
+                <label><span class="labelRow">Bays</span><input id="shelfBays" type="number" step="1" min="1" /></label>
+                <label><span class="labelRow">Slats / shelf</span><input id="shelfSlats" type="number" step="1" min="1" /></label>
+              </div>
+            </div>
+
+            <div class="quickSection hidden" data-shelf-controls>
+              <div class="quickSectionTitle"><span>Lumber</span></div>
+              <div class="controlGrid two">
+                <label><span class="labelRow">Post face</span><input id="shelfPost" type="number" step="0.125" min="1.5" /></label>
+                <label><span class="labelRow">Rail height</span><input id="shelfRail" type="number" step="0.125" min="0.5" /></label>
+                <label><span class="labelRow">Deck board</span><input id="shelfDeck" type="number" step="0.125" min="0.5" /></label>
+              </div>
+            </div>
+
+            <div class="quickSection" data-frame-controls>
+              <div class="quickSectionTitle"><span>Frame</span></div>
+              <div class="controlGrid two">
+                <label><span class="labelRow">Outer W<span class="fieldHelp" tabindex="0" aria-label="Outer width help"><span class="infoIcon">i</span><span class="helpCard">The finished outside width of the frame.<svg class="helpSketch measureX" viewBox="0 0 120 64" aria-hidden="true"><rect x="20" y="14" width="80" height="36"/><rect x="34" y="24" width="52" height="16"/><line class="measurePulse" x1="20" y1="56" x2="100" y2="56"/></svg></span></span></span><input id="outerW" type="number" step="0.125" min="1" /></label>
+                <label><span class="labelRow">Outer H<span class="fieldHelp" tabindex="0" aria-label="Outer height help"><span class="infoIcon">i</span><span class="helpCard">The finished outside height of the frame.<svg class="helpSketch measureZ" viewBox="0 0 120 64" aria-hidden="true"><rect x="28" y="10" width="64" height="44"/><rect x="42" y="20" width="36" height="24"/><line class="measurePulse" x1="102" y1="10" x2="102" y2="54"/></svg></span></span></span><input id="outerH" type="number" step="0.125" min="1" /></label>
+                <label><span class="labelRow">Face<span class="fieldHelp" tabindex="0" aria-label="Face width help"><span class="infoIcon">i</span><span class="helpCard">The visible front width of the frame between the outside edge and opening.<svg class="helpSketch measureRail" viewBox="0 0 120 64" aria-hidden="true"><rect x="18" y="12" width="84" height="40"/><rect x="36" y="24" width="48" height="16"/><line class="measurePulse" x1="18" y1="58" x2="36" y2="58"/></svg></span></span></span><input id="face" type="number" step="0.0625" min="0.25" /></label>
+                <label><span class="labelRow">Reveal<span class="fieldHelp" tabindex="0" aria-label="Reveal help"><span class="infoIcon">i</span><span class="helpCard">The shadow gap between the canvas edge and the frame opening.<svg class="helpSketch measureGap" viewBox="0 0 120 64" aria-hidden="true"><rect x="16" y="16" width="88" height="34"/><rect class="canvasMini" x="32" y="24" width="56" height="18"/><line class="measurePulse" x1="88" y1="24" x2="104" y2="24"/></svg></span></span></span><input id="reveal" type="number" step="0.0625" min="0" /></label>
+                <label><span class="labelRow">Depth<span class="fieldHelp" tabindex="0" aria-label="Frame depth help"><span class="infoIcon">i</span><span class="helpCard">The frame depth from the back to the canvas face height, before any protective face lip.<svg class="helpSketch measureY" viewBox="0 0 120 64" aria-hidden="true"><path d="M25 14h54l18 14v28H43L25 42z"/><line class="measurePulse" x1="100" y1="28" x2="100" y2="56"/></svg></span></span></span><input id="depth" type="number" step="0.0625" min="0.25" /></label>
+                <label data-support-label data-liner-width-label><span class="labelRow">Liner<span class="fieldHelp" tabindex="0" aria-label="Liner width help"><span class="infoIcon">i</span><span class="helpCard">The support rail width. For screws it aligns with the stretcher; for Z-clips it is set back for clip clearance.<svg class="helpSketch measureRail" viewBox="0 0 120 64" aria-hidden="true"><rect x="18" y="18" width="84" height="30"/><rect class="supportMini" x="30" y="28" width="60" height="10"/><line class="measurePulse" x1="30" y1="54" x2="46" y2="54"/></svg></span></span></span><input id="linerW" type="number" step="0.0625" min="0.25" /></label>
+                <label data-strainer-depth-label class="hidden"><span class="labelRow">Strainer depth<span class="fieldHelp" tabindex="0" aria-label="Strainer depth help"><span class="infoIcon">i</span><span class="helpCard">The vertical thickness of the strainer rail seated on the rabbet ledge.<svg class="helpSketch measureY" viewBox="0 0 120 64" aria-hidden="true"><rect x="20" y="18" width="82" height="34"/><rect class="supportMini" x="34" y="28" width="54" height="12"/><line class="measurePulse" x1="96" y1="28" x2="96" y2="40"/></svg></span></span></span><input id="strainerDepth" type="number" step="0.0625" min="0.125" /></label>
+              </div>
+            </div>
+
+            <div class="quickSection" data-frame-controls>
+              <div class="quickSectionTitle"><span>Joinery</span></div>
+              <div class="segmented fill" id="joinToggle">
+                <button class="active" data-join="miter" type="button">Miter</button>
+                <button data-join="butt" type="button">Butt</button>
+              </div>
+            </div>
+
+            <div class="quickSection" data-frame-controls>
+              <div class="quickSectionTitle"><span>Mounting</span></div>
+              <div class="segmented fill" id="mountToggle">
+                <button class="active" data-mount="screws" type="button">Screws</button>
+                <button data-mount="clips" type="button">Z-clips</button>
+              </div>
+              <label class="clipField">Clip offset
+                <select id="mountClip">
+                  <option value="none">No clip</option>
+                </select>
+              </label>
+              <div class="mountStatus" id="mountStatus"></div>
+              <button class="btn" id="btnFixClip" type="button">Fix Clip Fit</button>
+            </div>
+          </aside>
+        </div>
+
+        <div class="card cutView hidden" id="cutView">
+          <div class="builder-header">
+            <h2>Cut List</h2>
+            <div class="toolbar">
+              <label class="inlineControl">Board length
+                <select id="purchaseBoardLength">
+                  <option value="48">4 ft</option>
+                  <option value="96">8 ft</option>
+                  <option value="144">12 ft</option>
+                  <option value="192">16 ft</option>
+                </select>
+              </label>
+              <button class="btn" id="btnExportCsv" type="button">Export CSV</button>
+              <button class="btn" id="btnCopyList" type="button">Copy</button>
+              <button class="btn" id="btnPrint" type="button">Print Plan</button>
+            </div>
+          </div>
+          <div class="purchasePanel" id="purchaseEstimate"></div>
+          <table class="cuts">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Part</th>
+                <th>Qty</th>
+                <th>Length</th>
+                <th>Width</th>
+                <th>Thickness</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody id="cutTable"></tbody>
+          </table>
+        </div>
+
+        <div class="card scadView hidden" id="scadView">
+          <div class="builder-header">
+            <h2>OpenSCAD</h2>
+            <div class="toolbar">
+              <button class="btn" id="btnCopyScad" type="button">Copy</button>
+              <button class="btn" id="btnDownloadScad" type="button">Download .scad</button>
+            </div>
+          </div>
+          <pre class="codePanel"><code id="scadOutput"></code></pre>
+        </div>
+
+        <div class="card physicsView hidden" id="physicsView">
+          <div class="builder-header">
+            <h2>Physics Check</h2>
+            <div class="toolbar">
+              <label class="inlineControl">Gravity
+                <select id="physicsGravity">
+                  <option value="-y">Down</option>
+                  <option value="+y">Up</option>
+                  <option value="-z">Toward back</option>
+                  <option value="+z">Toward front</option>
+                  <option value="-x">Left</option>
+                  <option value="+x">Right</option>
+                </select>
+              </label>
+              <button class="btn primary" id="btnRunPhysics" type="button">Run Check</button>
+            </div>
+          </div>
+          <div class="physicsPanel" id="physicsOutput">
+            <p>Select Run Check to test the assembly with rigid bodies, gravity, and fastener links.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <dialog id="advancedDialog">
+      <form method="dialog" class="modal">
+        <div class="modalHeader">
+          <h2>Advanced Dimensions</h2>
+          <button class="iconBtn" value="cancel" type="submit">Close</button>
+        </div>
+        <div class="controlGrid three">
+          <label>Stock thickness<input id="stock" type="number" step="0.0625" min="0.125" /></label>
+          <label>Kerf<input id="kerf" type="number" step="0.0625" min="0" /></label>
+          <label>Rabbet ledge<input id="rabbet" type="number" step="0.0625" min="0.0625" /></label>
+          <label>Face lip<input id="faceLip" type="number" step="0.0625" min="0" /></label>
+          <label>Finish
+            <select id="finishColor">
+              <option value="stain_dark_brown">Dark stain</option>
+              <option value="walnut">Walnut</option>
+              <option value="maple">Maple</option>
+              <option value="black">Black</option>
+              <option value="white">White</option>
+            </select>
+          </label>
+          <label>Sheen
+            <select id="finishSheen">
+              <option value="matte">Matte</option>
+              <option value="satin">Satin</option>
+              <option value="gloss">Gloss</option>
+            </select>
+          </label>
+          <label>Canvas
+            <select id="canvasAppearance">
+              <option value="white">White canvas</option>
+              <option value="art_translucent">Translucent geometry</option>
+              <option value="art_blocks">Bold geometry</option>
+              <option value="art_spiral">Shape spiral</option>
+              <option value="art_landscape">Simple landscape</option>
+            </select>
+          </label>
+        </div>
+        <div class="modalActions">
+          <button class="btn primary" id="btnSaveAdvanced" value="default" type="submit">Apply</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="canvasDialog">
+      <form method="dialog" class="modal">
+        <div class="modalHeader">
+          <h2>Canvas Presets</h2>
+          <button class="iconBtn" value="cancel" type="submit">Close</button>
+        </div>
+        <div class="presetList" id="canvasPresetList"></div>
+      </form>
+    </dialog>
+
+    <script>
+      if (window.location.protocol === 'file:') {
+        document.getElementById('fileWarning')?.classList.remove('hidden');
+      }
+    </script>
+    <script type="module">
+      if (window.location.protocol !== 'file:') {
+        import('./src/app.js');
+      }
+    </script>
+  </body>
+</html>
