@@ -101,9 +101,11 @@ function calculateToteRackPlan(plan) {
   const rowPitch = toteH + verticalClearance;
   const runnerY = (row) => baseStackHeight + toteH - toteLipThickness - rail / 2 + row * rowPitch;
   const height = runnerY(rows - 1) + rail / 2 + verticalClearance + stock;
-  const railLength = Math.max(stock, bayWidth - post);
+  const postStep = (width - stock) / columns;
+  const railLength = Math.max(stock, postStep - stock);
   const depthRailLength = Math.max(stock, depth - stock * 2);
-  const frameRailLength = Math.max(stock, width - stock);
+  const frameRailLength = railLength;
+  const tieRailLength = Math.max(stock, depth - post * 2);
   const supportRailLength = depthRailLength;
   const totalHeight = height + casterHeight;
   const capacity = columns * rows;
@@ -113,10 +115,10 @@ function calculateToteRackPlan(plan) {
 
   const parts = [
     { part: 'Vertical posts', qty: (columns + 1) * 2, length: height, width: post, thickness: stock, notes: 'Front and back posts; mark every row height before assembly.' },
-    { part: 'Top frame rails', qty: 2, length: frameRailLength, width: rail, thickness: stock, notes: 'Continuous front and back top rails laid flat with the wide face upward.' },
-    { part: 'Doubled bottom frame rails', qty: 4, length: frameRailLength, width: rail, thickness: stock, notes: 'Two stacked rails across the front and back create a stronger caster-bearing base.' },
+    { part: 'Top frame rail spans', qty: columns * 2, length: frameRailLength, width: rail, thickness: stock, notes: 'Front and back top rails laid flat between posts with the wide face upward.' },
+    { part: 'Doubled bottom frame rail spans', qty: columns * 4, length: frameRailLength, width: rail, thickness: stock, notes: 'Two stacked rails across each front/back bay create a stronger caster-bearing base.' },
     { part: 'Tote runner rails', qty: rows * columns * 2, length: supportRailLength, width: rail, thickness: stock, notes: 'Two front-to-back runners for each tote bay; runners are not shared between neighboring totes.' },
-    { part: 'Depth tie rails', qty: (columns + 1) * 2, length: depthRailLength, width: rail, thickness: stock, notes: 'Top and bottom rails tying each front post to the matching back post.' },
+    { part: 'Depth tie rails', qty: (columns + 1) * 2, length: tieRailLength, width: rail, thickness: stock, notes: 'Top and bottom rails tying each front post to the matching back post.' },
     { part: 'Swivel casters', qty: 4, length: casterHeight, width: 3.62, thickness: 2.44, notes: 'Mount to the doubled bottom frame rails if the rack needs to roll.' },
     { part: 'Structural screws', qty: rows * columns * 8 + (columns + 1) * 8, length: 2.5, width: NaN, thickness: NaN, notes: 'Fasten runner and tie rail ends into posts; add wall anchors for tall racks.' }
   ];
@@ -124,7 +126,7 @@ function calculateToteRackPlan(plan) {
     const boardFeetForPart = (p.qty * p.length * p.width * p.thickness) / 144;
     return Number.isFinite(boardFeetForPart) ? sum + boardFeetForPart : sum;
   }, 0);
-  const model = { width, height, totalHeight, depth, rows, columns, toteW, toteD, toteH, sideClearance, verticalClearance, railInset, post, stock, rail, bayWidth, railLength, depthRailLength, frameRailLength, supportRailLength, rowPitch, casterHeight, toteLipThickness, baseStackHeight };
+  const model = { width, height, totalHeight, depth, rows, columns, toteW, toteD, toteH, sideClearance, verticalClearance, railInset, post, stock, rail, bayWidth, postStep, railLength, depthRailLength, frameRailLength, tieRailLength, supportRailLength, rowPitch, casterHeight, toteLipThickness, baseStackHeight };
   const assembly = buildToteRackAssembly(model);
   const validation = validateShelfConstruction(assembly, warnings);
   return {
@@ -148,6 +150,7 @@ function calculateToteRackPlan(plan) {
     railLength,
     depthRailLength,
     frameRailLength,
+    tieRailLength,
     supportRailLength,
     slatLength: 0,
     bayStep: bayWidth,
@@ -624,9 +627,9 @@ function buildToteRackAssembly(model) {
   const yForRow = (row) => model.baseStackHeight + model.toteH - model.toteLipThickness - model.rail / 2 + row * model.rowPitch;
   const bottomFrameY = [model.stock / 2, model.stock * 1.5];
   const topFrameY = model.height - model.stock / 2;
-  const frameRailMeta = { group: 'rails', subgroup: 'frame', intentionalOverlap: true };
-  const tieRailMeta = { group: 'rails', subgroup: 'tie', intentionalOverlap: true };
-  const runnerRailMeta = { group: 'rails', subgroup: 'runner', intentionalOverlap: true };
+  const frameRailMeta = { group: 'rails', subgroup: 'frame' };
+  const tieRailMeta = { group: 'rails', subgroup: 'tie' };
+  const runnerRailMeta = { group: 'rails', subgroup: 'runner' };
 
   for (let i = 0; i <= model.columns; i += 1) {
     const x = postXForIndex(i);
@@ -637,19 +640,25 @@ function buildToteRackAssembly(model) {
   bottomFrameY.forEach((y, stackIndex) => {
     ['front', 'back'].forEach((side) => {
       const z = side === 'front' ? zFront : zBack;
-      const frameRailId = `rail.frame.${side}.bottom.${stackIndex}`;
-      parts.push(assemblyPart(frameRailId, `${side} doubled bottom frame rail`, 'wood', { x: model.frameRailLength, y: model.stock, z: model.rail }, { x: 0, y, z }, { ...frameRailMeta, side, level: 'bottom', stackIndex }));
-      connections.push(contactConnection(`contact.${frameRailId}.leftPost`, frameRailId, `post.${side}.0`, 'frame rail bears on outer post'));
-      connections.push(contactConnection(`contact.${frameRailId}.rightPost`, frameRailId, `post.${side}.${model.columns}`, 'frame rail bears on outer post'));
+      for (let bay = 0; bay < model.columns; bay += 1) {
+        const x = bayCenterX(bay);
+        const frameRailId = `rail.frame.${side}.bottom.${stackIndex}.bay${bay}`;
+        parts.push(assemblyPart(frameRailId, `${side} doubled bottom frame rail`, 'wood', { x: model.frameRailLength, y: model.stock, z: model.rail }, { x, y, z }, { ...frameRailMeta, side, level: 'bottom', stackIndex, bay }));
+        connections.push(contactConnection(`contact.${frameRailId}.leftPost`, frameRailId, `post.${side}.${bay}`, 'frame rail bears on post'));
+        connections.push(contactConnection(`contact.${frameRailId}.rightPost`, frameRailId, `post.${side}.${bay + 1}`, 'frame rail bears on post'));
+      }
     });
   });
 
   ['front', 'back'].forEach((side) => {
     const z = side === 'front' ? zFront : zBack;
-    const frameRailId = `rail.frame.${side}.top`;
-    parts.push(assemblyPart(frameRailId, `${side} top frame rail`, 'wood', { x: model.frameRailLength, y: model.stock, z: model.rail }, { x: 0, y: topFrameY, z }, { ...frameRailMeta, side, level: 'top' }));
-    connections.push(contactConnection(`contact.${frameRailId}.leftPost`, frameRailId, `post.${side}.0`, 'frame rail bears on outer post'));
-    connections.push(contactConnection(`contact.${frameRailId}.rightPost`, frameRailId, `post.${side}.${model.columns}`, 'frame rail bears on outer post'));
+    for (let bay = 0; bay < model.columns; bay += 1) {
+      const x = bayCenterX(bay);
+      const frameRailId = `rail.frame.${side}.top.bay${bay}`;
+      parts.push(assemblyPart(frameRailId, `${side} top frame rail`, 'wood', { x: model.frameRailLength, y: model.stock, z: model.rail }, { x, y: topFrameY, z }, { ...frameRailMeta, side, level: 'top', bay }));
+      connections.push(contactConnection(`contact.${frameRailId}.leftPost`, frameRailId, `post.${side}.${bay}`, 'frame rail bears on post'));
+      connections.push(contactConnection(`contact.${frameRailId}.rightPost`, frameRailId, `post.${side}.${bay + 1}`, 'frame rail bears on post'));
+    }
   });
 
   ['bottom', 'top'].forEach((level) => {
@@ -657,7 +666,7 @@ function buildToteRackAssembly(model) {
     for (let i = 0; i <= model.columns; i += 1) {
       const x = postXForIndex(i);
       const tieRailId = `rail.tie.${level}.post${i}`;
-      parts.push(assemblyPart(tieRailId, `${level} depth tie rail`, 'wood', { x: model.rail, y: model.stock, z: model.depthRailLength }, { x, y, z: 0 }, { ...tieRailMeta, level, postIndex: i }));
+      parts.push(assemblyPart(tieRailId, `${level} depth tie rail`, 'wood', { x: model.rail, y: model.stock, z: model.tieRailLength }, { x, y, z: 0 }, { ...tieRailMeta, level, postIndex: i }));
       connections.push(contactConnection(`contact.${tieRailId}.frontPost`, tieRailId, `post.front.${i}`, 'depth tie rail bears on front post'));
       connections.push(contactConnection(`contact.${tieRailId}.backPost`, tieRailId, `post.back.${i}`, 'depth tie rail bears on back post'));
     }
@@ -683,8 +692,8 @@ function buildToteRackAssembly(model) {
 
 function addToteRackCasters(model, parts, connections, zFront, zBack) {
   const casterInsetX = 3.62 / 2;
-  const leftCasterX = -model.frameRailLength / 2 + casterInsetX;
-  const rightCasterX = model.frameRailLength / 2 - casterInsetX;
+  const leftCasterX = -model.width / 2 + model.stock + casterInsetX;
+  const rightCasterX = model.width / 2 - model.stock - casterInsetX;
   const casterPositions = [
     ['frontLeft', leftCasterX, zFront],
     ['frontRight', rightCasterX, zFront],
@@ -703,7 +712,8 @@ function addToteRackCasters(model, parts, connections, zFront, zBack) {
       wheel: { diameter: 2.95, width: 1.24 },
       height: model.casterHeight
     }));
-    const targetRail = `rail.frame.${isFront ? 'front' : 'back'}.bottom.0`;
+    const targetBay = corner.endsWith('Left') ? 0 : model.columns - 1;
+    const targetRail = `rail.frame.${isFront ? 'front' : 'back'}.bottom.0.bay${targetBay}`;
     connections.push(contactConnection(`contact.${casterId}.base`, casterId, targetRail, 'caster plate mounts under doubled base rail'));
     [
       [-1.35, -0.88],
