@@ -230,6 +230,7 @@ function renderPlanCatalog() {
         <h2>${escapeHtml(item.title)}</h2>
         <p>${escapeHtml(item.summary)}</p>
         <p class="planMaterials">${escapeHtml(item.materials)}</p>
+        ${renderCatalogDetails(item.details)}
         <div class="planTags">${item.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join('')}</div>
       </div>
     </article>
@@ -281,6 +282,7 @@ function render() {
   renderFields();
   renderToggles();
   renderDimensionSummary();
+  renderPlanDetails();
   renderStatus();
   renderCutList();
   renderOpenScad();
@@ -290,6 +292,22 @@ function render() {
   renderCameraInputs();
   renderProjectionToggle();
   savePlanState();
+}
+
+function renderCatalogDetails(details) {
+  if (!details) return '';
+  const tools = (details.tools || []).slice(0, 2).join(', ');
+  const notes = (details.notes || []).slice(0, 1).join(' ');
+  const rows = [
+    tools ? ['Tools', tools] : null,
+    notes ? ['Note', notes] : null
+  ].filter(Boolean);
+  if (!rows.length) return '';
+  return `
+    <dl class="planCardDetails">
+      ${rows.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('')}
+    </dl>
+  `;
 }
 
 function calculateCurrentPlan() {
@@ -422,6 +440,33 @@ function renderDimensionSummary() {
     ['Estimated board feet', result.ok ? result.boardFeet.toFixed(2) : '-']
   ];
   $('#dimensionSummary').innerHTML = rows.map(([key, value]) => `<div class="kvitem"><span>${escapeHtml(key)}</span><b>${escapeHtml(value)}</b></div>`).join('');
+}
+
+function renderPlanDetails() {
+  const definition = getPlanDefinition(currentPlanId);
+  const details = definition.details;
+  const card = $('#planDetailsCard');
+  if (!details) {
+    card.classList.add('hidden');
+    card.innerHTML = '';
+    return;
+  }
+  const sections = [
+    ['Materials', details.materials],
+    ['Tools', details.tools],
+    ['Notes', details.notes]
+  ].filter(([, items]) => items?.length);
+  card.classList.remove('hidden');
+  card.innerHTML = `
+    <h2>Plan Notes</h2>
+    <p>${escapeHtml(details.description || definition.summary)}</p>
+    ${sections.map(([title, items]) => `
+      <div class="planDetailSection">
+        <h3>${escapeHtml(title)}</h3>
+        <ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+      </div>
+    `).join('')}
+  `;
 }
 
 function renderStatus() {
