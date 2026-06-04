@@ -1067,7 +1067,11 @@ function miterGuideContent(part) {
 }
 
 function renderStage() {
-  const labels = isShelfPlan() ? ['Plan', 'Posts', 'Rails', plan.build === 'tote-rack' ? 'Totes' : 'Shelf slats', 'Fasteners'] : getStageLabels(plan.build);
+  const labels = isShelfPlan()
+    ? plan.build === 'tote-rack'
+      ? ['Plan', 'Bottom base', 'Posts', 'Top frame', 'Runner rails', 'Casters', 'Totes']
+      : ['Plan', 'Posts', 'Rails', 'Shelf slats', 'Fasteners']
+    : getStageLabels(plan.build);
   const slider = $('#stageSlider');
   slider.max = labels.length - 1;
   slider.value = Math.min(plan.stage, labels.length - 1);

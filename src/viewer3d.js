@@ -537,7 +537,9 @@ export class FrameViewer {
     const levels = result.levels;
     const bays = result.bays;
     const slats = result.slats;
-    const labels = ['Plan', 'Posts', 'Rails', 'Shelf slats', 'Fasteners'];
+    const labels = result.style === 'tote-rack'
+      ? ['Plan', 'Bottom base', 'Posts', 'Top frame', 'Runner rails', 'Casters', 'Totes']
+      : ['Plan', 'Posts', 'Rails', 'Shelf slats', 'Fasteners'];
     const maxStage = Math.min(plan.stage ?? labels.length - 1, labels.length - 1);
     const shouldShow = (name) => plan.vis?.[name] !== false;
     const visibleThrough = (label) => maxStage === 0 || labels.indexOf(label) <= maxStage || maxStage >= labels.length - 1;
@@ -559,14 +561,26 @@ export class FrameViewer {
 
     if (result.assembly?.parts?.length) {
       this.setGridFloor(assemblyFloorY(result.assembly) * SCALE);
-      const stageLabelForGroup = (group) => ({
-        posts: 'Posts',
-        rails: 'Rails',
-        slats: 'Shelf slats',
-        totes: 'Shelf slats',
-        hardware: 'Fasteners',
-        fasteners: 'Fasteners'
-      }[group]);
+      const stageLabelForPart = (part) => {
+        const group = part.meta?.group;
+        if (result.style === 'tote-rack') {
+          if (group === 'posts') return 'Posts';
+          if (group === 'totes') return 'Totes';
+          if (group === 'hardware' || group === 'fasteners') return 'Casters';
+          if (group === 'rails' && part.meta?.subgroup === 'runner') return 'Runner rails';
+          if (group === 'rails' && part.meta?.subgroup === 'frame' && part.meta?.level === 'top') return 'Top frame';
+          if (group === 'rails') return 'Bottom base';
+          return null;
+        }
+        return ({
+          posts: 'Posts',
+          rails: 'Rails',
+          slats: 'Shelf slats',
+          totes: 'Shelf slats',
+          hardware: 'Fasteners',
+          fasteners: 'Fasteners'
+        }[group]);
+      };
       const visKeyForGroup = (group) => group === 'fasteners' || group === 'hardware' ? 'hardware' : group === 'totes' ? 'slats' : group;
       const materialForPart = (part) => {
         if (part.material === 'fastener') return mat.shelfScrew;
@@ -574,7 +588,7 @@ export class FrameViewer {
       };
       result.assembly.parts.forEach((part) => {
         const group = part.meta?.group;
-        const stageLabel = stageLabelForGroup(group);
+        const stageLabel = stageLabelForPart(part);
         if (!stageLabel || !shouldShow(visKeyForGroup(group)) || !visibleThrough(stageLabel)) return;
         if (part.material === 'hardware' && part.meta?.kind === 'caster') {
           addCaster(this.root, part, mat);
