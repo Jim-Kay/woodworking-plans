@@ -98,6 +98,31 @@ export const PLAN_CATALOG = [
     ],
     tags: ['storage', 'rolling', 'casters', '48 in cuts'],
     thumbnail: 'rolling-shelves'
+  },
+  {
+    id: 'tote-rack-27',
+    title: '27 Gallon Tote Rack',
+    family: 'Storage',
+    status: 'ready',
+    build: 'tote-rack',
+    defaults: { build: 'tote-rack', toteW: 20.5, toteD: 30.5, toteH: 14.25, toteColumns: 3, toteRows: 3, toteSideClearance: 1.5, toteVerticalClearance: 3, toteRailInset: 1.25, shelfPost: 3.5, shelfRail: 3.5, shelfDeck: 1.5 },
+    summary: 'A slide-in rack sized for common 27 gallon totes, with adjustable tote dimensions and clearances.',
+    materials: '2x4 posts and rails, screws, optional anti-tip anchors',
+    details: {
+      description: 'A garage or basement rack for black-and-yellow 27 gallon storage totes. The default tote size matches a common published 30.5 in L x 20.5 in W x 14.25 in H bin, but the rack recalculates from the actual tote length, width, and height entered by the user.',
+      materials: ['2x4 posts and horizontal rails', 'Structural screws or lag screws', 'Actual 27 gallon totes for test fitting', 'Optional wall anchors or anti-tip straps'],
+      tools: ['Miter saw or circular saw', 'Drill/driver', 'Tape measure and square', 'Clamps', 'Level'],
+      notes: ['Measure the tote at the widest lid/lip, not just the tapered base.', 'Leave enough vertical clearance to lift the front lip slightly as the tote slides in and out.', 'Heavy totes should be tested gradually; add wall anchoring for tall racks.']
+    },
+    buildSteps: [
+      { title: 'Measure one real tote', stage: 0, instructions: ['Measure the tote length, width, and height at its largest outside dimensions, usually across the lid lip.', 'Enter those dimensions in the Tote Size controls before cutting rack parts.', 'Confirm the row and column count fits the wall space and ceiling height.'] },
+      { title: 'Cut posts and rails', stage: 1, instructions: ['Cut the vertical posts and horizontal tote support rails from the generated cut list.', 'Mark every rail height on the posts as a batch so matching rails line up front-to-back.', 'Keep rails for each row grouped together.'] },
+      { title: 'Build the side frames', stage: 2, instructions: ['Lay out left and right side frames with matching post spacing and row heights.', 'Fasten the depth rails to the posts, keeping the rail tops level from front to back.', 'Check both side frames for square before standing them up.'] },
+      { title: 'Connect the rack width', stage: 3, instructions: ['Stand the side frames and connect them with front and back rails for each tote bay.', 'Use the tote width plus side clearance to maintain consistent bay spacing.', 'Anchor or brace the rack if it racks side-to-side.'] },
+      { title: 'Test fit totes and anchor', stage: 4, instructions: ['Slide an empty tote into each row and confirm the lip clears the rails.', 'Adjust rail inset or clearance if your tote shape binds.', 'Anchor tall racks to the wall before loading heavy totes.'] }
+    ],
+    tags: ['storage', 'totes', '27 gallon', 'adjustable'],
+    thumbnail: 'tote-rack'
   }
 ];
 
@@ -114,6 +139,7 @@ export function buildForPlanId(id) {
 }
 
 export function planIdForBuild(build) {
+  if (build === 'tote-rack') return 'tote-rack-27';
   if (build === 'rolling-shelves') return 'rolling-storage-shelf';
   if (build === 'shelves') return 'basement-shelves';
   return build === 'strainer' ? 'frame-strainer' : 'frame-liner';

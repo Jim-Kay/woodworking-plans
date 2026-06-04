@@ -165,6 +165,7 @@ async function loadRapier() {
 function isPhysicalPart(part) {
   const group = part.group || part.meta?.group || part.role || '';
   return part.material !== 'fastener' &&
+    part.material !== 'tote' &&
     group !== 'guide' &&
     group !== 'guides' &&
     group !== 'fastener' &&

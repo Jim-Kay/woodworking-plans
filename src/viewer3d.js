@@ -563,10 +563,11 @@ export class FrameViewer {
         posts: 'Posts',
         rails: 'Rails',
         slats: 'Shelf slats',
+        totes: 'Shelf slats',
         hardware: 'Fasteners',
         fasteners: 'Fasteners'
       }[group]);
-      const visKeyForGroup = (group) => group === 'fasteners' || group === 'hardware' ? 'hardware' : group;
+      const visKeyForGroup = (group) => group === 'fasteners' || group === 'hardware' ? 'hardware' : group === 'totes' ? 'slats' : group;
       const materialForPart = (part) => {
         if (part.material === 'fastener') return mat.shelfScrew;
         return shelfPartMaterial(plan, part);
@@ -1155,6 +1156,9 @@ function partMaterial(plan, naturalColor, part, roughness = 0.7) {
 
 function shelfPartMaterial(plan, part) {
   const group = part.meta?.group;
+  if (part.material === 'tote') {
+    return makeModelMaterial(plan, plan.modelPalette === 'component' ? 0xfacc15 : 0xfbbf24, 0.58, { transparent: true, opacity: plan.modelOpacity === 'transparent' ? 0.35 : 0.68, depthWrite: false });
+  }
   if (part.material === 'plywood') {
     return partMaterial(plan, 0xc7a268, { ...part, meta: { ...part.meta, group: 'slats' } }, 0.72);
   }

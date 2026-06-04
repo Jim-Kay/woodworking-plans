@@ -81,4 +81,39 @@ assert.equal(shelves.assembly.parts.find((part) => part.id === 'post.front.0').p
 assert.equal(shelves.assembly.parts.find((part) => part.id === 'rail.side.level0.post0').position.x, -47.25);
 assert.equal(shelves.assembly.connections.some((connection) => connection.type === 'fastenedBy'), true);
 
+const toteRack = calculateShelfPlan({
+  build: 'tote-rack',
+  toteW: 20.5,
+  toteD: 30.5,
+  toteH: 14.25,
+  toteColumns: 3,
+  toteRows: 3,
+  toteSideClearance: 1.5,
+  toteVerticalClearance: 3,
+  toteRailInset: 1.25,
+  shelfPost: 3.5,
+  shelfRail: 3.5
+});
+assert.equal(toteRack.ok, true);
+assert.equal(toteRack.capacity, 9);
+assert.equal(toteRack.shelfW, 69.5);
+assert.equal(toteRack.shelfD, 33.5);
+assert.equal(toteRack.assembly.parts.filter((part) => part.material === 'tote').length, 9);
+
+const customToteRack = calculateShelfPlan({
+  build: 'tote-rack',
+  toteW: 22,
+  toteD: 30.5,
+  toteH: 14.25,
+  toteColumns: 2,
+  toteRows: 4,
+  toteSideClearance: 1.5,
+  toteVerticalClearance: 3,
+  toteRailInset: 1.25,
+  shelfPost: 3.5,
+  shelfRail: 3.5
+});
+assert.equal(customToteRack.capacity, 8);
+assert.equal(customToteRack.shelfW, 50.5);
+
 console.log('frameMath tests passed');

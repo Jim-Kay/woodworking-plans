@@ -39,7 +39,15 @@ const fields = {
   shelfSlats: $('#shelfSlats'),
   shelfPost: $('#shelfPost'),
   shelfRail: $('#shelfRail'),
-  shelfDeck: $('#shelfDeck')
+  shelfDeck: $('#shelfDeck'),
+  toteW: $('#toteW'),
+  toteD: $('#toteD'),
+  toteH: $('#toteH'),
+  toteColumns: $('#toteColumns'),
+  toteRows: $('#toteRows'),
+  toteSideClearance: $('#toteSideClearance'),
+  toteVerticalClearance: $('#toteVerticalClearance'),
+  toteRailInset: $('#toteRailInset')
 };
 
 const cameraFields = {
@@ -102,6 +110,8 @@ function bindInputs() {
         plan = applyOuterSize(plan, outerW, outerH);
       } else if (key === 'finishColor' || key === 'finishSheen' || key === 'canvasAppearance' || key === 'mountClip') {
         plan[key] = el.value;
+      } else if (['shelfLevels', 'shelfBays', 'shelfSlats', 'toteColumns', 'toteRows'].includes(key)) {
+        plan[key] = Number(el.value);
       } else {
         plan[key] = toInches(el.value, plan.unit);
       }
@@ -262,7 +272,7 @@ function showTab(activeTab) {
 
 function selectPlan(planId) {
   currentPlanId = resolvePlanId(planId);
-  if (currentPlanId === 'rolling-storage-shelf') purchaseBoardLength = 48;
+  purchaseBoardLength = currentPlanId === 'rolling-storage-shelf' ? 48 : 96;
   const next = clonePlan(DEFAULT_PLAN);
   Object.assign(next, getPlanDefinition(currentPlanId).defaults || {});
   next.build = buildForPlanId(currentPlanId);
@@ -282,6 +292,9 @@ function planThumbnail(kind) {
   }
   if (kind === 'rolling-shelves') {
     return `<svg viewBox="0 0 320 190" aria-hidden="true"><rect width="320" height="190" rx="8" fill="#0c1117"/><g fill="#d7b982"><rect x="70" y="36" width="18" height="118"/><rect x="232" y="36" width="18" height="118"/><rect x="92" y="42" width="136" height="14"/><rect x="92" y="86" width="136" height="14"/><rect x="92" y="130" width="136" height="14"/></g><g fill="#b98a56"><rect x="84" y="58" width="152" height="18" opacity=".95"/><rect x="84" y="102" width="152" height="18" opacity=".95"/><rect x="84" y="146" width="152" height="14" opacity=".95"/></g><g fill="#7d8798"><circle cx="78" cy="166" r="10"/><circle cx="242" cy="166" r="10"/></g><path d="M70 95h18M232 95h18" stroke="#263449" stroke-width="2"/></svg>`;
+  }
+  if (kind === 'tote-rack') {
+    return `<svg viewBox="0 0 320 190" aria-hidden="true"><rect width="320" height="190" rx="8" fill="#0c1117"/><g stroke="#d7b982" stroke-width="8" stroke-linecap="square"><path d="M42 34h236M42 86h236M42 138h236M50 28v122M270 28v122"/></g><g fill="#111827" stroke="#facc15" stroke-width="4"><rect x="66" y="46" width="48" height="26" rx="3"/><rect x="136" y="46" width="48" height="26" rx="3"/><rect x="206" y="46" width="48" height="26" rx="3"/><rect x="66" y="98" width="48" height="26" rx="3"/><rect x="136" y="98" width="48" height="26" rx="3"/><rect x="206" y="98" width="48" height="26" rx="3"/></g><g fill="#facc15"><rect x="62" y="42" width="56" height="8" rx="2"/><rect x="132" y="42" width="56" height="8" rx="2"/><rect x="202" y="42" width="56" height="8" rx="2"/><rect x="62" y="94" width="56" height="8" rx="2"/><rect x="132" y="94" width="56" height="8" rx="2"/><rect x="202" y="94" width="56" height="8" rx="2"/></g></svg>`;
   }
   return `<svg viewBox="0 0 320 190" aria-hidden="true"><rect width="320" height="190" rx="8" fill="#0c1117"/><path d="M52 48h210l24 24v70H76L52 118z" fill="#6b432a"/><path d="M82 72h150l20 18v30H102L82 104z" fill="#f4efe4"/><path d="M98 82h124l14 12v16H112L98 98z" fill="#91b6e8"/><path d="M52 118l24 24h210M262 48l24 24" stroke="#1d2635" stroke-width="2"/><path d="M80 142h176" stroke="#c79b5f" stroke-width="9"/></svg>`;
 }
@@ -327,32 +340,40 @@ function calculateCurrentPlan() {
 }
 
 function applyPlanRules(nextPlan) {
-  return isShelfPlan() || nextPlan.build === 'shelves' ? nextPlan : applyMountingRules(nextPlan);
+  return isShelfPlan() || ['shelves', 'tote-rack'].includes(nextPlan.build) ? nextPlan : applyMountingRules(nextPlan);
 }
 
 function isShelfPlan() {
-  return currentPlanId === 'basement-shelves' || currentPlanId === 'rolling-storage-shelf' || plan.build === 'shelves' || plan.build === 'rolling-shelves';
+  return currentPlanId === 'basement-shelves' || currentPlanId === 'rolling-storage-shelf' || currentPlanId === 'tote-rack-27' || plan.build === 'shelves' || plan.build === 'rolling-shelves' || plan.build === 'tote-rack';
 }
 
 function renderFields() {
-  const numericKeys = ['canvasW', 'canvasH', 'canvasT', 'stretcherW', 'face', 'reveal', 'depth', 'faceLip', 'linerW', 'strainerDepth', 'stock', 'kerf', 'rabbet', 'shelfW', 'shelfH', 'shelfD', 'shelfLevels', 'shelfBays', 'shelfSlats', 'shelfPost', 'shelfRail', 'shelfDeck'];
+  const numericKeys = ['canvasW', 'canvasH', 'canvasT', 'stretcherW', 'face', 'reveal', 'depth', 'faceLip', 'linerW', 'strainerDepth', 'stock', 'kerf', 'rabbet', 'shelfW', 'shelfH', 'shelfD', 'shelfLevels', 'shelfBays', 'shelfSlats', 'shelfPost', 'shelfRail', 'shelfDeck', 'toteW', 'toteD', 'toteH', 'toteColumns', 'toteRows', 'toteSideClearance', 'toteVerticalClearance', 'toteRailInset'];
   numericKeys.forEach((key) => {
     const displayValue = plan.build === 'rolling-shelves' && key === 'shelfDeck' && result?.deck ? result.deck : plan[key];
-    if (fields[key] && document.activeElement !== fields[key]) fields[key].value = roundDisplay(fromInches(displayValue, plan.unit));
+    const isCount = ['shelfLevels', 'shelfBays', 'shelfSlats', 'toteColumns', 'toteRows'].includes(key);
+    if (fields[key] && document.activeElement !== fields[key]) fields[key].value = isCount ? displayValue : roundDisplay(fromInches(displayValue, plan.unit));
   });
   if (fields.outerW && document.activeElement !== fields.outerW) fields.outerW.value = roundDisplay(fromInches(result.outerW, plan.unit));
   if (fields.outerH && document.activeElement !== fields.outerH) fields.outerH.value = roundDisplay(fromInches(result.outerH, plan.unit));
   if (fields.finishColor) fields.finishColor.value = plan.finishColor;
   if (fields.finishSheen) fields.finishSheen.value = plan.finishSheen;
   const rolling = plan.build === 'rolling-shelves';
-  fields.shelfBays?.closest('label')?.classList.toggle('hidden', rolling);
-  fields.shelfSlats?.closest('label')?.classList.toggle('hidden', false);
+  const toteRack = plan.build === 'tote-rack';
+  fields.shelfBays?.closest('label')?.classList.toggle('hidden', rolling || toteRack);
+  fields.shelfSlats?.closest('label')?.classList.toggle('hidden', toteRack);
   const deckLabel = fields.shelfDeck?.closest('label')?.querySelector('.labelRow');
   if (deckLabel?.firstChild) deckLabel.firstChild.textContent = rolling ? 'Plank width' : 'Deck board';
+  fields.shelfDeck?.closest('label')?.classList.toggle('hidden', toteRack);
   if (fields.canvasAppearance) fields.canvasAppearance.value = plan.canvasAppearance;
   if (fields.mountClip) fields.mountClip.value = plan.mountClip;
   $$('[data-frame-controls]').forEach((el) => el.classList.toggle('hidden', isShelfPlan()));
   $$('[data-shelf-controls]').forEach((el) => el.classList.toggle('hidden', !isShelfPlan()));
+  $$('[data-tote-controls]').forEach((el) => el.classList.toggle('hidden', !toteRack));
+  $$('[data-shelf-controls]').forEach((el) => {
+    const title = el.querySelector('.quickSectionTitle span')?.textContent || '';
+    if (title === 'Shelf Size') el.classList.toggle('hidden', !isShelfPlan() || toteRack);
+  });
   if (fields.linerW) {
     fields.linerW.disabled = true;
     fields.linerW.title = ['liner', 'strainer'].includes(normalizeBuild(plan.build))
@@ -369,7 +390,7 @@ function renderFields() {
   if (isShelfPlan()) {
     document.querySelector('[data-stage-part="primary"]').textContent = 'Posts';
     document.querySelector('[data-stage-part="support"]').textContent = 'Rails';
-    document.querySelector('[data-stage-part="surface"]').textContent = 'Slats';
+    document.querySelector('[data-stage-part="surface"]').textContent = toteRack ? 'Totes' : 'Slats';
     document.querySelector('[data-stage-part="hardware"]').textContent = 'Fasteners';
   } else {
     document.querySelector('[data-stage-part="primary"]').textContent = 'Frame';
@@ -394,7 +415,7 @@ function renderToggles() {
     ? [
         ['posts', 'Posts'],
         ['rails', 'Rails'],
-        ['slats', 'Slats'],
+        ['slats', plan.build === 'tote-rack' ? 'Totes' : 'Slats'],
         ['hardware', 'Fasteners']
       ]
     : [
@@ -422,6 +443,20 @@ function renderToggles() {
 
 function renderDimensionSummary() {
   if (isShelfPlan()) {
+    if (plan.build === 'tote-rack') {
+      const rows = [
+        ['Rack size', `${formatLength(result.shelfW, plan.unit)} x ${formatLength(result.shelfH, plan.unit)} x ${formatLength(result.shelfD, plan.unit)}`],
+        ['Tote size', `${formatLength(result.toteW, plan.unit)} x ${formatLength(result.toteH, plan.unit)} x ${formatLength(result.toteD, plan.unit)}`],
+        ['Tote layout', `${result.columns} wide x ${result.rows} high`],
+        ['Side gap', formatLength(result.sideClearance, plan.unit)],
+        ['Vertical gap', formatLength(result.verticalClearance, plan.unit)],
+        ['Rail inset', formatLength(result.railInset, plan.unit)],
+        ['Capacity', `${result.capacity} totes`],
+        ['Estimated board feet', result.ok ? result.boardFeet.toFixed(2) : '-']
+      ];
+      $('#dimensionSummary').innerHTML = rows.map(([key, value]) => `<div class="kvitem"><span>${escapeHtml(key)}</span><b>${escapeHtml(value)}</b></div>`).join('');
+      return;
+    }
     const rolling = plan.build === 'rolling-shelves';
     const rows = [
       ['Overall size', `${formatLength(plan.shelfW, plan.unit)} x ${formatLength(plan.shelfH, plan.unit)} x ${formatLength(plan.shelfD, plan.unit)}`],
@@ -1020,7 +1055,7 @@ function miterGuideContent(part) {
 }
 
 function renderStage() {
-  const labels = isShelfPlan() ? ['Plan', 'Posts', 'Rails', 'Shelf slats', 'Fasteners'] : getStageLabels(plan.build);
+  const labels = isShelfPlan() ? ['Plan', 'Posts', 'Rails', plan.build === 'tote-rack' ? 'Totes' : 'Shelf slats', 'Fasteners'] : getStageLabels(plan.build);
   const slider = $('#stageSlider');
   slider.max = labels.length - 1;
   slider.value = Math.min(plan.stage, labels.length - 1);
@@ -1221,7 +1256,7 @@ function printPlanDetailsHtml(definition) {
 function printDimensionSummaryHtml() {
   const rows = isShelfPlan()
     ? [
-        ['Overall size', `${formatLength(plan.shelfW, plan.unit)} x ${formatLength(plan.shelfH, plan.unit)} x ${formatLength(plan.shelfD, plan.unit)}`],
+        ['Overall size', `${formatLength(result.shelfW, plan.unit)} x ${formatLength(result.shelfH, plan.unit)} x ${formatLength(result.shelfD, plan.unit)}`],
         ['Levels', result.levels],
         ['Bays', result.bays],
         ['Post size', `${formatLength(result.post, plan.unit)} x ${formatLength(result.stock, plan.unit)}`],

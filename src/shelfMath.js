@@ -1,6 +1,7 @@
 import { findComponentOverlaps } from './assembly.js';
 
 export function calculateShelfPlan(plan) {
+  if (plan.build === 'tote-rack') return calculateToteRackPlan(plan);
   if (plan.build === 'rolling-shelves') return calculateRollingShelfPlan(plan);
 
   const errors = [];
@@ -69,6 +70,87 @@ export function calculateShelfPlan(plan) {
     bayStep,
     bayWidth,
     shelfSpacing,
+    assembly,
+    validation
+  };
+}
+
+function calculateToteRackPlan(plan) {
+  const errors = [];
+  const warnings = [];
+  const toteW = positive(plan.toteW, 'Tote width', errors);
+  const toteD = positive(plan.toteD, 'Tote length', errors);
+  const toteH = positive(plan.toteH, 'Tote height', errors);
+  const columns = integerAtLeast(plan.toteColumns, 1, 'Tote columns', errors);
+  const rows = integerAtLeast(plan.toteRows, 1, 'Tote rows', errors);
+  const sideClearance = nonnegative(plan.toteSideClearance, 'Side clearance', errors);
+  const verticalClearance = nonnegative(plan.toteVerticalClearance, 'Vertical clearance', errors);
+  const railInset = nonnegative(plan.toteRailInset, 'Rail inset', errors);
+  const post = positive(plan.shelfPost, 'Post face width', errors);
+  const rail = positive(plan.shelfRail, 'Rail height', errors);
+  const stock = 1.5;
+  const ok = errors.length === 0;
+  if (!ok) return { type: 'shelves', style: 'tote-rack', ok: false, errors, warnings, parts: [], boardFeet: 0 };
+
+  const bayWidth = toteW + sideClearance;
+  const width = columns * bayWidth + post;
+  const depth = toteD + stock * 2;
+  const rowPitch = toteH + verticalClearance + rail;
+  const height = rows * rowPitch + rail / 2;
+  const railLength = Math.max(stock, bayWidth - post);
+  const depthRailLength = Math.max(stock, depth - stock * 2);
+  const capacity = columns * rows;
+  if (verticalClearance < 2) warnings.push('Vertical clearance is under 2 in; totes may be hard to lift over the support rails.');
+  if (sideClearance < 1) warnings.push('Side clearance is under 1 in; measure the tote lid lip carefully before cutting.');
+  if (toteD > 36) warnings.push('Tote length is over 36 in; check rack depth and wall clearance.');
+
+  const parts = [
+    { part: 'Vertical posts', qty: (columns + 1) * 2, length: height, width: post, thickness: stock, notes: 'Front and back posts; mark every row height before assembly.' },
+    { part: 'Front tote support rails', qty: rows * columns, length: railLength, width: rail, thickness: stock, notes: 'One front rail per tote bay; supports the tote lip or bottom edge.' },
+    { part: 'Back tote support rails', qty: rows * columns, length: railLength, width: rail, thickness: stock, notes: 'One back rail per tote bay; align level with matching front rail.' },
+    { part: 'Side depth rails', qty: rows * (columns + 1), length: depthRailLength, width: rail, thickness: stock, notes: 'Runs front-to-back at each post line to tie the rack together.' },
+    { part: 'Structural screws', qty: rows * columns * 8 + rows * (columns + 1) * 4, length: 2.5, width: NaN, thickness: NaN, notes: 'Fasten rail ends into posts; add wall anchors for tall racks.' }
+  ];
+  const boardFeet = parts.reduce((sum, p) => {
+    const boardFeetForPart = (p.qty * p.length * p.width * p.thickness) / 144;
+    return Number.isFinite(boardFeetForPart) ? sum + boardFeetForPart : sum;
+  }, 0);
+  const model = { width, height, depth, rows, columns, toteW, toteD, toteH, sideClearance, verticalClearance, railInset, post, stock, rail, bayWidth, railLength, depthRailLength, rowPitch };
+  const assembly = buildToteRackAssembly(model);
+  const validation = validateShelfConstruction(assembly, warnings);
+  return {
+    type: 'shelves',
+    style: 'tote-rack',
+    ok,
+    errors,
+    warnings,
+    parts,
+    boardFeet,
+    shelfW: width,
+    shelfH: height,
+    shelfD: depth,
+    levels: rows,
+    bays: columns,
+    slats: 0,
+    post,
+    stock,
+    rail,
+    deck: stock,
+    railLength,
+    depthRailLength,
+    slatLength: 0,
+    bayStep: bayWidth,
+    bayWidth,
+    shelfSpacing: rowPitch,
+    toteW,
+    toteD,
+    toteH,
+    rows,
+    columns,
+    sideClearance,
+    verticalClearance,
+    railInset,
+    capacity,
     assembly,
     validation
   };
@@ -515,6 +597,51 @@ function addRollingHardware(model, parts, connections, cornerPositions) {
   });
 }
 
+function buildToteRackAssembly(model) {
+  const parts = [];
+  const connections = [];
+  const xStart = -model.width / 2 + model.post / 2;
+  const postXForIndex = (index) => xStart + index * model.bayWidth;
+  const bayCenterX = (bay) => (postXForIndex(bay) + postXForIndex(bay + 1)) / 2;
+  const zFront = -model.depth / 2 + model.stock / 2;
+  const zBack = model.depth / 2 - model.stock / 2;
+  const zFrontRail = -model.depth / 2 + model.stock * 1.5 + model.railInset;
+  const zBackRail = model.depth / 2 - model.stock * 1.5 - model.railInset;
+  const yForRow = (row) => model.rail / 2 + row * model.rowPitch;
+
+  for (let i = 0; i <= model.columns; i += 1) {
+    const x = postXForIndex(i);
+    parts.push(assemblyPart(`post.front.${i}`, 'front post', 'wood', { x: model.post, y: model.height, z: model.stock }, { x, y: model.height / 2, z: zFront }, { group: 'posts', index: i, side: 'front' }));
+    parts.push(assemblyPart(`post.back.${i}`, 'back post', 'wood', { x: model.post, y: model.height, z: model.stock }, { x, y: model.height / 2, z: zBack }, { group: 'posts', index: i, side: 'back' }));
+  }
+
+  for (let row = 0; row < model.rows; row += 1) {
+    const y = yForRow(row);
+    for (let bay = 0; bay < model.columns; bay += 1) {
+      const x = bayCenterX(bay);
+      const frontRailId = `rail.front.row${row}.bay${bay}`;
+      const backRailId = `rail.back.row${row}.bay${bay}`;
+      parts.push(assemblyPart(frontRailId, 'front tote support rail', 'wood', { x: model.railLength, y: model.rail, z: model.stock }, { x, y, z: zFrontRail }, { group: 'rails', row, bay, side: 'front' }));
+      parts.push(assemblyPart(backRailId, 'back tote support rail', 'wood', { x: model.railLength, y: model.rail, z: model.stock }, { x, y, z: zBackRail }, { group: 'rails', row, bay, side: 'back' }));
+      connections.push(contactConnection(`contact.${frontRailId}.leftPost`, frontRailId, `post.front.${bay}`, 'front rail bears on post'));
+      connections.push(contactConnection(`contact.${frontRailId}.rightPost`, frontRailId, `post.front.${bay + 1}`, 'front rail bears on post'));
+      connections.push(contactConnection(`contact.${backRailId}.leftPost`, backRailId, `post.back.${bay}`, 'back rail bears on post'));
+      connections.push(contactConnection(`contact.${backRailId}.rightPost`, backRailId, `post.back.${bay + 1}`, 'back rail bears on post'));
+      parts.push(assemblyPart(`tote.row${row}.bay${bay}`, '27 gallon tote clearance envelope', 'tote', { x: model.toteW, y: model.toteH, z: model.toteD }, { x, y: y + model.rail / 2 + model.toteH / 2, z: 0 }, { group: 'totes', row, bay, intentionalOverlap: true }));
+    }
+    for (let i = 0; i <= model.columns; i += 1) {
+      const x = postXForIndex(i);
+      const sideRailId = `rail.side.row${row}.post${i}`;
+      parts.push(assemblyPart(sideRailId, 'side depth rail', 'wood', { x: model.stock, y: model.rail, z: model.depthRailLength }, { x, y, z: 0 }, { group: 'rails', row, postIndex: i, side: 'depth' }));
+      connections.push(contactConnection(`contact.${sideRailId}.frontPost`, sideRailId, `post.front.${i}`, 'side rail bears on front post'));
+      connections.push(contactConnection(`contact.${sideRailId}.backPost`, sideRailId, `post.back.${i}`, 'side rail bears on back post'));
+    }
+  }
+
+  addToteRackScrewParts(model, parts, connections, postXForIndex, yForRow, zFront, zBack);
+  return { type: 'shelves', style: 'tote-rack', units: 'in', parts, connections };
+}
+
 export function buildShelfAssembly(model) {
   const xStart = -model.width / 2 + model.stock / 2;
   const postXForIndex = (index) => {
@@ -580,7 +707,7 @@ function validateShelfConstruction(assembly, warnings) {
   const structuralBoxes = structuralParts.map(partBox);
   const byId = new Map(assembly.parts.map((part) => [part.id, part]));
   const validation = {
-    componentOverlaps: findComponentOverlaps(assembly, { limit: 12 })
+    componentOverlaps: findComponentOverlaps({ ...assembly, parts: assembly.parts.filter((part) => part.material !== 'tote') }, { limit: 12 })
   };
   if (validation.componentOverlaps.count) {
     const shown = validation.componentOverlaps.items
@@ -656,6 +783,31 @@ function addShelfScrewParts(model, parts, connections, xStart, yForLevel) {
           parts.push(screwPart(backId, 'back rail screw', { x, y: y + dy, z: model.depth / 2 }, 'z', -1, shankLength, radius, { group: 'fasteners', level, bay, endIndex, index, side: 'back' }));
           connections.push(fastenerConnection(`fasten.${frontId}`, `rail.front.level${level}.bay${bay}`, `post.front.${postIndex}`, frontId, 'front rail screw'));
           connections.push(fastenerConnection(`fasten.${backId}`, `rail.back.level${level}.bay${bay}`, `post.back.${postIndex}`, backId, 'back rail screw'));
+        });
+      });
+    }
+  }
+}
+
+function addToteRackScrewParts(model, parts, connections, postXForIndex, yForRow, zFront, zBack) {
+  const shankLength = model.stock * 1.55;
+  const radius = 0.09;
+  const railScrewOffset = model.rail * 0.3;
+  const endInset = model.stock * 0.25;
+  for (let row = 0; row < model.rows; row += 1) {
+    const y = yForRow(row);
+    for (let bay = 0; bay < model.columns; bay += 1) {
+      [
+        [bay, postXForIndex(bay) + endInset],
+        [bay + 1, postXForIndex(bay + 1) - endInset]
+      ].forEach(([postIndex, x], endIndex) => {
+        [-railScrewOffset, railScrewOffset].forEach((dy, index) => {
+          const frontId = `screw.tote.front.row${row}.bay${bay}.end${endIndex}.${index}`;
+          const backId = `screw.tote.back.row${row}.bay${bay}.end${endIndex}.${index}`;
+          parts.push(screwPart(frontId, 'front tote rail screw', { x, y: y + dy, z: zFront }, 'z', 1, shankLength, radius, { group: 'fasteners', row, bay, endIndex, index, side: 'front' }));
+          parts.push(screwPart(backId, 'back tote rail screw', { x, y: y + dy, z: zBack }, 'z', -1, shankLength, radius, { group: 'fasteners', row, bay, endIndex, index, side: 'back' }));
+          connections.push(fastenerConnection(`fasten.${frontId}`, `rail.front.row${row}.bay${bay}`, `post.front.${postIndex}`, frontId, 'front tote rail screw'));
+          connections.push(fastenerConnection(`fasten.${backId}`, `rail.back.row${row}.bay${bay}`, `post.back.${postIndex}`, backId, 'back tote rail screw'));
         });
       });
     }
@@ -753,6 +905,15 @@ function positive(value, label, errors) {
   const number = Number(value);
   if (!Number.isFinite(number) || number <= 0) {
     errors.push(`${label} must be a positive number.`);
+    return 0;
+  }
+  return number;
+}
+
+function nonnegative(value, label, errors) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < 0) {
+    errors.push(`${label} must be zero or a positive number.`);
     return 0;
   }
   return number;

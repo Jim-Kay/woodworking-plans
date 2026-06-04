@@ -46,6 +46,14 @@ export const DEFAULT_PLAN = {
   shelfPost: 3.5,
   shelfRail: 3.5,
   shelfDeck: 3.5,
+  toteW: 20.5,
+  toteD: 30.5,
+  toteH: 14.25,
+  toteColumns: 3,
+  toteRows: 3,
+  toteSideClearance: 1.5,
+  toteVerticalClearance: 3,
+  toteRailInset: 1.25,
   vis: { face: true, liner: true, spacers: true, canvas: true, hardware: true },
   stage: 0
 };
