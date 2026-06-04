@@ -2,6 +2,14 @@
 
 A no-build browser app for designing adjustable woodworking plans. It started as a floating frame planner and now includes a plan catalog for floating frames and storage shelves, with interactive dimensions, 3D previews, cut lists, OpenSCAD export, and a first-pass assembly/physics check.
 
+Live site: [https://jim-kay.github.io/woodworking-plans/](https://jim-kay.github.io/woodworking-plans/)
+
+## Screenshots
+
+![Plan catalog](assets/screenshots/plan-catalog.png)
+
+![Rolling storage shelf builder](assets/screenshots/rolling-shelf-builder.png)
+
 ## Available Plans
 
 - Floating Frame: Liner Rails
