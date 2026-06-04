@@ -324,6 +324,7 @@ export class FrameViewer {
   build() {
     clearGroup(this.root);
     this.hideHoverTooltip();
+    this.setGridFloor(0);
     if (!this.plan || !this.result?.ok) return;
     if (this.result.type === 'shelves') {
       this.buildShelves();
@@ -557,6 +558,7 @@ export class FrameViewer {
     const yForLevel = (level) => levels === 1 ? height * 0.55 : (rail / 2) + level * ((height - rail) / (levels - 1));
 
     if (result.assembly?.parts?.length) {
+      this.setGridFloor(assemblyFloorY(result.assembly) * SCALE);
       const stageLabelForGroup = (group) => ({
         posts: 'Posts',
         rails: 'Rails',
@@ -670,6 +672,11 @@ export class FrameViewer {
     requestAnimationFrame(() => this.animate());
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
+  }
+
+  setGridFloor(y) {
+    if (!this.grid) return;
+    this.grid.position.y = Number.isFinite(y) ? y : 0;
   }
 }
 
@@ -852,6 +859,15 @@ function addCaster(group, part, mat) {
     if (mesh.isMesh) mesh.userData.partInfo = part;
   });
   group.add(casterGroup);
+}
+
+function assemblyFloorY(assembly) {
+  const floorY = (assembly?.parts || [])
+    .filter((part) => part.material !== 'fastener')
+    .map((part) => part.position?.y - part.size?.y / 2)
+    .filter(Number.isFinite)
+    .reduce((min, value) => Math.min(min, value), 0);
+  return Number.isFinite(floorY) ? floorY : 0;
 }
 
 function addShelfScrewShank(group, x, y, z, axis, dir, length, material, partInfo = null) {
