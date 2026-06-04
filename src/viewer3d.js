@@ -1162,6 +1162,18 @@ function shelfPartMaterial(plan, part) {
   if (part.material === 'plywood') {
     return partMaterial(plan, 0xc7a268, { ...part, meta: { ...part.meta, group: 'slats' } }, 0.72);
   }
+  if (plan.build === 'tote-rack') {
+    const toteColors = {
+      posts: 0xd8a7f1,
+      frame: 0xf3f7bd,
+      tie: 0x5ec46e,
+      runner: 0x36aaa3,
+      rails: 0x36aaa3,
+      fasteners: 0x111827
+    };
+    const colorKey = part.meta?.subgroup || group;
+    return makeModelMaterial(plan, toteColors[colorKey] || 0xc5a178, group === 'rails' ? 0.6 : 0.72);
+  }
   const naturalColors = {
     posts: 0xb08f64,
     rails: 0x7a4a2d,

@@ -97,7 +97,7 @@ const toteRack = calculateShelfPlan({
 assert.equal(toteRack.ok, true);
 assert.equal(toteRack.capacity, 9);
 assert.equal(toteRack.shelfW, 69.5);
-assert.equal(toteRack.shelfD, 33.5);
+assert.equal(toteRack.shelfD, 36);
 assert.equal(toteRack.assembly.parts.filter((part) => part.material === 'tote').length, 9);
 
 const customToteRack = calculateShelfPlan({
