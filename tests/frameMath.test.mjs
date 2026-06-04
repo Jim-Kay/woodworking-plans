@@ -106,6 +106,7 @@ assert.deepEqual(toteRack.assembly.parts.find((part) => part.id === 'rail.frame.
 assert.equal(toteRack.assembly.parts.find((part) => part.id === 'post.front.0').position.y, 28.5);
 assert.equal(toteRack.assembly.parts.find((part) => part.id === 'rail.runner.row0.bay0.left').position.x, -32.5);
 assert.equal(toteRack.assembly.parts.filter((part) => part.id.startsWith('rail.tie.bottom.')).length, 8);
+assert.equal(toteRack.assembly.parts.filter((part) => part.id.startsWith('rail.tie.top.')).length, 0);
 assert.equal(toteRack.assembly.parts.find((part) => part.id === 'rail.tie.bottom.0.post0').position.x, -33);
 assert.equal(toteRack.assembly.parts.find((part) => part.id === 'rail.tie.bottom.0.post3').position.x, 33);
 assert.equal(toteRack.validation.componentOverlaps.count, 0);

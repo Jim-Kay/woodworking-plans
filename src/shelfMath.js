@@ -119,7 +119,6 @@ function calculateToteRackPlan(plan) {
     { part: 'Top frame rails', qty: 2, length: frameRailLength, width: rail, thickness: stock, notes: 'Full-width front and back top rails laid flat on top of the posts.' },
     { part: 'Doubled bottom frame rails', qty: 4, length: frameRailLength, width: rail, thickness: stock, notes: 'Two stacked full-width rails across the front and back create a stronger caster-bearing base.' },
     { part: 'Tote runner rails', qty: rows * columns * 2, length: supportRailLength, width: rail, thickness: stock, notes: 'Two front-to-back runners for each tote bay; runners are not shared between neighboring totes.' },
-    { part: 'Top depth tie rails', qty: columns + 1, length: tieRailLength, width: rail, thickness: stock, notes: 'Top rails tying each front post to the matching back post.' },
     { part: 'Doubled bottom depth tie rails', qty: (columns + 1) * 2, length: tieRailLength, width: rail, thickness: stock, notes: 'Two stacked bottom depth ties; outer rails are inset so their outside faces align with the post outside faces.' },
     { part: 'Swivel casters', qty: 4, length: casterHeight, width: 3.62, thickness: 2.44, notes: 'Mount to the doubled bottom frame rails if the rack needs to roll.' },
     { part: 'Structural screws', qty: rows * columns * 8 + (columns + 1) * 8, length: 2.5, width: NaN, thickness: NaN, notes: 'Fasten runner and tie rail ends into posts; add wall anchors for tall racks.' }
@@ -637,7 +636,6 @@ function buildToteRackAssembly(model) {
   const postBottomY = model.baseStackHeight;
   const postTopY = postBottomY + model.postLength;
   const topFrameY = postTopY + model.stock / 2;
-  const topTieY = postTopY - model.stock / 2;
   const frameRailMeta = { group: 'rails', subgroup: 'frame' };
   const tieRailMeta = { group: 'rails', subgroup: 'tie' };
   const runnerRailMeta = { group: 'rails', subgroup: 'runner' };
@@ -672,14 +670,13 @@ function buildToteRackAssembly(model) {
 
   [
     ['bottom', model.stock / 2, 0],
-    ['bottom', model.stock * 1.5, 1],
-    ['top', topTieY, 0]
+    ['bottom', model.stock * 1.5, 1]
   ].forEach(([level, y, stackIndex]) => {
     for (let i = 0; i <= model.columns; i += 1) {
       const x = level === 'bottom' ? tieRailXForIndex(i) : postXForIndex(i);
       const tieRailId = `rail.tie.${level}.${stackIndex}.post${i}`;
       parts.push(assemblyPart(tieRailId, `${level} depth tie rail`, 'wood', { x: model.rail, y: model.stock, z: model.tieRailLength }, { x, y, z: 0 }, { ...tieRailMeta, level, stackIndex, postIndex: i }));
-      if (level === 'top' || stackIndex === 1) {
+      if (stackIndex === 1) {
         connections.push(contactConnection(`contact.${tieRailId}.frontPost`, tieRailId, `post.front.${i}`, 'depth tie rail bears on front post'));
         connections.push(contactConnection(`contact.${tieRailId}.backPost`, tieRailId, `post.back.${i}`, 'depth tie rail bears on back post'));
       }
