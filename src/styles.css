@@ -762,6 +762,101 @@ label {
   color: var(--muted);
 }
 
+.buildStepsPanel {
+  margin-top: 14px;
+}
+
+.buildStepsIntro {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border: var(--bd);
+  border-radius: var(--radius);
+  background: #0c1117;
+}
+
+.buildStepsIntro b {
+  color: var(--text);
+}
+
+.buildStepsIntro span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.buildStepsList {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: build-step;
+}
+
+.buildStep {
+  display: grid;
+  grid-template-columns: minmax(250px, .9fr) minmax(320px, 1.1fr);
+  gap: 14px;
+  padding: 14px;
+  border: var(--bd);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, #151a24, #0f131a);
+}
+
+.buildStepText {
+  min-width: 0;
+}
+
+.buildStepKicker {
+  margin-bottom: 8px;
+  color: #9bc8ff;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.buildStep h3 {
+  margin-bottom: 10px;
+  color: var(--text);
+  font-size: 16px;
+}
+
+.buildStep ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+}
+
+.buildStep li {
+  margin-bottom: 8px;
+  line-height: 1.45;
+}
+
+.buildStepScene {
+  overflow: hidden;
+  min-height: 230px;
+  border: var(--bd);
+  border-radius: var(--radius);
+  background: #0c1117;
+}
+
+.buildStepScene img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 230px;
+  object-fit: cover;
+}
+
+.buildStepPlaceholder {
+  display: grid;
+  min-height: 230px;
+  place-items: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .quickPanel {
   padding: 14px;
   display: flex;
@@ -1152,6 +1247,7 @@ dialog::backdrop { background: rgba(0,0,0,.62); }
 
 @media (max-width: 1120px) {
   .app, .builderView { grid-template-columns: 1fr; }
+  .buildStep { grid-template-columns: 1fr; }
   .builder-card { height: auto; min-height: 480px; }
   .canvas-wrap { min-height: 460px; }
   .planNav { margin-top: 0; }

@@ -81,6 +81,7 @@
         <div class="tabs" role="tablist">
           <button class="active" id="tabBuilder" type="button">3D Builder</button>
           <button id="tabCutList" type="button">Cut List</button>
+          <button id="tabBuildSteps" type="button">Build Steps</button>
           <button id="tabOpenScad" type="button">OpenSCAD</button>
           <button id="tabPhysics" type="button">Physics</button>
         </div>
@@ -249,6 +250,16 @@
             </thead>
             <tbody id="cutTable"></tbody>
           </table>
+        </div>
+
+        <div class="card buildStepsView hidden" id="buildStepsView">
+          <div class="builder-header">
+            <h2>Build Steps</h2>
+            <div class="toolbar">
+              <button class="btn" id="btnRefreshBuildSteps" type="button">Refresh Views</button>
+            </div>
+          </div>
+          <div class="buildStepsPanel" id="buildStepsPanel"></div>
         </div>
 
         <div class="card scadView hidden" id="scadView">

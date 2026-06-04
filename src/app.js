@@ -186,22 +186,11 @@ function bindInputs() {
     render();
   });
 
-  $$('#tabBuilder, #tabCutList, #tabOpenScad, #tabPhysics').forEach((button) => {
+  $('#btnRefreshBuildSteps').addEventListener('click', () => renderBuildSteps(true));
+
+  $$('#tabBuilder, #tabCutList, #tabBuildSteps, #tabOpenScad, #tabPhysics').forEach((button) => {
     button.addEventListener('click', () => {
-      const activeTab = button.id.replace('tab', '').toLowerCase();
-      const showBuilder = activeTab === 'builder';
-      const showCutList = activeTab === 'cutlist';
-      const showOpenScad = activeTab === 'openscad';
-      const showPhysics = activeTab === 'physics';
-      $('#tabBuilder').classList.toggle('active', showBuilder);
-      $('#tabCutList').classList.toggle('active', showCutList);
-      $('#tabOpenScad').classList.toggle('active', showOpenScad);
-      $('#tabPhysics').classList.toggle('active', showPhysics);
-      $('#builderView').classList.toggle('hidden', !showBuilder);
-      $('#cutView').classList.toggle('hidden', !showCutList);
-      $('#scadView').classList.toggle('hidden', !showOpenScad);
-      $('#physicsView').classList.toggle('hidden', !showPhysics);
-      if (showBuilder) requestAnimationFrame(() => viewer.resize());
+      showTab(button.id.replace('tab', '').toLowerCase());
     });
   });
 
@@ -246,7 +235,29 @@ function showCatalog() {
 function showPlanner() {
   $('#planCatalog').classList.add('hidden');
   $('#plannerApp').classList.remove('hidden');
+  showTab(urlParams.get('view') || 'builder');
   requestAnimationFrame(() => viewer.resize());
+}
+
+function showTab(activeTab) {
+  if (!['builder', 'cutlist', 'buildsteps', 'openscad', 'physics'].includes(activeTab)) activeTab = 'builder';
+  const showBuilder = activeTab === 'builder';
+  const showCutList = activeTab === 'cutlist';
+  const showBuildSteps = activeTab === 'buildsteps';
+  const showOpenScad = activeTab === 'openscad';
+  const showPhysics = activeTab === 'physics';
+  $('#tabBuilder').classList.toggle('active', showBuilder);
+  $('#tabCutList').classList.toggle('active', showCutList);
+  $('#tabBuildSteps').classList.toggle('active', showBuildSteps);
+  $('#tabOpenScad').classList.toggle('active', showOpenScad);
+  $('#tabPhysics').classList.toggle('active', showPhysics);
+  $('#builderView').classList.toggle('hidden', !showBuilder);
+  $('#cutView').classList.toggle('hidden', !showCutList);
+  $('#buildStepsView').classList.toggle('hidden', !showBuildSteps);
+  $('#scadView').classList.toggle('hidden', !showOpenScad);
+  $('#physicsView').classList.toggle('hidden', !showPhysics);
+  if (showBuilder) requestAnimationFrame(() => viewer.resize());
+  if (showBuildSteps) renderBuildSteps(true);
 }
 
 function selectPlan(planId) {
@@ -289,6 +300,7 @@ function render() {
   renderPhysics();
   renderStage();
   viewer.update(plan, result);
+  renderBuildSteps();
   renderCameraInputs();
   renderProjectionToggle();
   savePlanState();
@@ -626,6 +638,59 @@ function renderPhysics() {
   output.innerHTML = result?.assembly
     ? `${validationSummaryHtml()}<p>Select Run Check to test the current assembly with rigid bodies, gravity, and fastener links.</p>`
     : '<p>This plan does not have a shared assembly model available for physics checks yet.</p>';
+}
+
+function renderBuildSteps(force = false) {
+  const target = $('#buildStepsPanel');
+  if (!target) return;
+  const view = $('#buildStepsView');
+  const cacheKey = JSON.stringify({ planId: currentPlanId, plan, ok: result?.ok });
+  if (!force && view?.classList.contains('hidden')) return;
+  if (!force && target.dataset.cacheKey === cacheKey) return;
+  const definition = getPlanDefinition(currentPlanId);
+  const steps = definition.buildSteps || [];
+  target.dataset.cacheKey = cacheKey;
+  if (!steps.length) {
+    target.innerHTML = '<p class="purchaseNote">No step-by-step build sequence is available for this plan yet.</p>';
+    return;
+  }
+  target.innerHTML = `
+    <div class="buildStepsIntro">
+      <b>${escapeHtml(definition.title)}</b>
+      <span>Use the cut list first, then follow these staged assembly views in order.</span>
+    </div>
+    <ol class="buildStepsList">
+      ${steps.map((step, index) => buildStepHtml(step, index)).join('')}
+    </ol>
+  `;
+}
+
+function buildStepHtml(step, index) {
+  const image = viewer.captureImage({
+    stage: step.stage ?? 999,
+    vis: step.vis || buildStepVisibility(),
+    width: 760,
+    height: 430,
+    grid: true
+  });
+  return `
+    <li class="buildStep">
+      <div class="buildStepText">
+        <div class="buildStepKicker">Step ${index + 1}</div>
+        <h3>${escapeHtml(step.title)}</h3>
+        <ul>${(step.instructions || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+      </div>
+      <div class="buildStepScene">
+        ${image ? `<img src="${image}" alt="${escapeHtml(step.title)} 3D assembly stage" />` : '<div class="buildStepPlaceholder">3D view unavailable</div>'}
+      </div>
+    </li>
+  `;
+}
+
+function buildStepVisibility() {
+  return isShelfPlan()
+    ? { posts: true, rails: true, slats: true, hardware: true }
+    : { face: true, liner: true, spacers: true, canvas: true, hardware: true };
 }
 
 function validationSummaryHtml() {

@@ -14,6 +14,13 @@ export const PLAN_CATALOG = [
       tools: ['Miter saw or table saw sled for 45 degree miters', 'Drill/driver', 'Clamps', 'Sander'],
       notes: ['Best for builders who want a floating reveal without milling a rabbet.', 'Z-clip mounting requires matching the frame depth and support rail setback to the selected clip offset.']
     },
+    buildSteps: [
+      { title: 'Mill and cut the parts', stage: 0, instructions: ['Mill the face and liner stock square and to the listed thicknesses.', 'Cut all face and liner pieces from the cut list, keeping long-point miter measurements grouped by part.', 'Sand inside faces before assembly because they become harder to reach later.'] },
+      { title: 'Build the support liner', stage: 4, instructions: ['Dry fit the liner rails into a flat rectangle that matches the inner opening.', 'Glue and clamp the liner assembly, checking diagonals until the frame is square.', 'Keep the front faces flush so the canvas support plane stays even.'] },
+      { title: 'Add the outer frame face', stage: 8, instructions: ['Dry fit the face pieces around the liner assembly and confirm the reveal is even on all sides.', 'Glue and clamp the face pieces to the liner, using cauls or spacer blocks to protect the show face.', 'Clean squeeze-out from the inside corner before it hardens.'] },
+      { title: 'Set the reveal and canvas', stage: 10, instructions: ['Use spacer blocks to hold the canvas evenly inside the opening.', 'Confirm the canvas face sits at the intended depth and the reveal looks consistent.', 'Make any finish touch-ups before permanently fastening the artwork.'] },
+      { title: 'Install mounting hardware', stage: 12, instructions: ['For screws, predrill through the liner into the canvas stretcher and stay within the recommended screw length range.', 'For Z-clips, confirm the selected clip offset matches the support depth before fastening.', 'After mounting, inspect the front reveal one last time before hanging.'] }
+    ],
     tags: ['canvas', 'frame', 'miter', 'cut list'],
     thumbnail: 'frame-liner'
   },
@@ -32,6 +39,13 @@ export const PLAN_CATALOG = [
       tools: ['Table saw with dado blade or repeated passes', 'Router table with rabbet bit as an alternative', 'Miter saw or table saw sled', 'Drill/driver', 'Clamps'],
       notes: ['Choose this plan when you can safely cut a consistent rabbet before assembly.', 'Check the rabbet width and strainer depth against the canvas thickness so the support ledge remains usable.']
     },
+    buildSteps: [
+      { title: 'Mill the rabbeted frame stock', stage: 1, instructions: ['Mill the frame stock square and cut the rabbet along the inside back edge before cutting final miters.', 'Use a table saw, dado setup, or router table to remove the highlighted rabbet area consistently.', 'Label the inside/back edge of each board so the rabbet orientation stays correct.'] },
+      { title: 'Cut and dry fit the frame', stage: 6, instructions: ['Cut the rabbeted face pieces to the cut-list lengths, measuring miters to the long points.', 'Dry fit the outer frame and check that the rabbet ledge forms a continuous support shelf.', 'Fix any twist or mismatched rabbet depth before glue-up.'] },
+      { title: 'Seat the strainer rails', stage: 5, instructions: ['Cut the strainer rails and dry fit them on the rabbet ledge.', 'Glue or fasten the strainer rails so they sit flat and do not rock on the ledge.', 'Keep the strainer inner edge aligned to preserve the planned canvas reveal.'] },
+      { title: 'Assemble the frame body', stage: 9, instructions: ['Glue and clamp the face frame with the strainer seated in place or ready to drop in after glue-up.', 'Check diagonals and use the canvas or spacer blocks only as a sizing reference, not as a clamp surface.', 'Sand and finish the frame before final artwork mounting.'] },
+      { title: 'Mount the canvas', stage: 13, instructions: ['Place spacer blocks around the canvas to hold the reveal.', 'Predrill for screws or install matching Z-clips according to the selected mounting method.', 'Confirm the canvas clears the rabbeted frame face and sits flat against the support.'] }
+    ],
     tags: ['canvas', 'frame', 'rabbet', 'lighter build'],
     thumbnail: 'frame-strainer'
   },
@@ -50,6 +64,13 @@ export const PLAN_CATALOG = [
       tools: ['Circular saw or miter saw', 'Drill/driver', 'Tape measure and square', 'Clamps'],
       notes: ['Best for full-length stock where long shelf slats and rails are practical.', 'Increase bay count or rail size when spans get wide or loads are heavy.']
     },
+    buildSteps: [
+      { title: 'Cut posts, rails, and shelf slats', stage: 0, instructions: ['Cut all repeated parts from the cut list and sort them by role.', 'Mark shelf level heights on every post as a batch so the shelves line up.', 'Pre-sand slats or sheet decking before installation if the shelf will be hard to reach later.'] },
+      { title: 'Stand and brace the posts', stage: 1, instructions: ['Lay out the front and back post lines and stand the posts in their final bay positions.', 'Temporarily clamp or brace the posts plumb before adding rails.', 'Check the full footprint for square before driving structural screws.'] },
+      { title: 'Install rails at each level', stage: 2, instructions: ['Fasten front and back rails first, then add the side depth rails at the same height.', 'Use the level marks on the posts to keep each shelf plane consistent.', 'For wide bays, check that the rails do not sag before adding decking.'] },
+      { title: 'Add shelf slats or decking', stage: 3, instructions: ['Place shelf slats evenly across each level or install sheet decking as planned.', 'Fasten each slat to the supporting rails so the shelf surface acts as a tied assembly.', 'Leave practical gaps for dust and airflow if using individual slats.'] },
+      { title: 'Final fasteners and anchoring', stage: 4, instructions: ['Add remaining screws at rail-to-post joints and check for racking.', 'Install wall anchors or anti-tip hardware if the shelf will carry tall or heavy loads.', 'Load the shelf gradually and recheck fasteners after the first use.'] }
+    ],
     tags: ['storage', 'shelves', '2x lumber'],
     thumbnail: 'shelves'
   },
@@ -68,6 +89,13 @@ export const PLAN_CATALOG = [
       tools: ['Miter saw or circular saw', 'Pocket-hole jig', 'Drill/driver', 'Clamps', 'Square'],
       notes: ['The default height targets a 6 ft 5 in overall limit including casters.', 'The doubled caster blocks and sister splice plates are part of the short-stock strategy, not decorative parts.']
     },
+    buildSteps: [
+      { title: 'Cut and sort the short-stock parts', stage: 0, instructions: ['Cut lower posts, upper posts, splice plates, top sister plates, caster blocks, rails, braces, and shelf planks from 4 ft stock.', 'Keep each corner post bundle together so the lower, upper, splice, top plate, and caster block parts stay paired.', 'Drill pocket holes in the rails before assembly where the cut list notes call for them.'] },
+      { title: 'Build the four corner post assemblies', stage: 1, instructions: ['Join each lower and upper post with its sister splice plate, keeping the post faces flush and straight.', 'Add the top rail sister plate and lower caster mounting block to each corner post assembly.', 'Clamp the doubled sections tightly before driving structural screws.'] },
+      { title: 'Connect the shelf rails', stage: 2, instructions: ['Stand the four corner assemblies and connect them with front, back, and side rails at each shelf level.', 'Use pocket-hole screws from the inside faces where possible so exposed sides stay cleaner.', 'Check the frame for square after each level, not just at the end.'] },
+      { title: 'Install shelf planks and center supports', stage: 3, instructions: ['Add center supports at each level before installing the planks.', 'Install the front and back end planks, then fill the middle planks across the shelf depth.', 'Fasten planks to side rails and center supports so each level stiffens the rolling frame.'] },
+      { title: 'Add gussets, casters, and final fasteners', stage: 4, instructions: ['Install diagonal gusset braces to reduce racking before the shelf is moved.', 'Mount locking casters at the front and non-locking casters at the rear using the doubled caster blocks.', 'Set the shelf upright, lock the front wheels, and test roll it empty before loading.'] }
+    ],
     tags: ['storage', 'rolling', 'casters', '48 in cuts'],
     thumbnail: 'rolling-shelves'
   }
