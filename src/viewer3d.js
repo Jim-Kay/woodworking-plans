@@ -580,6 +580,10 @@ export class FrameViewer {
           addCaster(this.root, part, mat);
           return;
         }
+        if (part.material === 'tote') {
+          addTaperedTote(this.root, part, plan);
+          return;
+        }
         if (part.material === 'fastener') {
           const start = part.meta.start;
           addShelfScrew(
@@ -860,6 +864,80 @@ function addCaster(group, part, mat) {
     if (mesh.isMesh) mesh.userData.partInfo = part;
   });
   group.add(casterGroup);
+}
+
+function addTaperedTote(group, part, plan) {
+  const x = part.position.x * SCALE;
+  const y = part.position.y * SCALE;
+  const z = part.position.z * SCALE;
+  const width = part.size.x * SCALE;
+  const height = part.size.y * SCALE;
+  const depth = part.size.z * SCALE;
+  const lipT = (part.meta?.lipThickness || 0.75) * SCALE;
+  const wallT = Math.min(width, depth) * 0.035;
+  const bodyScale = part.meta?.bodyScale || 0.78;
+  const bodyTopW = width * 0.9;
+  const bodyTopD = depth * 0.9;
+  const bodyBottomW = width * bodyScale;
+  const bodyBottomD = depth * bodyScale;
+  const topY = height / 2 - lipT;
+  const bottomY = -height / 2;
+  const bodyMaterial = makeModelMaterial(plan, 0x6b7280, 0.62, { transparent: true, opacity: plan.modelOpacity === 'transparent' ? 0.26 : 0.68, depthWrite: false });
+  const lipMaterial = makeModelMaterial(plan, 0xfacc15, 0.55, { transparent: true, opacity: plan.modelOpacity === 'transparent' ? 0.42 : 0.86, depthWrite: false });
+
+  const vertices = new Float32Array([
+    -bodyBottomW / 2, bottomY, -bodyBottomD / 2,
+    bodyBottomW / 2, bottomY, -bodyBottomD / 2,
+    bodyBottomW / 2, bottomY, bodyBottomD / 2,
+    -bodyBottomW / 2, bottomY, bodyBottomD / 2,
+    -bodyTopW / 2, topY, -bodyTopD / 2,
+    bodyTopW / 2, topY, -bodyTopD / 2,
+    bodyTopW / 2, topY, bodyTopD / 2,
+    -bodyTopW / 2, topY, bodyTopD / 2
+  ]);
+  const indices = [
+    0, 1, 5, 0, 5, 4,
+    1, 2, 6, 1, 6, 5,
+    2, 3, 7, 2, 7, 6,
+    3, 0, 4, 3, 4, 7,
+    0, 3, 2, 0, 2, 1
+  ];
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  const toteGroup = new THREE.Group();
+  toteGroup.position.set(x, y, z);
+
+  const body = new THREE.Mesh(geometry, bodyMaterial);
+  body.castShadow = true;
+  body.receiveShadow = true;
+  body.userData.partInfo = part;
+  toteGroup.add(body);
+  const bodyEdges = new THREE.LineSegments(new THREE.EdgesGeometry(geometry, 1), new THREE.LineBasicMaterial({ color: 0x111827, transparent: true, opacity: 0.55 }));
+  bodyEdges.userData.partInfo = part;
+  toteGroup.add(bodyEdges);
+
+  const lipY = height / 2 - lipT / 2;
+  [
+    { x: 0, z: -depth / 2 + wallT / 2, w: width, h: wallT },
+    { x: 0, z: depth / 2 - wallT / 2, w: width, h: wallT },
+    { x: -width / 2 + wallT / 2, z: 0, w: wallT, h: depth },
+    { x: width / 2 - wallT / 2, z: 0, w: wallT, h: depth }
+  ].forEach((lip) => {
+    addRail(toteGroup, {
+      x: lip.x,
+      y: lipY,
+      z: lip.z,
+      w: lip.w,
+      d: lipT,
+      h: lip.h,
+      material: lipMaterial,
+      visible: true,
+      partInfo: part
+    });
+  });
+  group.add(toteGroup);
 }
 
 function assemblyFloorY(assembly) {

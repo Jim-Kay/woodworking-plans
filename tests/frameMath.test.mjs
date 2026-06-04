@@ -99,6 +99,10 @@ assert.equal(toteRack.capacity, 9);
 assert.equal(toteRack.shelfW, 69.5);
 assert.equal(toteRack.shelfD, 36);
 assert.equal(toteRack.assembly.parts.filter((part) => part.material === 'tote').length, 9);
+assert.equal(toteRack.assembly.parts.filter((part) => part.id.startsWith('rail.runner.')).length, 18);
+assert.equal(toteRack.assembly.parts.filter((part) => part.meta?.kind === 'caster').length, 4);
+assert.deepEqual(toteRack.assembly.parts.find((part) => part.id === 'post.front.0').size, { x: 1.5, y: toteRack.frameHeight, z: 3.5 });
+assert.deepEqual(toteRack.assembly.parts.find((part) => part.id === 'rail.frame.front.top').size, { x: 68, y: 1.5, z: 3.5 });
 
 const customToteRack = calculateShelfPlan({
   build: 'tote-rack',
