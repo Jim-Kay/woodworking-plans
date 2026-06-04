@@ -35,6 +35,7 @@ export const DEFAULT_PLAN = {
   modelPalette: 'natural',
   modelOpacity: 'opaque',
   modelScene: 'dark',
+  showDimensions: false,
   mountMethod: 'screws',
   mountClip: 'none',
   shelfW: 96,

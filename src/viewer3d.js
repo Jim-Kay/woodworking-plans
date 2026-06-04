@@ -612,6 +612,9 @@ export class FrameViewer {
           partInfo: part
         });
       });
+      if (plan.showDimensions && result.style === 'tote-rack') {
+        addToteRackDimensions(this.root, result, plan);
+      }
       if (!this.manualCamera) this.fitCamera(width, depth, height);
       return;
     }
@@ -938,6 +941,185 @@ function addTaperedTote(group, part, plan) {
     });
   });
   group.add(toteGroup);
+}
+
+function addToteRackDimensions(group, result, plan) {
+  const assembly = result.assembly;
+  if (!assembly?.parts?.length) return;
+  const parts = new Map(assembly.parts.map((part) => [part.id, part]));
+  const width = result.shelfW;
+  const depth = result.shelfD;
+  const height = result.shelfH;
+  const floorY = assemblyFloorY(assembly);
+  const topY = floorY + height;
+  const offset = Math.max(5, Math.min(width, depth) * 0.16);
+  const frontZ = -depth / 2;
+  const backZ = depth / 2;
+  const rightX = width / 2;
+  const leftX = -width / 2;
+  const dimGroup = new THREE.Group();
+  dimGroup.name = 'dimension-overlay';
+
+  const lineMat = new THREE.LineBasicMaterial({
+    color: plan.modelScene === 'light' ? 0x2563eb : 0x93c5fd,
+    transparent: true,
+    opacity: 0.95,
+    depthTest: false
+  });
+  const tickMat = new THREE.LineBasicMaterial({
+    color: plan.modelScene === 'light' ? 0x1d4ed8 : 0xbfdbfe,
+    transparent: true,
+    opacity: 0.9,
+    depthTest: false
+  });
+
+  addDimensionLine(dimGroup, {
+    start: { x: leftX, y: floorY + 1.5, z: frontZ - offset },
+    end: { x: rightX, y: floorY + 1.5, z: frontZ - offset },
+    tickAxis: 'y',
+    labelOffset: { x: 0, y: 1.2, z: 0 },
+    label: `Cart width ${formatDimensionValue(width, plan.unit)}`,
+    lineMat,
+    tickMat
+  });
+  addDimensionLine(dimGroup, {
+    start: { x: rightX + offset, y: floorY + 1.5, z: frontZ },
+    end: { x: rightX + offset, y: floorY + 1.5, z: backZ },
+    tickAxis: 'y',
+    labelOffset: { x: 0, y: 1.2, z: 0 },
+    label: `Cart depth ${formatDimensionValue(depth, plan.unit)}`,
+    lineMat,
+    tickMat
+  });
+  addDimensionLine(dimGroup, {
+    start: { x: rightX + offset, y: floorY, z: frontZ - offset * 0.45 },
+    end: { x: rightX + offset, y: topY, z: frontZ - offset * 0.45 },
+    tickAxis: 'x',
+    labelOffset: { x: 1.4, y: 0, z: 0 },
+    label: `Overall height ${formatDimensionValue(height, plan.unit)}`,
+    lineMat,
+    tickMat
+  });
+
+  const leftRunner = parts.get('rail.runner.row0.bay0.left');
+  const rightRunner = parts.get('rail.runner.row0.bay0.right');
+  if (leftRunner && rightRunner) {
+    const clearWidth = Math.max(0, rightRunner.position.x - leftRunner.position.x - leftRunner.size.x);
+    const y = leftRunner.position.y + leftRunner.size.y / 2 + 0.75;
+    addDimensionLine(dimGroup, {
+      start: { x: leftRunner.position.x + leftRunner.size.x / 2, y, z: frontZ - offset * 0.42 },
+      end: { x: rightRunner.position.x - rightRunner.size.x / 2, y, z: frontZ - offset * 0.42 },
+      tickAxis: 'y',
+      labelOffset: { x: 0, y: 1.1, z: 0 },
+      label: `Runner clear width ${formatDimensionValue(clearWidth, plan.unit)}`,
+      lineMat,
+      tickMat
+    });
+  }
+
+  const row0 = parts.get('rail.runner.row0.bay0.left');
+  const row1 = parts.get('rail.runner.row1.bay0.left');
+  if (row0 && row1) {
+    const pitch = Math.abs(row1.position.y - row0.position.y);
+    addDimensionLine(dimGroup, {
+      start: { x: (row0.position.x + row0.size.x / 2) + 1.2, y: row0.position.y, z: frontZ - offset * 0.25 },
+      end: { x: (row1.position.x + row1.size.x / 2) + 1.2, y: row1.position.y, z: frontZ - offset * 0.25 },
+      tickAxis: 'x',
+      labelOffset: { x: 1.2, y: 0, z: 0 },
+      label: `Runner vertical pitch ${formatDimensionValue(pitch, plan.unit)}`,
+      lineMat,
+      tickMat
+    });
+  }
+
+  group.add(dimGroup);
+}
+
+function addDimensionLine(group, opts) {
+  const start = scalePointFromInches(opts.start);
+  const end = scalePointFromInches(opts.end);
+  const geometry = new THREE.BufferGeometry().setFromPoints([start, end]);
+  const line = new THREE.Line(geometry, opts.lineMat);
+  line.renderOrder = 40;
+  group.add(line);
+
+  const tickSize = 1.25 * SCALE;
+  [start, end].forEach((point) => {
+    const a = point.clone();
+    const b = point.clone();
+    if (opts.tickAxis === 'x') {
+      a.x -= tickSize;
+      b.x += tickSize;
+    } else if (opts.tickAxis === 'z') {
+      a.z -= tickSize;
+      b.z += tickSize;
+    } else {
+      a.y -= tickSize;
+      b.y += tickSize;
+    }
+    const tick = new THREE.Line(new THREE.BufferGeometry().setFromPoints([a, b]), opts.tickMat);
+    tick.renderOrder = 40;
+    group.add(tick);
+  });
+
+  const midpoint = start.clone().add(end).multiplyScalar(0.5);
+  const label = makeDimensionLabel(opts.label, opts.lineMat.color?.getHex?.() || 0x93c5fd);
+  const offset = scalePointFromInches(opts.labelOffset || { x: 0, y: 0, z: 0 });
+  label.position.copy(midpoint.add(offset));
+  label.renderOrder = 42;
+  group.add(label);
+}
+
+function makeDimensionLabel(text, color) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = 'rgba(8, 13, 22, 0.82)';
+  roundRect(ctx, 10, 22, 492, 84, 18);
+  ctx.fill();
+  ctx.strokeStyle = `#${color.toString(16).padStart(6, '0')}`;
+  ctx.lineWidth = 4;
+  roundRect(ctx, 10, 22, 492, 84, 18);
+  ctx.stroke();
+  ctx.fillStyle = '#f8fafc';
+  ctx.font = '600 34px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, canvas.width / 2, canvas.height / 2 + 2, 462);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false }));
+  sprite.scale.set(2.45, 0.62, 1);
+  return sprite;
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function scalePointFromInches(point) {
+  return new THREE.Vector3((point.x || 0) * SCALE, (point.y || 0) * SCALE, (point.z || 0) * SCALE);
+}
+
+function formatDimensionValue(value, unit = 'in') {
+  if (unit === 'mm') return `${roundDimension(value * 25.4)} mm`;
+  return `${roundDimension(value)} in`;
+}
+
+function roundDimension(value) {
+  return Number(value).toFixed(Math.abs(value) >= 48 ? 1 : 2).replace(/\.0+$/, '').replace(/(\.\d*[1-9])0+$/, '$1');
 }
 
 function assemblyFloorY(assembly) {

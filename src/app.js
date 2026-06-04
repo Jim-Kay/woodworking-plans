@@ -60,6 +60,7 @@ const cameraFields = {
 };
 
 const STRING_PLAN_KEYS = ['unit', 'join', 'build', 'finishColor', 'finishSheen', 'canvasAppearance', 'modelPalette', 'modelOpacity', 'modelScene', 'mountMethod', 'mountClip'];
+const BOOLEAN_PLAN_KEYS = ['showDimensions'];
 
 const urlParams = new URLSearchParams(window.location.search);
 const urlPlan = hydratePlanFromUrl();
@@ -164,6 +165,11 @@ function bindInputs() {
   });
   $('#modelScene').addEventListener('change', (event) => {
     plan.modelScene = event.target.value;
+    viewer.manualCamera = true;
+    render();
+  });
+  $('#showDimensions').addEventListener('change', (event) => {
+    plan.showDimensions = event.target.checked;
     viewer.manualCamera = true;
     render();
   });
@@ -408,6 +414,7 @@ function renderFields() {
   $('#modelPalette').value = plan.modelPalette || 'natural';
   $('#modelScene').value = plan.modelScene || 'dark';
   $('#modelTransparent').checked = plan.modelOpacity === 'transparent';
+  $('#showDimensions').checked = Boolean(plan.showDimensions);
 }
 
 function renderToggles() {
@@ -1411,7 +1418,8 @@ function hydratePlanFromUrl() {
   Object.assign(next, getPlanDefinition(params.get('plan')).defaults || {});
   for (const [key, raw] of params.entries()) {
     if (key in next) {
-    if (STRING_PLAN_KEYS.includes(key)) next[key] = key === 'build' ? normalizePlanBuild(raw) : raw;
+      if (STRING_PLAN_KEYS.includes(key)) next[key] = key === 'build' ? normalizePlanBuild(raw) : raw;
+      else if (BOOLEAN_PLAN_KEYS.includes(key)) next[key] = raw === 'true' || raw === '1';
       else next[key] = Number(raw);
     }
   }
@@ -1428,6 +1436,8 @@ function hydratePlanFromStorage() {
       if (!(key in next)) return;
       if (STRING_PLAN_KEYS.includes(key)) {
         next[key] = key === 'build' ? normalizePlanBuild(value) : value;
+      } else if (BOOLEAN_PLAN_KEYS.includes(key)) {
+        next[key] = value === true || value === 'true' || value === 1 || value === '1';
       } else if (typeof value === 'number' && Number.isFinite(value)) {
         next[key] = value;
       } else if (typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value))) {
@@ -1479,6 +1489,7 @@ function serializePlan(current) {
   const serializable = {};
   Object.entries(current).forEach(([key, value]) => {
     if (typeof value !== 'object' && Number.isFinite(value)) serializable[key] = String(value);
+    else if (typeof value === 'boolean') serializable[key] = String(value);
     else if (typeof value === 'string') serializable[key] = value;
   });
   return serializable;
