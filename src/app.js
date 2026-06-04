@@ -518,6 +518,7 @@ function renderPurchaseEstimate() {
       <span><b>${escapeHtml(formatLength(estimate.totalWaste, plan.unit))}</b> estimated offcut</span>
     </div>
     ${estimate.tooLong.length ? `<div class="purchaseWarning">${estimate.tooLong.map((item) => `${escapeHtml(item.part)} needs ${escapeHtml(formatLength(item.length, plan.unit))}`).join('; ')}</div>` : ''}
+    ${visualCutListHtml(estimate)}
     <table class="purchaseTable">
       <thead><tr><th>Stock</th><th>Boards</th><th>Cut layout</th><th>Offcut</th></tr></thead>
       <tbody>
@@ -532,6 +533,86 @@ function renderPurchaseEstimate() {
       </tbody>
     </table>
   `;
+}
+
+function visualCutListHtml(estimate) {
+  return `
+    <div class="visualCutList" aria-label="Visual cut list">
+      <div class="visualCutHeader">
+        <h3>Visual Cut Layout</h3>
+        <span>${escapeHtml(formatLength(purchaseBoardLength, plan.unit))} stock length</span>
+      </div>
+      ${estimate.groups.map((group) => `
+        <section class="visualCutGroup">
+          <div class="visualCutGroupTitle">
+            <b>${escapeHtml(formatLength(group.width, plan.unit))} x ${escapeHtml(formatLength(group.thickness, plan.unit))}</b>
+            <span>${group.boards.length} board${group.boards.length === 1 ? '' : 's'}</span>
+          </div>
+          ${group.boards.map((board, boardIndex) => visualCutBoardHtml(group, board, boardIndex)).join('')}
+        </section>
+      `).join('')}
+    </div>
+  `;
+}
+
+function visualCutBoardHtml(group, board, boardIndex) {
+  const stockLength = Math.max(1, Number(purchaseBoardLength) || 96);
+  const kerf = Math.max(0, Number(plan.kerf) || 0);
+  const waste = Math.max(0, stockLength - board.used);
+  const segments = [];
+  board.pieces.forEach((piece, pieceIndex) => {
+    if (pieceIndex && kerf > 0) {
+      segments.push({
+        className: 'kerf',
+        width: percentOfStock(kerf, stockLength),
+        label: `Kerf ${formatLength(kerf, plan.unit)}`
+      });
+    }
+    segments.push({
+      className: '',
+      width: percentOfStock(piece.length, stockLength),
+      label: `${piece.part} ${formatLength(piece.length, plan.unit)}`,
+      piece
+    });
+  });
+  if (waste > 0.0001) {
+    segments.push({
+      className: 'waste',
+      width: percentOfStock(waste, stockLength),
+      label: `Offcut ${formatLength(waste, plan.unit)}`
+    });
+  }
+  return `
+    <div class="visualBoard">
+      <div class="visualBoardMeta">
+        <b>Board ${boardIndex + 1}</b>
+        <span>Used ${escapeHtml(formatLength(board.used, plan.unit))}</span>
+      </div>
+      <div class="visualBar">
+        ${segments.map((segment) => `
+          <span
+            class="visualSegment ${segment.className}"
+            style="width:${segment.width}%; ${segment.piece ? `--seg-color:${pieceColor(segment.piece.part, group.width, group.thickness)};` : ''}"
+            title="${escapeHtml(segment.label)}"
+          >
+            ${segment.className ? '' : `<span>${escapeHtml(segment.piece.part)}</span><b>${escapeHtml(formatLength(segment.piece.length, plan.unit))}</b>`}
+          </span>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function percentOfStock(value, stockLength) {
+  return Math.max(0.4, Math.min(100, (value / stockLength) * 100));
+}
+
+function pieceColor(partName, width, thickness) {
+  const palette = ['#60a5fa', '#34d399', '#fbbf24', '#f472b6', '#a78bfa', '#2dd4bf', '#fb7185', '#c084fc'];
+  const key = `${partName}:${roundStock(width)}:${roundStock(thickness)}`;
+  let hash = 0;
+  for (let i = 0; i < key.length; i += 1) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+  return palette[hash % palette.length];
 }
 
 function renderOpenScad() {
