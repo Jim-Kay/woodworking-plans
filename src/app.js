@@ -713,7 +713,7 @@ function renderBuildSteps(force = false) {
 }
 
 function buildStepHtml(step, index) {
-  const image = buildStepImage(step, { width: 760, height: 430, grid: true });
+  const images = buildStepImages(step, { width: 760, height: 430, grid: true });
   return `
     <li class="buildStep">
       <div class="buildStepText">
@@ -721,15 +721,28 @@ function buildStepHtml(step, index) {
         <h3>${escapeHtml(step.title)}</h3>
         <ul>${(step.instructions || []).map((item) => `<li>${escapeHtml(formatBuildInstruction(item))}</li>`).join('')}</ul>
       </div>
-      <div class="buildStepScene">
-        ${image ? `<img src="${image}" alt="${escapeHtml(step.title)} 3D assembly stage" />` : '<div class="buildStepPlaceholder">3D view unavailable</div>'}
+      <div class="buildStepSceneGroup">
+        ${images.length ? images.map((image, imageIndex) => `
+          <div class="buildStepScene">
+            <img src="${image}" alt="${escapeHtml(step.title)} assembly view ${imageIndex + 1}" />
+          </div>
+        `).join('') : '<div class="buildStepScene"><div class="buildStepPlaceholder">3D view unavailable</div></div>'}
       </div>
     </li>
   `;
 }
 
+function buildStepImages(step, options = {}) {
+  if (Array.isArray(step.images) && step.images.length) {
+    return step.images.map((image) => buildStepImage({ ...step, image }, options)).filter(Boolean);
+  }
+  const image = buildStepImage(step, options);
+  return image ? [image] : [];
+}
+
 function buildStepImage(step, options = {}) {
   if (step.image === 'cut-layout') return cutLayoutImage(options.width || 760, options.height || 430);
+  if (step.image?.type === 'front-frame') return frontFrameAssemblyImage(step.image.phase || 1, options.width || 760, options.height || 430);
   return viewer.captureImage({
     stage: step.stage ?? 999,
     vis: step.vis || buildStepVisibility(),
@@ -757,6 +770,105 @@ function buildInstructionValue(key) {
   }
   if (key === 'postCountPerFrame') return String((result?.columns || result?.bays || plan.toteColumns || 1) + 1);
   return `{${key}}`;
+}
+
+function frontFrameAssemblyImage(phase, width, height) {
+  const parts = new Map(result?.assembly?.parts?.map((part) => [part.id, part]) || []);
+  const postCount = (result?.columns || result?.bays || plan.toteColumns || 1) + 1;
+  const railLength = result?.shelfW || 0;
+  const firstPost = parts.get('post.front.0');
+  const secondPost = parts.get('post.front.1');
+  const postClear = firstPost && secondPost ? Math.max(0, secondPost.position.x - firstPost.position.x - firstPost.size.x) : 0;
+  const postHeight = firstPost?.size?.y || 0;
+  const railThickness = result?.stock || plan.shelfDeck || 1.5;
+  const railFace = result?.rail || plan.shelfRail || 3.5;
+  if (!railLength || !postHeight || !postCount) return null;
+
+  const pad = 34;
+  const noteH = 44;
+  const frameW = width - pad * 2;
+  const frameH = height - pad * 2 - noteH;
+  const xScale = frameW / railLength;
+  const railH = Math.max(8, railThickness * xScale);
+  const postW = Math.max(10, (firstPost?.size?.x || 1.5) * xScale);
+  const bottomRailY = height - pad - noteH - railH * 2.2;
+  const secondRailY = bottomRailY + railH;
+  const topRailY = Math.max(pad + 38, bottomRailY - postHeight * xScale);
+  const railX = pad;
+  const postBottomY = bottomRailY;
+  const topPostY = topRailY + railH;
+  const postXs = Array.from({ length: postCount }, (_, index) => {
+    const part = parts.get(`post.front.${index}`);
+    if (part) return railX + (part.position.x + railLength / 2 - part.size.x / 2) * xScale;
+    return railX + index * (frameW - postW) / Math.max(1, postCount - 1);
+  });
+  const showTop = phase >= 2;
+  const showSecondBottom = phase >= 3;
+  const title = [
+    '1. Fasten posts to the first bottom rail',
+    '2. Add the top rail and fasten down into posts',
+    '3. Add the second bottom rail and screw upward into the first'
+  ][Math.max(0, Math.min(2, phase - 1))];
+  const svg = [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+    '<defs>',
+    '<linearGradient id="floor" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#0c1117"/><stop offset="1" stop-color="#111827"/></linearGradient>',
+    '<filter id="shadow" x="-20%" y="-40%" width="140%" height="180%"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#020617" flood-opacity="0.45"/></filter>',
+    '<marker id="arrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="#93c5fd"/></marker>',
+    '</defs>',
+    '<rect width="100%" height="100%" fill="url(#floor)"/>'
+  ];
+  for (let x = pad; x < width; x += 32) svg.push(`<line x1="${x}" y1="${pad}" x2="${x}" y2="${height - pad}" stroke="#1f2937" stroke-width="1"/>`);
+  for (let y = pad; y < height; y += 32) svg.push(`<line x1="${pad}" y1="${y}" x2="${width - pad}" y2="${y}" stroke="#1f2937" stroke-width="1"/>`);
+  svg.push(`<text x="${pad}" y="25" fill="#bfdbfe" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800">${escapeHtml(title)}</text>`);
+
+  const railFill = '#d7bd83';
+  const secondFill = '#b88b57';
+  const postFill = '#b08f64';
+  const stroke = '#3f2a1b';
+  svg.push(`<rect x="${railX}" y="${bottomRailY}" width="${frameW}" height="${railH}" rx="2" fill="${railFill}" stroke="${stroke}" stroke-width="1.2" filter="url(#shadow)"/>`);
+  if (showSecondBottom) svg.push(`<rect x="${railX}" y="${secondRailY}" width="${frameW}" height="${railH}" rx="2" fill="${secondFill}" stroke="${stroke}" stroke-width="1.2" filter="url(#shadow)"/>`);
+  if (showTop) svg.push(`<rect x="${railX}" y="${topRailY}" width="${frameW}" height="${railH}" rx="2" fill="${railFill}" stroke="${stroke}" stroke-width="1.2" filter="url(#shadow)"/>`);
+  postXs.forEach((x, index) => {
+    svg.push(`<rect x="${x}" y="${topPostY}" width="${postW}" height="${postBottomY - topPostY}" rx="2" fill="${postFill}" stroke="${stroke}" stroke-width="1.2" filter="url(#shadow)"/>`);
+    if (phase === 1) addScrewPair(svg, x + postW / 2, bottomRailY + railH * 0.55, 'up');
+    if (phase === 2) addScrewPair(svg, x + postW / 2, topRailY + railH * 0.45, 'down');
+    if (showSecondBottom) addLaminationScrew(svg, x + postW / 2, secondRailY + railH * 0.82, bottomRailY + railH * 0.22);
+    if (index < postXs.length - 1) {
+      const x1 = x + postW;
+      const x2 = postXs[index + 1];
+      const y = bottomRailY + railH + 26;
+      addDim(svg, x1, x2, y, `Clear ${escapeHtml(formatLength(postClear, plan.unit))}`);
+    }
+  });
+  addDim(svg, railX, railX + frameW, topRailY - 20, `Rail ${escapeHtml(formatLength(railLength, plan.unit))}`);
+  svg.push(`<text x="${pad}" y="${height - 18}" fill="#e5e7eb" font-family="Inter, Arial, sans-serif" font-size="12">Use ${postCount} posts per frame. Rail face shown as ${escapeHtml(formatLength(railFace, plan.unit))}; repeat this assembly for the back frame.</text>`);
+  svg.push('</svg>');
+  return `data:image/svg+xml;base64,${btoa(svg.join(''))}`;
+}
+
+function addDim(svg, x1, x2, y, label) {
+  svg.push(`<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="#93c5fd" stroke-width="1.4" marker-start="url(#arrow)" marker-end="url(#arrow)"/>`);
+  svg.push(`<line x1="${x1}" y1="${y - 8}" x2="${x1}" y2="${y + 8}" stroke="#bfdbfe" stroke-width="1"/>`);
+  svg.push(`<line x1="${x2}" y1="${y - 8}" x2="${x2}" y2="${y + 8}" stroke="#bfdbfe" stroke-width="1"/>`);
+  svg.push(`<rect x="${(x1 + x2) / 2 - 46}" y="${y - 22}" width="92" height="18" rx="3" fill="#111827" stroke="#334155"/>`);
+  svg.push(`<text x="${(x1 + x2) / 2}" y="${y - 9}" fill="#f8fafc" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="700" text-anchor="middle">${label}</text>`);
+}
+
+function addScrewPair(svg, x, y, direction) {
+  const offsets = [-5, 5];
+  offsets.forEach((dx) => {
+    const y2 = direction === 'up' ? y - 20 : y + 20;
+    svg.push(`<line x1="${x + dx}" y1="${y}" x2="${x + dx}" y2="${y2}" stroke="#cbd5e1" stroke-width="2.2"/>`);
+    svg.push(`<circle cx="${x + dx}" cy="${y}" r="3.5" fill="#64748b" stroke="#e5e7eb" stroke-width="1"/>`);
+  });
+}
+
+function addLaminationScrew(svg, x, y1, y2) {
+  [-7, 7].forEach((dx) => {
+    svg.push(`<line x1="${x + dx}" y1="${y1}" x2="${x + dx}" y2="${y2}" stroke="#cbd5e1" stroke-width="2.2"/>`);
+    svg.push(`<circle cx="${x + dx}" cy="${y1}" r="3.5" fill="#64748b" stroke="#e5e7eb" stroke-width="1"/>`);
+  });
 }
 
 function cutLayoutImage(width, height) {
@@ -1328,7 +1440,7 @@ function printPlan() {
       .hero{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;margin-bottom:20px}.hero img{width:100%;height:auto;border-radius:6px;background:#0c1117;border:1px solid #bbb}.panel{break-inside:avoid;border:1px solid #bbb;border-radius:6px;padding:12px;margin:0 0 12px}.twocol{display:grid;grid-template-columns:1fr 1fr;gap:12px}.kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.kv div{border:1px solid #ddd;padding:6px}.kv span{display:block;color:#555;font-size:11px}.kv b{font-size:12px} ul{margin:0;padding-left:18px} li{margin-bottom:5px}
       table{border-collapse:collapse;width:100%;font-size:12px} th,td{border:1px solid #bbb;padding:6px;text-align:left;vertical-align:top} th{background:#eee}
       .views{margin:20px 0 22px}.viewGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.viewShot{break-inside:avoid;border:1px solid #bbb;border-radius:6px;padding:8px}.viewShot b{display:block;font-size:12px;margin:0 0 6px;color:#333}.viewShot img{display:block;width:100%;height:auto;border-radius:4px;background:#0c1117}
-      .steps{counter-reset:step}.printStep{break-inside:avoid;display:grid;grid-template-columns:.9fr 1.1fr;gap:12px;border:1px solid #bbb;border-radius:6px;padding:12px;margin:0 0 14px}.printStep img{width:100%;height:auto;border-radius:4px;background:#0c1117}.stepNo{font-size:11px;font-weight:bold;color:#555;text-transform:uppercase}.purchaseStats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}.purchaseStats span{border:1px solid #bbb;border-radius:999px;padding:5px 8px;font-size:12px}
+      .steps{counter-reset:step}.printStep{break-inside:avoid;display:grid;grid-template-columns:.9fr 1.1fr;gap:12px;border:1px solid #bbb;border-radius:6px;padding:12px;margin:0 0 14px}.printStepImages{display:grid;gap:8px}.printStep img{width:100%;height:auto;border-radius:4px;background:#0c1117}.stepNo{font-size:11px;font-weight:bold;color:#555;text-transform:uppercase}.purchaseStats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}.purchaseStats span{border:1px solid #bbb;border-radius:999px;padding:5px 8px;font-size:12px}
       .guides{margin-top:24px}.guideGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px}.printGuide{break-inside:avoid;border:1px solid #bbb;border-radius:6px;padding:12px;margin:0 0 14px}.printGuide b{display:block;margin-bottom:4px}.cutHelpText{display:block;font-size:12px;color:#333;margin-bottom:8px}.cutDiagram{width:100%;max-width:520px;height:auto}.miterDiagram{width:100%;max-width:430px;height:auto}.profile,.topProfile{fill:none;stroke:#111;stroke-width:4;stroke-linecap:round;stroke-linejoin:round}.keepProfile{fill:#b7dfbf;stroke:none}.remove{fill:#e26b6b;opacity:.55}.ledge{fill:#37a857;opacity:.75}.topRemove{fill:none;stroke:#d85656;stroke-width:3;stroke-linecap:round}.squiggle{fill:none;stroke:#888;stroke-width:1.5}.dimLine,.tick{stroke:#777;stroke-width:2}.grayText,.dimText{fill:#555;font-size:11px}.dimText{text-anchor:middle}
       @media print{.printStep,.panel,.viewShot,.printGuide{break-inside:avoid}.pageBreak{break-before:page}}
     </style>
@@ -1445,7 +1557,7 @@ function printBuildStepsHtml(definition) {
     <section class="steps pageBreak">
       <h2>Step-by-step Build Instructions</h2>
       ${steps.map((step, index) => {
-        const image = buildStepImage(step, {
+        const images = buildStepImages(step, {
           camera: printStepCamera(step),
           target: printCameraTarget(),
           width: 820,
@@ -1458,7 +1570,7 @@ function printBuildStepsHtml(definition) {
               <h3>${escapeHtml(step.title)}</h3>
               <ul>${(step.instructions || []).map((item) => `<li>${escapeHtml(formatBuildInstruction(item))}</li>`).join('')}</ul>
             </div>
-            ${image ? `<img src="${image}" alt="${escapeHtml(step.title)} assembly view">` : '<div class="panel muted">3D view unavailable</div>'}
+            ${images.length ? `<div class="printStepImages">${images.map((image, imageIndex) => `<img src="${image}" alt="${escapeHtml(step.title)} assembly view ${imageIndex + 1}">`).join('')}</div>` : '<div class="panel muted">3D view unavailable</div>'}
           </div>
         `;
       }).join('')}

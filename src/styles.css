@@ -841,6 +841,15 @@ label {
   background: #0c1117;
 }
 
+.buildStepSceneGroup {
+  display: grid;
+  gap: 10px;
+}
+
+.buildStepSceneGroup .buildStepScene {
+  min-height: 190px;
+}
+
 .buildStepScene img {
   display: block;
   width: 100%;
@@ -848,6 +857,10 @@ label {
   min-height: 230px;
   object-fit: contain;
   background: #0c1117;
+}
+
+.buildStepSceneGroup .buildStepScene img {
+  min-height: 190px;
 }
 
 .buildStepPlaceholder {
