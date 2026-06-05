@@ -781,6 +781,7 @@ function buildStepImage(step, options = {}) {
 
 function buildStepAnimation(step, options = {}) {
   if (step.animation?.type === 'front-frame') return frontFrameAnimationImage(options.width || 760, options.height || 430);
+  if (step.animation?.type === 'runner-rails') return runnerRailAnimationImage(options.width || 760, options.height || 430);
   return null;
 }
 
@@ -951,6 +952,105 @@ function frontFrameAnimationImage(width, height) {
   return `data:image/svg+xml;base64,${btoa(svg.join(''))}`;
 }
 
+function runnerRailAnimationImage(width, height) {
+  const parts = new Map(result?.assembly?.parts?.map((part) => [part.id, part]) || []);
+  const rows = result?.rows || result?.levels || plan.toteRows || 1;
+  const columns = result?.columns || result?.bays || plan.toteColumns || 1;
+  const railLength = result?.shelfW || 0;
+  const postHeight = parts.get('post.front.0')?.size?.y || 0;
+  const runnerClear = result?.runnerClearWidth || 0;
+  const rowPitch = result?.shelfSpacing || 0;
+  if (!railLength || !postHeight || !rows || !columns) return null;
+
+  const pad = 34;
+  const noteH = 42;
+  const frameW = width - pad * 2;
+  const xScale = frameW / railLength;
+  const railH = Math.max(8, (result?.stock || plan.shelfDeck || 1.5) * xScale);
+  const postW = Math.max(10, (parts.get('post.front.0')?.size?.x || 1.5) * xScale);
+  const runnerH = Math.max(13, (result?.rail || plan.shelfRail || 3.5) * xScale * 0.82);
+  const bottomRailY = height - pad - noteH - railH * 2.2;
+  const yScale = Math.max(1, (bottomRailY - pad - 72) / postHeight);
+  const topPostY = bottomRailY - postHeight * yScale;
+  const topRailY = topPostY - railH;
+  const railX = pad;
+  const postXs = Array.from({ length: columns + 1 }, (_, index) => {
+    const part = parts.get(`post.front.${index}`);
+    if (part) return railX + (part.position.x + railLength / 2 - part.size.x / 2) * xScale;
+    return railX + index * (frameW - postW) / Math.max(1, columns);
+  });
+  const runnerRows = Array.from({ length: rows }, (_, row) => {
+    const part = parts.get(`rail.runner.row${row}.bay0.left`);
+    if (part) return bottomRailY - (part.position.y - (result?.stock || 1.5)) * yScale;
+    return bottomRailY - (row + 1) * Math.max(42, (bottomRailY - topPostY) / Math.max(1, rows + 1));
+  }).filter((y) => y > topPostY + runnerH * 0.2 && y < bottomRailY - runnerH * 0.2);
+  const railFill = '#8f5f37';
+  const secondFill = '#d7bd83';
+  const postFill = '#b08f64';
+  const runnerFill = '#0f766e';
+  const runnerStroke = '#083f3d';
+  const stroke = '#3f2a1b';
+  const svg = [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+    '<defs>',
+    '<linearGradient id="floor" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#0c1117"/><stop offset="1" stop-color="#111827"/></linearGradient>',
+    '<filter id="shadow" x="-20%" y="-40%" width="140%" height="180%"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#020617" flood-opacity="0.45"/></filter>',
+    '<marker id="arrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="#93c5fd"/></marker>',
+    '</defs>',
+    '<rect width="100%" height="100%" fill="url(#floor)"/>'
+  ];
+  for (let x = pad; x < width; x += 32) svg.push(`<line x1="${x}" y1="${pad}" x2="${x}" y2="${height - pad}" stroke="#1f2937" stroke-width="1"/>`);
+  for (let y = pad; y < height; y += 32) svg.push(`<line x1="${pad}" y1="${y}" x2="${width - pad}" y2="${y}" stroke="#1f2937" stroke-width="1"/>`);
+  svg.push(`<text x="${pad}" y="25" fill="#bfdbfe" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800">Animated order: install runner rails bottom row first, then screw each end</text>`);
+
+  svg.push(`<rect x="${railX}" y="${topRailY}" width="${frameW}" height="${railH}" rx="2" fill="${secondFill}" stroke="${stroke}" stroke-width="1.2" filter="url(#shadow)"/>`);
+  svg.push(`<rect x="${railX}" y="${bottomRailY}" width="${frameW}" height="${railH}" rx="2" fill="${secondFill}" stroke="${stroke}" stroke-width="1.2" filter="url(#shadow)"/>`);
+  svg.push(`<rect x="${railX}" y="${bottomRailY + railH}" width="${frameW}" height="${railH}" rx="2" fill="${railFill}" stroke="${stroke}" stroke-width="1.2" filter="url(#shadow)"/>`);
+  postXs.forEach((x) => {
+    svg.push(`<rect x="${x}" y="${topPostY}" width="${postW}" height="${bottomRailY - topPostY}" rx="2" fill="${postFill}" stroke="${stroke}" stroke-width="1.2" filter="url(#shadow)"/>`);
+  });
+
+  runnerRows.forEach((y, rowIndex) => {
+    const rowDelay = rowIndex * 0.17;
+    postXs.slice(0, -1).forEach((leftPostX, bayIndex) => {
+      const rightPostX = postXs[bayIndex + 1];
+      const leftRailX = leftPostX + postW;
+      const rightRailX = rightPostX - postW;
+      const runnerW = Math.max(18, rightRailX - leftRailX);
+      const railY = y - runnerH / 2;
+      const slide = bayIndex % 2 === 0 ? -72 : 72;
+      const railKeyTimes = `0;${Math.min(0.82, 0.08 + rowDelay)};${Math.min(0.92, 0.18 + rowDelay)};1`;
+      const screwKeyTimes = `0;${Math.min(0.86, 0.2 + rowDelay)};${Math.min(0.96, 0.29 + rowDelay)};1`;
+      svg.push(animatedGroup(`row ${rowIndex + 1} bay ${bayIndex + 1} runner`, `${slide},0;${slide},0;0,0;0,0`, railKeyTimes));
+      svg.push(`<rect x="${leftRailX}" y="${railY}" width="${runnerW}" height="${runnerH}" rx="2" fill="${runnerFill}" stroke="${runnerStroke}" stroke-width="1.2" filter="url(#shadow)"/>`);
+      svg.push(`<line x1="${leftRailX + 8}" y1="${railY + 4}" x2="${leftRailX + runnerW - 8}" y2="${railY + 4}" stroke="#5eead4" stroke-opacity="0.35"/>`);
+      svg.push('</g>');
+      svg.push(animatedGroup(`row ${rowIndex + 1} bay ${bayIndex + 1} screws`, `0,-22;0,-22;0,0;0,0`, screwKeyTimes));
+      addRunnerScrews(svg, leftRailX + 10, railY + runnerH / 2, rightRailX - 10, railY + runnerH / 2);
+      svg.push('</g>');
+    });
+  });
+
+  if (postXs.length > 1 && runnerRows.length) {
+    const y = Math.max(pad + 54, runnerRows[runnerRows.length - 1] - runnerH - 18);
+    addDim(svg, postXs[0] + postW, postXs[1], y, `Post clear ${escapeHtml(formatLength(Math.max(0, (postXs[1] - postXs[0] - postW) / xScale), plan.unit))}`);
+  }
+  if (runnerClear && runnerRows.length) {
+    const y = Math.min(bottomRailY - runnerH - 12, runnerRows[0] + runnerH + 24);
+    const center = (postXs[0] + postXs[1]) / 2;
+    const clearW = runnerClear * xScale;
+    addDim(svg, center - clearW / 2, center + clearW / 2, y, `Runner clear ${escapeHtml(formatLength(runnerClear, plan.unit))}`);
+  }
+  if (rowPitch && runnerRows.length > 1) {
+    const x = Math.min(width - pad - 112, postXs.at(-1) + postW + 24);
+    addVerticalDim(svg, x, runnerRows[1], runnerRows[0], `Pitch ${escapeHtml(formatLength(rowPitch, plan.unit))}`);
+  }
+
+  svg.push(`<text x="${pad}" y="${height - 18}" fill="#e5e7eb" font-family="Inter, Arial, sans-serif" font-size="12">Sequence loops every 8 seconds. Keep each rail pair level and repeat the same row on the back side.</text>`);
+  svg.push('</svg>');
+  return `data:image/svg+xml;base64,${btoa(svg.join(''))}`;
+}
+
 function animatedGroup(label, values, keyTimes) {
   return `<g aria-label="${escapeHtml(label)}" opacity="0"><animate attributeName="opacity" dur="8s" repeatCount="indefinite" values="0;0;1;1" keyTimes="${keyTimes}" calcMode="linear"/><animateTransform attributeName="transform" type="translate" dur="8s" repeatCount="indefinite" values="${values}" keyTimes="${keyTimes}" calcMode="spline" keySplines=".2 .8 .2 1;.2 .8 .2 1;.2 .8 .2 1"/>`;
 }
@@ -963,12 +1063,29 @@ function addDim(svg, x1, x2, y, label) {
   svg.push(`<text x="${(x1 + x2) / 2}" y="${y - 9}" fill="#f8fafc" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="700" text-anchor="middle">${label}</text>`);
 }
 
+function addVerticalDim(svg, x, y1, y2, label) {
+  svg.push(`<line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}" stroke="#93c5fd" stroke-width="1.4" marker-start="url(#arrow)" marker-end="url(#arrow)"/>`);
+  svg.push(`<line x1="${x - 8}" y1="${y1}" x2="${x + 8}" y2="${y1}" stroke="#bfdbfe" stroke-width="1"/>`);
+  svg.push(`<line x1="${x - 8}" y1="${y2}" x2="${x + 8}" y2="${y2}" stroke="#bfdbfe" stroke-width="1"/>`);
+  svg.push(`<rect x="${x + 8}" y="${(y1 + y2) / 2 - 10}" width="88" height="20" rx="3" fill="#111827" stroke="#334155"/>`);
+  svg.push(`<text x="${x + 52}" y="${(y1 + y2) / 2 + 4}" fill="#f8fafc" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="700" text-anchor="middle">${label}</text>`);
+}
+
 function addScrewPair(svg, x, y, direction) {
   const offsets = [-5, 5];
   offsets.forEach((dx) => {
     const y2 = direction === 'up' ? y - 20 : y + 20;
     svg.push(`<line x1="${x + dx}" y1="${y}" x2="${x + dx}" y2="${y2}" stroke="#cbd5e1" stroke-width="2.2"/>`);
     svg.push(`<circle cx="${x + dx}" cy="${y}" r="3.5" fill="#64748b" stroke="#e5e7eb" stroke-width="1"/>`);
+  });
+}
+
+function addRunnerScrews(svg, leftX, leftY, rightX, rightY) {
+  [[leftX, leftY, 1], [rightX, rightY, -1]].forEach(([x, y, dir]) => {
+    [-4, 4].forEach((dy) => {
+      svg.push(`<line x1="${x - dir * 18}" y1="${y + dy - 8}" x2="${x}" y2="${y + dy}" stroke="#cbd5e1" stroke-width="2.1"/>`);
+      svg.push(`<circle cx="${x - dir * 18}" cy="${y + dy - 8}" r="3.2" fill="#64748b" stroke="#e5e7eb" stroke-width="1"/>`);
+    });
   });
 }
 
