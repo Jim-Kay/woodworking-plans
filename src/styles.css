@@ -941,9 +941,13 @@ label {
 
 .buildAnimationModal {
   width: 100%;
+  max-width: none;
+  overflow: hidden;
 }
 
 .buildAnimationDialogScene {
+  width: 100%;
+  max-width: 100%;
   overflow: hidden;
   border: var(--bd);
   border-radius: var(--radius);
@@ -953,12 +957,15 @@ label {
 .buildAnimationDialogScene canvas {
   display: block;
   width: 100%;
+  max-width: 100%;
   height: min(72vh, 720px);
   min-height: 520px;
 }
 
 #buildAnimationDialog {
-  width: min(1100px, calc(100vw - 28px));
+  width: calc(100vw - 32px);
+  max-width: none;
+  overflow: hidden;
 }
 
 .buildStepPlaceholder {

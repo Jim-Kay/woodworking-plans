@@ -12,6 +12,7 @@ const PLAN_STORAGE_KEY = 'floatingFramePlanner:lastState';
 let purchaseBoardLength = 96;
 let buildStepAnimationViewers = [];
 let modalBuildStepAnimation = null;
+let modalBuildStepPageOverflow = null;
 
 const fields = {
   canvasW: $('#canvasW'),
@@ -817,16 +818,36 @@ function openBuildAnimationDialog(type, title) {
   cleanupModalBuildStepAnimation();
   $('#buildAnimationDialogTitle').textContent = title || 'Build Step Animation';
   scene.innerHTML = `<canvas class="buildStepAnimationCanvas" data-build-animation="${escapeHtml(type)}" aria-label="${escapeHtml(title || 'Build step')} fullscreen animated assembly sequence"></canvas>`;
+  lockPageOverflowForBuildAnimation();
   dialog.showModal();
   const canvas = scene.querySelector('canvas');
   modalBuildStepAnimation = startBuildStepAnimation(canvas, type, { forceVisible: true });
+  requestAnimationFrame(() => modalBuildStepAnimation?.viewer?.resize?.());
 }
 
 function cleanupModalBuildStepAnimation() {
   if (modalBuildStepAnimation) stopBuildStepAnimation(modalBuildStepAnimation);
   modalBuildStepAnimation = null;
+  restorePageOverflowForBuildAnimation();
   const scene = $('#buildAnimationDialogScene');
   if (scene) scene.innerHTML = '';
+}
+
+function lockPageOverflowForBuildAnimation() {
+  if (modalBuildStepPageOverflow) return;
+  modalBuildStepPageOverflow = {
+    body: document.body.style.overflow,
+    documentElement: document.documentElement.style.overflow
+  };
+  document.body.style.overflow = 'hidden';
+  document.documentElement.style.overflow = 'hidden';
+}
+
+function restorePageOverflowForBuildAnimation() {
+  if (!modalBuildStepPageOverflow) return;
+  document.body.style.overflow = modalBuildStepPageOverflow.body;
+  document.documentElement.style.overflow = modalBuildStepPageOverflow.documentElement;
+  modalBuildStepPageOverflow = null;
 }
 
 function startBuildStepAnimation(canvas, type, settings = {}) {
