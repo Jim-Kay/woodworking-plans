@@ -40,11 +40,22 @@ export class FrameViewer {
     this.scene.add(underside);
     this.grid = this.createGrid('dark');
     this.scene.add(this.grid);
+    this.disposed = false;
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(canvas.parentElement);
     this.canvas.addEventListener('pointermove', (event) => this.handlePointerMove(event));
     this.canvas.addEventListener('pointerleave', () => this.hideHoverTooltip());
     this.animate();
+  }
+
+  dispose() {
+    this.disposed = true;
+    this.resizeObserver?.disconnect();
+    this.controls?.dispose();
+    this.hideHoverTooltip();
+    this.hoverTooltip?.remove();
+    disposeObject(this.root);
+    this.renderer?.dispose();
   }
 
   createHoverTooltip() {
@@ -590,6 +601,9 @@ export class FrameViewer {
         return shelfPartMaterial(plan, part);
       };
       result.assembly.parts.forEach((part) => {
+        const animatedPart = animatedAssemblyPart(plan, result, part);
+        if (!animatedPart) return;
+        part = animatedPart;
         const group = part.meta?.group;
         const stageLabel = stageLabelForPart(part);
         if (!stageLabel || !shouldShow(visKeyForGroup(group)) || !visibleThrough(stageLabel)) return;
@@ -694,6 +708,7 @@ export class FrameViewer {
   }
 
   animate() {
+    if (this.disposed) return;
     requestAnimationFrame(() => this.animate());
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
@@ -703,6 +718,66 @@ export class FrameViewer {
     if (!this.grid) return;
     this.grid.position.y = Number.isFinite(y) ? y : 0;
   }
+}
+
+function animatedAssemblyPart(plan, result, part) {
+  const animation = plan?.buildAnimation;
+  if (animation?.type !== 'runner-rails' || result?.style !== 'tote-rack') return part;
+  const meta = part.meta || {};
+  const isRunnerRail = meta.group === 'rails' && meta.subgroup === 'runner';
+  const isRunnerFastener = meta.group === 'fasteners' && meta.subgroup === 'runner';
+  if (!isRunnerRail && !isRunnerFastener) return part;
+
+  const rows = Math.max(1, result.rows || result.levels || 1);
+  const row = Math.max(0, Math.min(rows - 1, Number(meta.row) || 0));
+  const progress = Number(animation.progress) || 0;
+  const rowStart = 0.08 + row * Math.min(0.18, 0.5 / rows);
+  const railEnd = rowStart + 0.12;
+  const screwStart = railEnd + 0.035;
+  const screwEnd = screwStart + 0.1;
+  const sideSign = meta.side === 'right' ? 1 : -1;
+
+  if (isRunnerRail) {
+    if (progress < rowStart) return null;
+    const t = easeOutCubic(clamp01((progress - rowStart) / (railEnd - rowStart)));
+    return {
+      ...part,
+      position: {
+        ...part.position,
+        x: part.position.x + sideSign * 9 * (1 - t)
+      }
+    };
+  }
+
+  if (progress < screwStart) return null;
+  const t = easeOutCubic(clamp01((progress - screwStart) / (screwEnd - screwStart)));
+  const offsetX = sideSign * 5 * (1 - t);
+  const offsetY = 4 * (1 - t);
+  return {
+    ...part,
+    position: {
+      ...part.position,
+      x: part.position.x + offsetX,
+      y: part.position.y + offsetY
+    },
+    meta: {
+      ...meta,
+      start: {
+        ...meta.start,
+        x: meta.start.x + offsetX,
+        y: meta.start.y + offsetY
+      }
+    }
+  };
+}
+
+function clamp01(value) {
+  return Math.max(0, Math.min(1, value));
+}
+
+function easeOutCubic(value) {
+  const t = clamp01(value);
+  return 1 - Math.pow(1 - t, 3);
 }
 
 function addHardware(group, plan, result, mat) {

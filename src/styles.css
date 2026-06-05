@@ -916,6 +916,14 @@ label {
   min-height: 420px;
 }
 
+.buildStepAnimationCanvas {
+  display: block;
+  width: 100%;
+  height: 420px;
+  min-height: 420px;
+  background: #0c1117;
+}
+
 .buildStepPlaceholder {
   display: grid;
   min-height: 230px;
