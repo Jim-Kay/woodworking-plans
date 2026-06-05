@@ -246,6 +246,7 @@ export class FrameViewer {
         stage: options.stage ?? 999,
         showDimensions: options.showDimensions ?? this.plan.showDimensions,
         dimensionContext: options.dimensionContext || null,
+        buildAnimation: options.buildAnimation || null,
         vis: options.vis ? { ...this.plan.vis, ...options.vis } : this.plan.vis
       };
       this.manualCamera = true;
@@ -724,6 +725,8 @@ function animatedAssemblyPart(plan, result, part) {
   const animation = plan?.buildAnimation;
   if (!animation?.type) return part;
   if (result?.style === 'rolling') return animatedRollingShelfPart(animation, result, part);
+  if (result?.style && result.style !== 'tote-rack') return part;
+  if (result?.style !== 'tote-rack' && result?.type === 'shelves') return animatedStandardShelfPart(animation, result, part);
   if (result?.style !== 'tote-rack') return part;
   if (animation.type === 'front-frame') return animatedFrontFramePart(animation, part);
   if (animation.type === 'tote-fit') return animatedToteFitPart(animation, result, part);
@@ -785,6 +788,168 @@ function animatedRollingShelfPart(animation, result, part) {
   if (animation.type === 'rolling-deck') return animatedRollingDeckPart(animation, result, part);
   if (animation.type === 'rolling-finish') return animatedRollingFinishPart(animation, part);
   return part;
+}
+
+function animatedStandardShelfPart(animation, result, part) {
+  if (!/^shelf-/.test(animation.type || '')) return part;
+  if (animation.type === 'shelf-base-frame') return animatedShelfBaseFramePart(animation, part);
+  if (animation.type === 'shelf-bottom-slats') return animatedShelfBottomSlatPart(animation, result, part);
+  if (animation.type === 'shelf-corner-posts') return animatedShelfCornerPostPart(animation, result, part);
+  if (animation.type === 'shelf-second-frame') return animatedShelfSecondFramePart(animation, result, part);
+  if (animation.type === 'shelf-second-slats') return animatedShelfSecondSlatPart(animation, result, part);
+  if (animation.type === 'shelf-repeat-upward') return animatedShelfRepeatUpwardPart(animation, result, part);
+  if (animation.type === 'shelf-final-fasteners') return animatedShelfFinalFastenerPart(animation, part);
+  return part;
+}
+
+function animatedShelfBaseFramePart(animation, part) {
+  const meta = part.meta || {};
+  const progress = Number(animation.progress) || 0;
+  if (meta.group !== 'rails' || Number(meta.level) !== 0) return null;
+  const start = meta.side === 'back' ? 0.08 : meta.side === 'front' ? 0.18 : 0.3;
+  const end = start + 0.14;
+  const offset = meta.side === 'back' ? { z: 12 } : meta.side === 'front' ? { z: -12 } : { x: part.position.x <= 0 ? -12 : 12 };
+  return animatedPartFromPhase(part, progress, start, end, offset);
+}
+
+function animatedShelfBottomSlatPart(animation, result, part) {
+  const meta = part.meta || {};
+  const progress = Number(animation.progress) || 0;
+  if (isShelfRailAtOrBelow(part, 0)) return part;
+  if (meta.group !== 'slats' || Number(meta.level) !== 0) return null;
+  const index = Number(meta.index) || 0;
+  const stagger = Math.min(0.05, 0.24 / Math.max(1, result?.slats || 1)) * index;
+  return animatedPartFromPhase(part, progress, 0.14 + stagger, 0.3 + stagger, { y: 8 });
+}
+
+function animatedShelfCornerPostPart(animation, result, part) {
+  const meta = part.meta || {};
+  const progress = Number(animation.progress) || 0;
+  if (isShelfRailAtOrBelow(part, 0) || isShelfSlatAtOrBelow(part, 0)) return part;
+  if (meta.group === 'posts' && isShelfCornerIndex(meta.index, result)) {
+    const delay = meta.side === 'front' ? 0 : 0.08;
+    return animatedPartFromPhase(part, progress, 0.12 + delay, 0.28 + delay, { y: 16 });
+  }
+  if (isStandardShelfFastener(part) && Number(meta.level) === 0 && isShelfCornerFastener(part, result)) {
+    return animatedFastenerFromPhase(part, progress, 0.42, 0.58, { z: meta.side === 'front' ? -5 : 5 });
+  }
+  return null;
+}
+
+function animatedShelfSecondFramePart(animation, result, part) {
+  const meta = part.meta || {};
+  const progress = Number(animation.progress) || 0;
+  const secondLevel = Math.min(1, Math.max(0, (result?.levels || 1) - 1));
+  if (isShelfBaseAndCornerAssembly(part, result)) return part;
+  if (meta.group === 'posts' && !isShelfCornerIndex(meta.index, result)) {
+    return animatedPartFromPhase(part, progress, 0.36, 0.52, { y: 16 });
+  }
+  if (meta.group === 'rails' && Number(meta.level) === secondLevel) {
+    if (meta.side === 'depth' && isShelfCornerIndex(meta.postIndex, result)) {
+      return animatedPartFromPhase(part, progress, 0.08, 0.22, { x: part.position.x <= 0 ? -12 : 12 });
+    }
+    if (meta.side === 'front' || meta.side === 'back') {
+      return animatedPartFromPhase(part, progress, 0.22, 0.38, { z: meta.side === 'front' ? -12 : 12 });
+    }
+    if (meta.side === 'depth') {
+      return animatedPartFromPhase(part, progress, 0.52, 0.66, { x: part.position.x <= 0 ? -12 : 12 });
+    }
+  }
+  if (isStandardShelfFastener(part) && Number(meta.level) === secondLevel) {
+    return animatedFastenerFromPhase(part, progress, 0.66, 0.82, { z: meta.side === 'front' ? -5 : 5 });
+  }
+  return null;
+}
+
+function animatedShelfSecondSlatPart(animation, result, part) {
+  const meta = part.meta || {};
+  const progress = Number(animation.progress) || 0;
+  const secondLevel = Math.min(1, Math.max(0, (result?.levels || 1) - 1));
+  if (isShelfRailAtOrBelow(part, secondLevel) || isShelfPostAtOrBelow(part, secondLevel, result) || isStandardShelfFastenerAtOrBelow(part, secondLevel)) return part;
+  if (meta.group !== 'slats' || Number(meta.level) !== secondLevel) return null;
+  const index = Number(meta.index) || 0;
+  const stagger = Math.min(0.05, 0.24 / Math.max(1, result?.slats || 1)) * index;
+  return animatedPartFromPhase(part, progress, 0.14 + stagger, 0.3 + stagger, { y: 8 });
+}
+
+function animatedShelfRepeatUpwardPart(animation, result, part) {
+  const meta = part.meta || {};
+  const progress = Number(animation.progress) || 0;
+  const levels = Math.max(1, result?.levels || 1);
+  if (meta.group === 'posts') return part;
+  if (isShelfRailAtOrBelow(part, 1) || isShelfSlatAtOrBelow(part, 1) || isStandardShelfFastenerAtOrBelow(part, 1)) return part;
+  const level = Number(meta.level);
+  if (!Number.isFinite(level) || level < 2) return null;
+  const levelDelay = (level - 2) * Math.min(0.16, 0.48 / Math.max(1, levels - 2));
+  if (meta.group === 'rails') {
+    const offset = meta.side === 'front' ? { z: -12 } :
+      meta.side === 'back' ? { z: 12 } :
+      { x: part.position.x <= 0 ? -12 : 12 };
+    return animatedPartFromPhase(part, progress, 0.08 + levelDelay, 0.22 + levelDelay, offset);
+  }
+  if (meta.group === 'slats') {
+    const index = Number(meta.index) || 0;
+    const stagger = Math.min(0.04, 0.16 / Math.max(1, result?.slats || 1)) * index;
+    return animatedPartFromPhase(part, progress, 0.24 + levelDelay + stagger, 0.36 + levelDelay + stagger, { y: 8 });
+  }
+  if (isStandardShelfFastener(part)) {
+    return animatedFastenerFromPhase(part, progress, 0.38 + levelDelay, 0.5 + levelDelay, { z: meta.side === 'front' ? -5 : 5 });
+  }
+  return null;
+}
+
+function animatedShelfFinalFastenerPart(animation, part) {
+  const meta = part.meta || {};
+  const progress = Number(animation.progress) || 0;
+  if (meta.group !== 'fasteners') return part;
+  const level = Number(meta.level) || 0;
+  const start = 0.08 + level * 0.08 + (Number(meta.bay) || 0) * 0.015;
+  return animatedFastenerFromPhase(part, progress, start, start + 0.12, { z: meta.side === 'front' ? -5 : 5 });
+}
+
+function isShelfRailAtOrBelow(part, level) {
+  const meta = part.meta || {};
+  return meta.group === 'rails' && Number(meta.level) <= level;
+}
+
+function isShelfSlatAtOrBelow(part, level) {
+  const meta = part.meta || {};
+  return meta.group === 'slats' && Number(meta.level) <= level;
+}
+
+function isShelfPostAtOrBelow(part, level, result) {
+  const meta = part.meta || {};
+  if (meta.group !== 'posts') return false;
+  if (level <= 0) return isShelfCornerIndex(meta.index, result);
+  return true;
+}
+
+function isStandardShelfFastenerAtOrBelow(part, level) {
+  const meta = part.meta || {};
+  return isStandardShelfFastener(part) && Number(meta.level) <= level;
+}
+
+function isShelfBaseAndCornerAssembly(part, result) {
+  const meta = part.meta || {};
+  return isShelfRailAtOrBelow(part, 0) ||
+    isShelfSlatAtOrBelow(part, 0) ||
+    (meta.group === 'posts' && isShelfCornerIndex(meta.index, result)) ||
+    (isStandardShelfFastener(part) && Number(meta.level) === 0 && isShelfCornerFastener(part, result));
+}
+
+function isShelfCornerIndex(index, result) {
+  const value = Number(index);
+  return value === 0 || value === Number(result?.bays || 1);
+}
+
+function isStandardShelfFastener(part) {
+  return /^screw\.(front|back)\.level\d+\./.test(part.id || '');
+}
+
+function isShelfCornerFastener(part, result) {
+  const meta = part.meta || {};
+  const postIndex = Number(meta.bay) + Number(meta.endIndex);
+  return isShelfCornerIndex(postIndex, result);
 }
 
 function animatedRollingPostAssemblyPart(animation, part) {

@@ -778,6 +778,25 @@ function buildStepImages(step, options = {}) {
 
 function buildStepImage(step, options = {}) {
   if (step.image === 'cut-layout') return cutLayoutImage(options.width || 760, options.height || 430);
+  if (step.image?.type === 'animation-still') {
+    const animationType = step.image.animation || step.animation?.type;
+    if (animationType) {
+      const animationOptions = buildAnimationOptions(animationType);
+      const span = Math.max(result?.shelfW || 60, result?.shelfH || 60, result?.shelfD || 30) * 0.1;
+      return viewer.captureImage({
+        stage: animationOptions.stage,
+        vis: step.vis || buildStepVisibility(),
+        showDimensions: animationOptions.showDimensions,
+        dimensionContext: animationOptions.dimensionContext,
+        width: options.width || 760,
+        height: options.height || 430,
+        grid: options.grid !== false,
+        camera: animationOptions.camera(span),
+        target: animationOptions.target(span),
+        buildAnimation: { type: animationType, progress: step.image.progress ?? 0.92 }
+      });
+    }
+  }
   if (step.image?.type === 'front-frame') return frontFrameAssemblyImage(step.image.phase || 1, options.width || 760, options.height || 430);
   return viewer.captureImage({
     stage: step.stage ?? 999,
@@ -802,7 +821,14 @@ function buildStepAnimation(step, options = {}) {
     'rolling-post-assemblies',
     'rolling-rails',
     'rolling-deck',
-    'rolling-finish'
+    'rolling-finish',
+    'shelf-base-frame',
+    'shelf-bottom-slats',
+    'shelf-corner-posts',
+    'shelf-second-frame',
+    'shelf-second-slats',
+    'shelf-repeat-upward',
+    'shelf-final-fasteners'
   ].includes(step.animation?.type)) return { type: step.animation.type };
   return null;
 }
@@ -908,7 +934,14 @@ function buildAnimationOptions(type) {
     'rolling-post-assemblies': { stage: 999, dimensionContext: null, showDimensions: false, camera: (span) => ({ x: span * 0.75, y: span * 0.62, z: span * 1.18 }), target: defaultTarget },
     'rolling-rails': { stage: 999, dimensionContext: null, showDimensions: false, camera: (span) => ({ x: span * 1.0, y: span * 0.66, z: span * 1.25 }), target: defaultTarget },
     'rolling-deck': { stage: 999, dimensionContext: null, showDimensions: false, camera: (span) => ({ x: span * 1.05, y: span * 0.82, z: span * 1.18 }), target: defaultTarget },
-    'rolling-finish': { stage: 999, dimensionContext: null, showDimensions: false, camera: (span) => ({ x: span * 1.0, y: span * 0.48, z: span * 1.28 }), target: (span) => ({ x: 0, y: span * 0.3, z: 0 }) }
+    'rolling-finish': { stage: 999, dimensionContext: null, showDimensions: false, camera: (span) => ({ x: span * 1.0, y: span * 0.48, z: span * 1.28 }), target: (span) => ({ x: 0, y: span * 0.3, z: 0 }) },
+    'shelf-base-frame': { stage: 999, dimensionContext: null, showDimensions: false, camera: (span) => ({ x: span * 0.95, y: span * 0.28, z: span * 1.25 }), target: (span) => ({ x: 0, y: span * 0.12, z: 0 }) },
+    'shelf-bottom-slats': { stage: 999, dimensionContext: null, showDimensions: false, camera: (span) => ({ x: span * 0.95, y: span * 0.42, z: span * 1.25 }), target: (span) => ({ x: 0, y: span * 0.16, z: 0 }) },
+    'shelf-corner-posts': { stage: 999, dimensionContext: null, showDimensions: false, camera: (span) => ({ x: span * 0.86, y: span * 0.72, z: span * 1.18 }), target: defaultTarget },
+    'shelf-second-frame': { stage: 999, dimensionContext: null, showDimensions: false, camera: (span) => ({ x: span * 1.0, y: span * 0.68, z: span * 1.25 }), target: defaultTarget },
+    'shelf-second-slats': { stage: 999, dimensionContext: null, showDimensions: false, camera: (span) => ({ x: span * 1.02, y: span * 0.76, z: span * 1.18 }), target: defaultTarget },
+    'shelf-repeat-upward': { stage: 999, dimensionContext: null, showDimensions: false, camera: (span) => ({ x: span * 1.05, y: span * 0.82, z: span * 1.28 }), target: defaultTarget },
+    'shelf-final-fasteners': { stage: 999, dimensionContext: null, showDimensions: false, camera: (span) => ({ x: span * 1.0, y: span * 0.72, z: span * 1.25 }), target: defaultTarget }
   };
   return options[type] || options['runner-rails'];
 }
