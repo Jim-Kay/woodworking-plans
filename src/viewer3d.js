@@ -722,7 +722,9 @@ export class FrameViewer {
 
 function animatedAssemblyPart(plan, result, part) {
   const animation = plan?.buildAnimation;
-  if (animation?.type !== 'runner-rails' || result?.style !== 'tote-rack') return part;
+  if (!animation?.type || result?.style !== 'tote-rack') return part;
+  if (animation.type === 'front-frame') return animatedFrontFramePart(animation, part);
+  if (animation.type !== 'runner-rails') return part;
   const meta = part.meta || {};
   const isRunnerRail = meta.group === 'rails' && meta.subgroup === 'runner';
   const isRunnerFastener = meta.group === 'fasteners' && meta.subgroup === 'runner';
@@ -766,6 +768,86 @@ function animatedAssemblyPart(plan, result, part) {
         ...meta.start,
         x: meta.start.x + offsetX,
         y: meta.start.y + offsetY
+      }
+    }
+  };
+}
+
+function animatedFrontFramePart(animation, part) {
+  const meta = part.meta || {};
+  const group = meta.group;
+  const progress = Number(animation.progress) || 0;
+  const frameRail = group === 'rails' && meta.subgroup === 'frame';
+  const tieRail = group === 'rails' && meta.subgroup === 'tie';
+  const frameFastener = group === 'fasteners' && meta.subgroup === 'frame';
+  const tieFastener = group === 'fasteners' && meta.subgroup === 'tie';
+  const post = group === 'posts';
+  if (!post && !frameRail && !tieRail && !frameFastener && !tieFastener) return part;
+
+  if (frameRail && meta.level === 'bottom' && meta.stackIndex === 0) return part;
+
+  if (post) {
+    return animatedPartFromPhase(part, progress, 0.08, 0.2, { y: 18 });
+  }
+
+  if (frameFastener && /bottom/.test(part.id)) {
+    return animatedFastenerFromPhase(part, progress, 0.22, 0.33, { y: 5 });
+  }
+
+  if (frameRail && meta.level === 'top') {
+    return animatedPartFromPhase(part, progress, 0.34, 0.46, { y: 16 });
+  }
+
+  if (frameFastener && /top/.test(part.id)) {
+    return animatedFastenerFromPhase(part, progress, 0.48, 0.58, { y: 6 });
+  }
+
+  if (frameRail && meta.level === 'bottom' && meta.stackIndex === 1) {
+    return animatedPartFromPhase(part, progress, 0.58, 0.68, { y: -7 });
+  }
+
+  if (frameFastener && /stack/.test(part.id)) {
+    return animatedFastenerFromPhase(part, progress, 0.68, 0.78, { y: -5 });
+  }
+
+  if (tieRail) {
+    const zOffset = (part.position.z || 0) <= 0 ? -14 : 14;
+    return animatedPartFromPhase(part, progress, 0.78, 0.88, { z: zOffset });
+  }
+
+  if (tieFastener) {
+    return animatedFastenerFromPhase(part, progress, 0.88, 0.96, { y: -5 });
+  }
+
+  return part;
+}
+
+function animatedPartFromPhase(part, progress, start, end, offset) {
+  if (progress < start) return null;
+  const t = easeOutCubic(clamp01((progress - start) / (end - start)));
+  return {
+    ...part,
+    position: {
+      ...part.position,
+      x: part.position.x + (offset.x || 0) * (1 - t),
+      y: part.position.y + (offset.y || 0) * (1 - t),
+      z: part.position.z + (offset.z || 0) * (1 - t)
+    }
+  };
+}
+
+function animatedFastenerFromPhase(part, progress, start, end, offset) {
+  const animated = animatedPartFromPhase(part, progress, start, end, offset);
+  if (!animated) return null;
+  return {
+    ...animated,
+    meta: {
+      ...animated.meta,
+      start: {
+        ...animated.meta.start,
+        x: animated.meta.start.x + (offset.x || 0) * (1 - easeOutCubic(clamp01((progress - start) / (end - start)))),
+        y: animated.meta.start.y + (offset.y || 0) * (1 - easeOutCubic(clamp01((progress - start) / (end - start)))),
+        z: animated.meta.start.z + (offset.z || 0) * (1 - easeOutCubic(clamp01((progress - start) / (end - start))))
       }
     }
   };
