@@ -846,6 +846,54 @@ label {
   gap: 10px;
 }
 
+.buildStepMedia {
+  min-width: 0;
+}
+
+.buildStepMode {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.buildStepMediaTabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 10px;
+  border: var(--bd);
+  border-radius: 999px;
+  background: #111827;
+}
+
+.buildStepMediaTab {
+  cursor: pointer;
+  border-radius: 999px;
+  padding: 6px 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  user-select: none;
+}
+
+.buildStepModeIllustrated:checked ~ .buildStepMediaTabs .buildStepMediaTabIllustrated,
+.buildStepModeVideo:checked ~ .buildStepMediaTabs .buildStepMediaTabVideo {
+  color: #f8fafc;
+  background: var(--accent);
+}
+
+.buildStepMediaPanelVideo {
+  display: none;
+}
+
+.buildStepModeVideo:checked ~ .buildStepMediaPanels .buildStepMediaPanelIllustrated {
+  display: none;
+}
+
+.buildStepModeVideo:checked ~ .buildStepMediaPanels .buildStepMediaPanelVideo {
+  display: block;
+}
+
 .buildStepSceneGroup .buildStepScene {
   min-height: 190px;
 }
@@ -861,6 +909,11 @@ label {
 
 .buildStepSceneGroup .buildStepScene img {
   min-height: 190px;
+}
+
+.buildStepVideoScene,
+.buildStepVideoScene img {
+  min-height: 420px;
 }
 
 .buildStepPlaceholder {

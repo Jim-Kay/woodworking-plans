@@ -714,6 +714,8 @@ function renderBuildSteps(force = false) {
 
 function buildStepHtml(step, index) {
   const images = buildStepImages(step, { width: 760, height: 430, grid: true });
+  const animation = buildStepAnimation(step, { width: 760, height: 430 });
+  const mediaName = `build-step-media-${index}`;
   return `
     <li class="buildStep">
       <div class="buildStepText">
@@ -721,12 +723,33 @@ function buildStepHtml(step, index) {
         <h3>${escapeHtml(step.title)}</h3>
         <ul>${(step.instructions || []).map((item) => `<li>${escapeHtml(formatBuildInstruction(item))}</li>`).join('')}</ul>
       </div>
-      <div class="buildStepSceneGroup">
-        ${images.length ? images.map((image, imageIndex) => `
-          <div class="buildStepScene">
-            <img src="${image}" alt="${escapeHtml(step.title)} assembly view ${imageIndex + 1}" />
+      <div class="buildStepMedia">
+        ${animation ? `
+          <input class="buildStepMode buildStepModeIllustrated" type="radio" id="${mediaName}-illustrated" name="${mediaName}" checked>
+          <input class="buildStepMode buildStepModeVideo" type="radio" id="${mediaName}-video" name="${mediaName}">
+          <div class="buildStepMediaTabs" role="tablist" aria-label="${escapeHtml(step.title)} media">
+            <label class="buildStepMediaTab buildStepMediaTabIllustrated" for="${mediaName}-illustrated">Illustrated</label>
+            <label class="buildStepMediaTab buildStepMediaTabVideo" for="${mediaName}-video">Mini-video</label>
           </div>
-        `).join('') : '<div class="buildStepScene"><div class="buildStepPlaceholder">3D view unavailable</div></div>'}
+        ` : ''}
+        <div class="buildStepMediaPanels">
+          <div class="buildStepMediaPanel buildStepMediaPanelIllustrated">
+            <div class="buildStepSceneGroup">
+              ${images.length ? images.map((image, imageIndex) => `
+                <div class="buildStepScene">
+                  <img src="${image}" alt="${escapeHtml(step.title)} assembly view ${imageIndex + 1}" />
+                </div>
+              `).join('') : '<div class="buildStepScene"><div class="buildStepPlaceholder">3D view unavailable</div></div>'}
+            </div>
+          </div>
+          ${animation ? `
+            <div class="buildStepMediaPanel buildStepMediaPanelVideo">
+              <div class="buildStepScene buildStepVideoScene">
+                <img src="${animation}" alt="${escapeHtml(step.title)} animated assembly sequence" />
+              </div>
+            </div>
+          ` : ''}
+        </div>
       </div>
     </li>
   `;
@@ -754,6 +777,11 @@ function buildStepImage(step, options = {}) {
     camera: options.camera,
     target: options.target
   });
+}
+
+function buildStepAnimation(step, options = {}) {
+  if (step.animation?.type === 'front-frame') return frontFrameAnimationImage(options.width || 760, options.height || 430);
+  return null;
 }
 
 function formatBuildInstruction(text) {
@@ -845,6 +873,86 @@ function frontFrameAssemblyImage(phase, width, height) {
   svg.push(`<text x="${pad}" y="${height - 18}" fill="#e5e7eb" font-family="Inter, Arial, sans-serif" font-size="12">Use ${postCount} posts per frame. Rail face shown as ${escapeHtml(formatLength(railFace, plan.unit))}; repeat this assembly for the back frame.</text>`);
   svg.push('</svg>');
   return `data:image/svg+xml;base64,${btoa(svg.join(''))}`;
+}
+
+function frontFrameAnimationImage(width, height) {
+  const parts = new Map(result?.assembly?.parts?.map((part) => [part.id, part]) || []);
+  const postCount = (result?.columns || result?.bays || plan.toteColumns || 1) + 1;
+  const railLength = result?.shelfW || 0;
+  const firstPost = parts.get('post.front.0');
+  const secondPost = parts.get('post.front.1');
+  const postClear = firstPost && secondPost ? Math.max(0, secondPost.position.x - firstPost.position.x - firstPost.size.x) : 0;
+  const postHeight = firstPost?.size?.y || 0;
+  const railThickness = result?.stock || plan.shelfDeck || 1.5;
+  if (!railLength || !postHeight || !postCount) return null;
+
+  const pad = 34;
+  const noteH = 40;
+  const frameW = width - pad * 2;
+  const xScale = frameW / railLength;
+  const railH = Math.max(8, railThickness * xScale);
+  const postW = Math.max(10, (firstPost?.size?.x || 1.5) * xScale);
+  const bottomRailY = height - pad - noteH - railH * 2.2;
+  const secondRailY = bottomRailY + railH;
+  const topRailY = Math.max(pad + 44, bottomRailY - postHeight * xScale);
+  const railX = pad;
+  const topPostY = topRailY + railH;
+  const postXs = Array.from({ length: postCount }, (_, index) => {
+    const part = parts.get(`post.front.${index}`);
+    if (part) return railX + (part.position.x + railLength / 2 - part.size.x / 2) * xScale;
+    return railX + index * (frameW - postW) / Math.max(1, postCount - 1);
+  });
+  const railFill = '#d7bd83';
+  const secondFill = '#b88b57';
+  const postFill = '#b08f64';
+  const stroke = '#3f2a1b';
+  const svg = [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+    '<defs>',
+    '<linearGradient id="floor" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#0c1117"/><stop offset="1" stop-color="#111827"/></linearGradient>',
+    '<filter id="shadow" x="-20%" y="-40%" width="140%" height="180%"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#020617" flood-opacity="0.45"/></filter>',
+    '<marker id="arrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="#93c5fd"/></marker>',
+    '</defs>',
+    '<rect width="100%" height="100%" fill="url(#floor)"/>'
+  ];
+  for (let x = pad; x < width; x += 32) svg.push(`<line x1="${x}" y1="${pad}" x2="${x}" y2="${height - pad}" stroke="#1f2937" stroke-width="1"/>`);
+  for (let y = pad; y < height; y += 32) svg.push(`<line x1="${pad}" y1="${y}" x2="${width - pad}" y2="${y}" stroke="#1f2937" stroke-width="1"/>`);
+  svg.push(`<text x="${pad}" y="25" fill="#bfdbfe" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800">Animated assembly order: posts, top rail, second bottom rail, then fasteners</text>`);
+  addDim(svg, railX, railX + frameW, topRailY - 22, `Rail ${escapeHtml(formatLength(railLength, plan.unit))}`);
+
+  svg.push(`<rect x="${railX}" y="${bottomRailY}" width="${frameW}" height="${railH}" rx="2" fill="${railFill}" stroke="${stroke}" stroke-width="1.2" filter="url(#shadow)"/>`);
+  svg.push(animatedGroup('posts', '0,-70;0,-70;0,0;0,0', '0;0.06;0.18;1'));
+  postXs.forEach((x, index) => {
+    svg.push(`<rect x="${x}" y="${topPostY}" width="${postW}" height="${bottomRailY - topPostY}" rx="2" fill="${postFill}" stroke="${stroke}" stroke-width="1.2" filter="url(#shadow)"/>`);
+    if (index < postXs.length - 1) {
+      const x1 = x + postW;
+      const x2 = postXs[index + 1];
+      addDim(svg, x1, x2, bottomRailY + railH + 26, `Clear ${escapeHtml(formatLength(postClear, plan.unit))}`);
+    }
+  });
+  svg.push('</g>');
+  svg.push(animatedGroup('bottom screws', '0,34;0,34;0,0;0,0', '0;0.2;0.3;1'));
+  postXs.forEach((x) => addScrewPair(svg, x + postW / 2, bottomRailY + railH * 0.55, 'up'));
+  svg.push('</g>');
+  svg.push(animatedGroup('top rail', '0,-58;0,-58;0,0;0,0', '0;0.34;0.46;1'));
+  svg.push(`<rect x="${railX}" y="${topRailY}" width="${frameW}" height="${railH}" rx="2" fill="${railFill}" stroke="${stroke}" stroke-width="1.2" filter="url(#shadow)"/>`);
+  svg.push('</g>');
+  svg.push(animatedGroup('top screws', '0,-30;0,-30;0,0;0,0', '0;0.49;0.58;1'));
+  postXs.forEach((x) => addScrewPair(svg, x + postW / 2, topRailY + railH * 0.45, 'down'));
+  svg.push('</g>');
+  svg.push(animatedGroup('second bottom rail', '0,44;0,44;0,0;0,0', '0;0.62;0.73;1'));
+  svg.push(`<rect x="${railX}" y="${secondRailY}" width="${frameW}" height="${railH}" rx="2" fill="${secondFill}" stroke="${stroke}" stroke-width="1.2" filter="url(#shadow)"/>`);
+  svg.push('</g>');
+  svg.push(animatedGroup('lamination screws', '0,34;0,34;0,0;0,0', '0;0.76;0.88;1'));
+  postXs.forEach((x) => addLaminationScrew(svg, x + postW / 2, secondRailY + railH * 0.82, bottomRailY + railH * 0.22));
+  svg.push('</g>');
+  svg.push(`<text x="${pad}" y="${height - 18}" fill="#e5e7eb" font-family="Inter, Arial, sans-serif" font-size="12">Sequence loops every 8 seconds. Repeat this same frame assembly for the back frame.</text>`);
+  svg.push('</svg>');
+  return `data:image/svg+xml;base64,${btoa(svg.join(''))}`;
+}
+
+function animatedGroup(label, values, keyTimes) {
+  return `<g aria-label="${escapeHtml(label)}" opacity="0"><animate attributeName="opacity" dur="8s" repeatCount="indefinite" values="0;0;1;1" keyTimes="${keyTimes}" calcMode="linear"/><animateTransform attributeName="transform" type="translate" dur="8s" repeatCount="indefinite" values="${values}" keyTimes="${keyTimes}" calcMode="spline" keySplines=".2 .8 .2 1;.2 .8 .2 1;.2 .8 .2 1"/>`;
 }
 
 function addDim(svg, x1, x2, y, label) {
