@@ -737,7 +737,7 @@ function animatedAssemblyPart(plan, result, part) {
   const railEnd = rowStart + 0.12;
   const screwStart = railEnd + 0.035;
   const screwEnd = screwStart + 0.1;
-  const sideSign = meta.side === 'right' ? 1 : -1;
+  const insertionSign = (Number(meta.bay) || 0) % 2 === 0 ? -1 : 1;
 
   if (isRunnerRail) {
     if (progress < rowStart) return null;
@@ -746,27 +746,27 @@ function animatedAssemblyPart(plan, result, part) {
       ...part,
       position: {
         ...part.position,
-        x: part.position.x + sideSign * 9 * (1 - t)
+        z: part.position.z + insertionSign * 12 * (1 - t)
       }
     };
   }
 
   if (progress < screwStart) return null;
   const t = easeOutCubic(clamp01((progress - screwStart) / (screwEnd - screwStart)));
-  const offsetX = sideSign * 5 * (1 - t);
+  const offsetZ = (meta.face === 'back' ? 1 : -1) * 5 * (1 - t);
   const offsetY = 4 * (1 - t);
   return {
     ...part,
     position: {
       ...part.position,
-      x: part.position.x + offsetX,
+      z: part.position.z + offsetZ,
       y: part.position.y + offsetY
     },
     meta: {
       ...meta,
       start: {
         ...meta.start,
-        x: meta.start.x + offsetX,
+        z: meta.start.z + offsetZ,
         y: meta.start.y + offsetY
       }
     }
