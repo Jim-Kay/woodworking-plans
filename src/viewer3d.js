@@ -540,7 +540,7 @@ export class FrameViewer {
     const bays = result.bays;
     const slats = result.slats;
     const labels = result.style === 'tote-rack'
-      ? ['Plan', 'Bottom base', 'Posts', 'Top frame', 'Runner rails', 'Casters', 'Totes']
+      ? ['Plan', 'Frames', 'Depth ties', 'Runner rails', 'Casters', 'Totes']
       : ['Plan', 'Posts', 'Rails', 'Shelf slats', 'Fasteners'];
     const maxStage = Math.min(plan.stage ?? labels.length - 1, labels.length - 1);
     const shouldShow = (name) => plan.vis?.[name] !== false;
@@ -565,13 +565,14 @@ export class FrameViewer {
       this.setGridFloor(assemblyFloorY(result.assembly) * SCALE);
       const stageLabelForPart = (part) => {
         const group = part.meta?.group;
+        if (part.meta?.stageLabel) return part.meta.stageLabel;
         if (result.style === 'tote-rack') {
-          if (group === 'posts') return 'Posts';
+          if (group === 'posts') return 'Frames';
           if (group === 'totes') return 'Totes';
           if (group === 'hardware' || group === 'fasteners') return 'Casters';
           if (group === 'rails' && part.meta?.subgroup === 'runner') return 'Runner rails';
-          if (group === 'rails' && part.meta?.subgroup === 'frame' && part.meta?.level === 'top') return 'Top frame';
-          if (group === 'rails') return 'Bottom base';
+          if (group === 'rails' && part.meta?.subgroup === 'tie') return 'Depth ties';
+          if (group === 'rails') return 'Frames';
           return null;
         }
         return ({

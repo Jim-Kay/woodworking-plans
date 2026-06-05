@@ -655,14 +655,14 @@ function buildToteRackAssembly(model) {
   const postBottomY = model.baseStackHeight;
   const postTopY = postBottomY + model.postLength;
   const topFrameY = postTopY + model.stock / 2;
-  const frameRailMeta = { group: 'rails', subgroup: 'frame' };
-  const tieRailMeta = { group: 'rails', subgroup: 'tie' };
-  const runnerRailMeta = { group: 'rails', subgroup: 'runner' };
+  const frameRailMeta = { group: 'rails', subgroup: 'frame', stageLabel: 'Frames' };
+  const tieRailMeta = { group: 'rails', subgroup: 'tie', stageLabel: 'Depth ties' };
+  const runnerRailMeta = { group: 'rails', subgroup: 'runner', stageLabel: 'Runner rails' };
 
   for (let i = 0; i <= model.columns; i += 1) {
     const x = postXForIndex(i);
-    parts.push(assemblyPart(`post.front.${i}`, 'front post', 'wood', { x: model.stock, y: model.postLength, z: model.post }, { x, y: postBottomY + model.postLength / 2, z: zFront }, { group: 'posts', index: i, side: 'front' }));
-    parts.push(assemblyPart(`post.back.${i}`, 'back post', 'wood', { x: model.stock, y: model.postLength, z: model.post }, { x, y: postBottomY + model.postLength / 2, z: zBack }, { group: 'posts', index: i, side: 'back' }));
+    parts.push(assemblyPart(`post.front.${i}`, 'front post', 'wood', { x: model.stock, y: model.postLength, z: model.post }, { x, y: postBottomY + model.postLength / 2, z: zFront }, { group: 'posts', index: i, side: 'front', stageLabel: 'Frames' }));
+    parts.push(assemblyPart(`post.back.${i}`, 'back post', 'wood', { x: model.stock, y: model.postLength, z: model.post }, { x, y: postBottomY + model.postLength / 2, z: zBack }, { group: 'posts', index: i, side: 'back', stageLabel: 'Frames' }));
   }
 
   bottomFrameY.forEach((y, stackIndex) => {
@@ -670,6 +670,9 @@ function buildToteRackAssembly(model) {
       const z = side === 'front' ? zFront : zBack;
       const frameRailId = `rail.frame.${side}.bottom.${stackIndex}`;
       parts.push(assemblyPart(frameRailId, `${side} doubled bottom frame rail`, 'wood', { x: model.frameRailLength, y: model.stock, z: model.rail }, { x: 0, y, z }, { ...frameRailMeta, side, level: 'bottom', stackIndex }));
+      if (stackIndex === 1) {
+        connections.push(contactConnection(`contact.${frameRailId}.lowerStack`, frameRailId, `rail.frame.${side}.bottom.0`, 'doubled bottom frame rails are stacked together'));
+      }
       if (stackIndex === 1) {
         for (let i = 0; i <= model.columns; i += 1) {
           connections.push(contactConnection(`contact.${frameRailId}.post${i}`, frameRailId, `post.${side}.${i}`, 'post bears on bottom frame rail'));
@@ -695,6 +698,9 @@ function buildToteRackAssembly(model) {
       const x = level === 'bottom' ? tieRailXForIndex(i) : postXForIndex(i);
       const tieRailId = `rail.tie.${level}.${stackIndex}.post${i}`;
       parts.push(assemblyPart(tieRailId, `${level} depth tie rail`, 'wood', { x: model.rail, y: model.stock, z: model.tieRailLength }, { x, y, z: 0 }, { ...tieRailMeta, level, stackIndex, postIndex: i }));
+      if (stackIndex === 1) {
+        connections.push(contactConnection(`contact.${tieRailId}.lowerStack`, tieRailId, `rail.tie.${level}.0.post${i}`, 'doubled bottom depth tie rails are stacked together'));
+      }
       if (stackIndex === 1) {
         connections.push(contactConnection(`contact.${tieRailId}.frontPost`, tieRailId, `post.front.${i}`, 'depth tie rail bears on front post'));
         connections.push(contactConnection(`contact.${tieRailId}.backPost`, tieRailId, `post.back.${i}`, 'depth tie rail bears on back post'));
@@ -722,8 +728,94 @@ function buildToteRackAssembly(model) {
     }
   }
 
+  addToteRackStructuralFasteners(model, parts, connections, {
+    postXForIndex,
+    tieRailXForIndex,
+    yForRow,
+    zFront,
+    zBack,
+    bottomFrameY,
+    topFrameY
+  });
   addToteRackCasters(model, parts, connections, zFront, zBack);
   return { type: 'shelves', style: 'tote-rack', units: 'in', parts, connections };
+}
+
+function addToteRackStructuralFasteners(model, parts, connections, context) {
+  const { postXForIndex, tieRailXForIndex, yForRow, zFront, zBack, bottomFrameY, topFrameY } = context;
+  const radius = 0.045;
+  const shortScrew = model.stock * 1.12;
+  const jointScrew = model.stock * 1.75;
+  const faceScrewOffsets = [-model.stock * 0.28, model.stock * 0.28];
+  const stackZOffsets = [-model.rail * 0.26, model.rail * 0.26];
+  const runnerYOffset = model.rail * 0.24;
+  const runnerZInset = model.post * 0.42;
+
+  ['front', 'back'].forEach((side) => {
+    const z = side === 'front' ? zFront : zBack;
+    const bottomUpperId = `rail.frame.${side}.bottom.1`;
+    const bottomLowerId = `rail.frame.${side}.bottom.0`;
+    const topId = `rail.frame.${side}.top`;
+    for (let i = 0; i <= model.columns; i += 1) {
+      const x = postXForIndex(i);
+      faceScrewOffsets.forEach((dx, screwIndex) => {
+        const bottomScrewId = `screw.toteFrame.${side}.bottom.post${i}.${screwIndex}`;
+        parts.push(screwPart(bottomScrewId, 'bottom frame post screw', { x: x + dx, y: bottomFrameY[1], z }, 'y', 1, jointScrew, radius, { group: 'fasteners', subgroup: 'frame', stageLabel: 'Frames', side, postIndex: i, screwIndex }));
+        connections.push(fastenerConnection(`fasten.${bottomScrewId}`, bottomUpperId, `post.${side}.${i}`, bottomScrewId, 'bottom frame post screw'));
+
+        const topScrewId = `screw.toteFrame.${side}.top.post${i}.${screwIndex}`;
+        parts.push(screwPart(topScrewId, 'top frame post screw', { x: x + dx, y: topFrameY, z }, 'y', -1, jointScrew, radius, { group: 'fasteners', subgroup: 'frame', stageLabel: 'Frames', side, postIndex: i, screwIndex }));
+        connections.push(fastenerConnection(`fasten.${topScrewId}`, topId, `post.${side}.${i}`, topScrewId, 'top frame post screw'));
+      });
+      stackZOffsets.forEach((dz, screwIndex) => {
+        const stackScrewId = `screw.toteFrame.${side}.stack.post${i}.${screwIndex}`;
+        parts.push(screwPart(stackScrewId, 'doubled bottom frame screw', { x, y: bottomFrameY[0], z: z + dz }, 'y', 1, shortScrew, radius, { group: 'fasteners', subgroup: 'frame', stageLabel: 'Frames', side, postIndex: i, screwIndex }));
+        connections.push(fastenerConnection(`fasten.${stackScrewId}`, bottomLowerId, bottomUpperId, stackScrewId, 'doubled bottom frame screw'));
+      });
+    }
+  });
+
+  for (let i = 0; i <= model.columns; i += 1) {
+    const x = tieRailXForIndex(i);
+    const upperTieId = `rail.tie.bottom.1.post${i}`;
+    const lowerTieId = `rail.tie.bottom.0.post${i}`;
+    [-model.rail * 0.28, model.rail * 0.28].forEach((dx, screwIndex) => {
+      const stackScrewId = `screw.toteTie.stack.post${i}.${screwIndex}`;
+      parts.push(screwPart(stackScrewId, 'doubled depth tie screw', { x: x + dx, y: bottomFrameY[0], z: 0 }, 'y', 1, shortScrew, radius, { group: 'fasteners', subgroup: 'tie', stageLabel: 'Depth ties', postIndex: i, screwIndex }));
+      connections.push(fastenerConnection(`fasten.${stackScrewId}`, lowerTieId, upperTieId, stackScrewId, 'doubled depth tie screw'));
+    });
+    ['front', 'back'].forEach((side) => {
+      const z = side === 'front' ? zFront : zBack;
+      const zAttach = z + (side === 'front' ? model.post / 2 : -model.post / 2);
+      faceScrewOffsets.forEach((dx, screwIndex) => {
+        const tieScrewId = `screw.toteTie.${side}.post${i}.${screwIndex}`;
+        parts.push(screwPart(tieScrewId, 'depth tie post screw', { x: postXForIndex(i) + dx, y: bottomFrameY[1], z: zAttach }, 'y', 1, jointScrew, radius, { group: 'fasteners', subgroup: 'tie', stageLabel: 'Depth ties', side, postIndex: i, screwIndex }));
+        connections.push(fastenerConnection(`fasten.${tieScrewId}`, upperTieId, `post.${side}.${i}`, tieScrewId, 'depth tie post screw'));
+      });
+    });
+  }
+
+  for (let row = 0; row < model.rows; row += 1) {
+    const y = yForRow(row);
+    for (let bay = 0; bay < model.columns; bay += 1) {
+      [-1, 1].forEach((sideSign) => {
+        const sideName = sideSign < 0 ? 'left' : 'right';
+        const postIndex = sideSign < 0 ? bay : bay + 1;
+        const runnerX = sideSign < 0 ? postXForIndex(bay) + model.stock : postXForIndex(bay + 1) - model.stock;
+        const runnerRailId = `rail.runner.row${row}.bay${bay}.${sideName}`;
+        const sideStagger = sideSign < 0 ? -model.rail * 0.16 : model.rail * 0.16;
+        ['front', 'back'].forEach((face) => {
+          const zEdge = face === 'front' ? zFront - model.post / 2 : zBack + model.post / 2;
+          const zOffsetDirection = face === 'front' ? 1 : -1;
+          [-runnerYOffset, runnerYOffset].forEach((dy, screwIndex) => {
+            const runnerScrewId = `screw.toteRunner.row${row}.bay${bay}.${sideName}.${face}.${screwIndex}`;
+            parts.push(screwPart(runnerScrewId, 'runner rail post screw', { x: runnerX, y: y + dy + sideStagger, z: zEdge + zOffsetDirection * runnerZInset }, 'x', sideSign, jointScrew, radius, { group: 'fasteners', subgroup: 'runner', stageLabel: 'Runner rails', row, bay, side: sideName, face, screwIndex }));
+            connections.push(fastenerConnection(`fasten.${runnerScrewId}`, runnerRailId, `post.${face}.${postIndex}`, runnerScrewId, 'runner rail post screw'));
+          });
+        });
+      });
+    }
+  }
 }
 
 function addToteRackCasters(model, parts, connections, zFront, zBack) {

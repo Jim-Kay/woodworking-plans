@@ -1157,7 +1157,7 @@ function miterGuideContent(part) {
 function renderStage() {
   const labels = isShelfPlan()
     ? plan.build === 'tote-rack'
-      ? ['Plan', 'Bottom base', 'Posts', 'Top frame', 'Runner rails', 'Casters', 'Totes']
+      ? ['Plan', 'Frames', 'Depth ties', 'Runner rails', 'Casters', 'Totes']
       : ['Plan', 'Posts', 'Rails', 'Shelf slats', 'Fasteners']
     : getStageLabels(plan.build);
   const slider = $('#stageSlider');
