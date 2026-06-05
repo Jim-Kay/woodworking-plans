@@ -719,7 +719,7 @@ function buildStepHtml(step, index) {
       <div class="buildStepText">
         <div class="buildStepKicker">Step ${index + 1}</div>
         <h3>${escapeHtml(step.title)}</h3>
-        <ul>${(step.instructions || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+        <ul>${(step.instructions || []).map((item) => `<li>${escapeHtml(formatBuildInstruction(item))}</li>`).join('')}</ul>
       </div>
       <div class="buildStepScene">
         ${image ? `<img src="${image}" alt="${escapeHtml(step.title)} 3D assembly stage" />` : '<div class="buildStepPlaceholder">3D view unavailable</div>'}
@@ -741,6 +741,22 @@ function buildStepImage(step, options = {}) {
     camera: options.camera,
     target: options.target
   });
+}
+
+function formatBuildInstruction(text) {
+  return String(text || '').replace(/\{([a-zA-Z0-9_]+)\}/g, (_, key) => buildInstructionValue(key));
+}
+
+function buildInstructionValue(key) {
+  if (key === 'frameRailLength') return formatLength(result?.shelfW, plan.unit);
+  if (key === 'postClearWidth') {
+    const parts = new Map(result?.assembly?.parts?.map((part) => [part.id, part]) || []);
+    const first = parts.get('post.front.0');
+    const second = parts.get('post.front.1');
+    if (first && second) return formatLength(Math.max(0, second.position.x - first.position.x - first.size.x), plan.unit);
+  }
+  if (key === 'postCountPerFrame') return String((result?.columns || result?.bays || plan.toteColumns || 1) + 1);
+  return `{${key}}`;
 }
 
 function cutLayoutImage(width, height) {
@@ -1440,7 +1456,7 @@ function printBuildStepsHtml(definition) {
             <div>
               <div class="stepNo">Step ${index + 1}</div>
               <h3>${escapeHtml(step.title)}</h3>
-              <ul>${(step.instructions || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+              <ul>${(step.instructions || []).map((item) => `<li>${escapeHtml(formatBuildInstruction(item))}</li>`).join('')}</ul>
             </div>
             ${image ? `<img src="${image}" alt="${escapeHtml(step.title)} assembly view">` : '<div class="panel muted">3D view unavailable</div>'}
           </div>

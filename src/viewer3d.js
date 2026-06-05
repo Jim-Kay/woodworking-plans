@@ -759,7 +759,7 @@ function addShelfFasteners(group, opts) {
 function addShelfScrew(group, x, y, z, axis, dir, length, headMaterial, shankMaterial, partInfo = null) {
   addPocketHoleMarker(group, partInfo, headMaterial);
   addShelfScrewShank(group, x, y, z, axis, dir, length, shankMaterial, partInfo);
-  addShelfScrewHead(group, x, y, z, axis, headMaterial, partInfo);
+  addShelfScrewHead(group, x, y, z, axis, dir, headMaterial, partInfo);
 }
 
 function addPocketHoleMarker(group, partInfo, material) {
@@ -968,7 +968,7 @@ function addToteRackDimensions(group, result, plan) {
   const showDimension = (name) => {
     if (dimensionContext === 'all') return true;
     if (dimensionContext === 'overall') return ['cartWidth', 'cartDepth', 'height'].includes(name);
-    if (dimensionContext === 'post') return name === 'postWidth';
+    if (dimensionContext === 'post') return ['frameWidth', 'postWidth'].includes(name);
     if (dimensionContext === 'runner') return ['runnerWidth', 'runnerPitch', 'postWidth'].includes(name);
     return false;
   };
@@ -1033,6 +1033,18 @@ function addToteRackDimensions(group, result, plan) {
     });
   }
 
+  if (showDimension('frameWidth')) {
+    addDimensionLine(dimGroup, {
+      start: { x: leftX, y: topY + 1.2, z: frontZ - offset * 0.72 },
+      end: { x: rightX, y: topY + 1.2, z: frontZ - offset * 0.72 },
+      tickAxis: 'y',
+      labelOffset: { x: 0, y: 1.1, z: 0 },
+      label: `Rail ${formatDimensionValue(width, plan.unit)}`,
+      lineMat,
+      tickMat
+    });
+  }
+
   const leftRunner = parts.get('rail.runner.row0.bay0.left');
   const rightRunner = parts.get('rail.runner.row0.bay0.right');
   if (showDimension('runnerWidth') && leftRunner && rightRunner) {
@@ -1049,22 +1061,26 @@ function addToteRackDimensions(group, result, plan) {
     });
   }
 
-  const topRowIndex = Math.max(0, (result.rows || result.levels || 1) - 1);
-  const topLeftRunner = parts.get(`rail.runner.row${topRowIndex}.bay0.left`);
   const leftPost = parts.get('post.front.0');
   const nextPost = parts.get('post.front.1');
-  if (showDimension('postWidth') && topLeftRunner && leftPost && nextPost) {
-    const clearWidth = Math.max(0, nextPost.position.x - leftPost.position.x - leftPost.size.x);
-    const y = topLeftRunner.position.y + topLeftRunner.size.y / 2 + 1.95;
-    addDimensionLine(dimGroup, {
-      start: { x: leftPost.position.x + leftPost.size.x / 2, y, z: frontZ - offset * 0.58 },
-      end: { x: nextPost.position.x - nextPost.size.x / 2, y, z: frontZ - offset * 0.58 },
-      tickAxis: 'y',
-      labelOffset: { x: 0, y: 1.1, z: 0 },
-      label: `Post clear width ${formatDimensionValue(clearWidth, plan.unit)}`,
-      lineMat,
-      tickMat
-    });
+  if (showDimension('postWidth') && leftPost && nextPost) {
+    const bayCount = result.bays || result.columns || 1;
+    const y = topY - 1.5;
+    for (let bay = 0; bay < bayCount; bay += 1) {
+      const postA = parts.get(`post.front.${bay}`);
+      const postB = parts.get(`post.front.${bay + 1}`);
+      if (!postA || !postB) continue;
+      const clearWidth = Math.max(0, postB.position.x - postA.position.x - postA.size.x);
+      addDimensionLine(dimGroup, {
+        start: { x: postA.position.x + postA.size.x / 2, y, z: frontZ - offset * 0.42 },
+        end: { x: postB.position.x - postB.size.x / 2, y, z: frontZ - offset * 0.42 },
+        tickAxis: 'y',
+        labelOffset: { x: 0, y: 1.1, z: 0 },
+        label: `Clear ${formatDimensionValue(clearWidth, plan.unit)}`,
+        lineMat,
+        tickMat
+      });
+    }
   }
 
   const upperRowIndex = Math.max(1, (result.rows || result.levels || 2) - 1);
@@ -1143,7 +1159,7 @@ function makeDimensionLabel(text, color) {
   const texture = new THREE.CanvasTexture(canvas);
   texture.needsUpdate = true;
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false }));
-  sprite.scale.set(2.45, 0.62, 1);
+  sprite.scale.set(2.9, 0.72, 1);
   return sprite;
 }
 
@@ -1201,14 +1217,19 @@ function addShelfScrewShank(group, x, y, z, axis, dir, length, material, partInf
   group.add(mesh);
 }
 
-function addShelfScrewHead(group, x, y, z, axis, material, partInfo = null) {
+function addShelfScrewHead(group, x, y, z, axis, dir, material, partInfo = null) {
   const radius = 0.018;
   const height = 0.007;
   const geometry = new THREE.CylinderGeometry(radius, radius, height, 20);
   const mesh = new THREE.Mesh(geometry, material);
   if (axis === 'z') mesh.rotation.x = Math.PI / 2;
   if (axis === 'x') mesh.rotation.z = Math.PI / 2;
-  mesh.position.set(x, y, z);
+  const offset = -dir * height / 2;
+  mesh.position.set(
+    axis === 'x' ? x + offset : x,
+    axis === 'y' ? y + offset : y,
+    axis === 'z' ? z + offset : z
+  );
   mesh.castShadow = true;
   if (partInfo) mesh.userData.partInfo = partInfo;
   group.add(mesh);
