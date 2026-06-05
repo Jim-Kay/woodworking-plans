@@ -769,7 +769,8 @@ function addToteRackStructuralFasteners(model, parts, connections, context) {
       });
       stackZOffsets.forEach((dz, screwIndex) => {
         const stackScrewId = `screw.toteFrame.${side}.stack.post${i}.${screwIndex}`;
-        parts.push(screwPart(stackScrewId, 'doubled bottom frame screw', { x, y: bottomFrameY[0] - model.stock / 2, z: z + dz }, 'y', 1, laminationScrew, radius, { group: 'fasteners', subgroup: 'frame', stageLabel: 'Frames', side, postIndex: i, screwIndex, minBite: model.stock * 0.62 }));
+        const screwX = x + laminationScrewXOffset(model, i, screwIndex);
+        parts.push(screwPart(stackScrewId, 'doubled bottom frame screw', { x: screwX, y: bottomFrameY[0] - model.stock / 2, z: z + dz }, 'y', 1, laminationScrew, radius, { group: 'fasteners', subgroup: 'frame', stageLabel: 'Frames', side, postIndex: i, screwIndex, minBite: model.stock * 0.62 }));
         connections.push(fastenerConnection(`fasten.${stackScrewId}`, bottomLowerId, bottomUpperId, stackScrewId, 'doubled bottom frame screw'));
       });
     }
@@ -817,6 +818,13 @@ function addToteRackStructuralFasteners(model, parts, connections, context) {
       });
     }
   }
+}
+
+function laminationScrewXOffset(model, postIndex, screwIndex) {
+  const offset = model.post * 0.68;
+  if (postIndex === 0) return offset;
+  if (postIndex === model.columns) return -offset;
+  return screwIndex === 0 ? -offset : offset;
 }
 
 function addToteRackCasters(model, parts, connections, zFront, zBack) {

@@ -119,6 +119,10 @@ assert.equal(toteRack.assembly.parts.find((part) => part.id === 'rail.tie.bottom
 assert.equal(toteRack.assembly.parts.find((part) => part.id === 'rail.tie.bottom.0.post3').position.x, 32.75);
 assert.equal(toteRack.assembly.parts.filter((part) => part.material === 'fastener').length, 160);
 assert.equal(toteRack.assembly.parts.find((part) => part.id === 'screw.toteFrame.front.stack.post0.0').meta.length, 2.5);
+assert.equal(toteRack.assembly.parts.find((part) => part.id === 'screw.toteFrame.front.stack.post0.0').position.x, -31.37);
+assert.deepEqual(toteRack.assembly.parts
+  .filter((part) => part.id.startsWith('screw.toteFrame.front.stack.post1.'))
+  .map((part) => part.position.x), [-13.63, -8.87]);
 assert.equal(toteRack.validation.screwOverlap, null);
 assert.equal(toteRack.validation.badScrew, null);
 assert.equal(toteRack.validation.missingFastener, null);

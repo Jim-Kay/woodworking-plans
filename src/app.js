@@ -861,7 +861,7 @@ function frontFrameAssemblyImage(phase, width, height) {
     svg.push(`<rect x="${x}" y="${topPostY}" width="${postW}" height="${postBottomY - topPostY}" rx="2" fill="${postFill}" stroke="${stroke}" stroke-width="1.2" filter="url(#shadow)"/>`);
     if (phase === 1) addScrewPair(svg, x + postW / 2, bottomRailY + railH * 0.55, 'up');
     if (phase === 2) addScrewPair(svg, x + postW / 2, topRailY + railH * 0.45, 'down');
-    if (showSecondBottom) addLaminationScrew(svg, x + postW / 2, secondRailY + railH * 0.82, bottomRailY + railH * 0.22);
+    if (showSecondBottom) addLaminationScrews(svg, laminationScrewCenters(x, index, postW, postXs.length, xScale), secondRailY + railH * 0.82, bottomRailY + railH * 0.22);
     if (index < postXs.length - 1) {
       const x1 = x + postW;
       const x2 = postXs[index + 1];
@@ -944,7 +944,7 @@ function frontFrameAnimationImage(width, height) {
   svg.push(`<rect x="${railX}" y="${secondRailY}" width="${frameW}" height="${railH}" rx="2" fill="${secondFill}" stroke="${stroke}" stroke-width="1.2" filter="url(#shadow)"/>`);
   svg.push('</g>');
   svg.push(animatedGroup('lamination screws', '0,34;0,34;0,0;0,0', '0;0.76;0.88;1'));
-  postXs.forEach((x) => addLaminationScrew(svg, x + postW / 2, secondRailY + railH * 0.82, bottomRailY + railH * 0.22));
+  postXs.forEach((x, index) => addLaminationScrews(svg, laminationScrewCenters(x, index, postW, postXs.length, xScale), secondRailY + railH * 0.82, bottomRailY + railH * 0.22));
   svg.push('</g>');
   svg.push(`<text x="${pad}" y="${height - 18}" fill="#e5e7eb" font-family="Inter, Arial, sans-serif" font-size="12">Sequence loops every 8 seconds. Repeat this same frame assembly for the back frame.</text>`);
   svg.push('</svg>');
@@ -972,10 +972,18 @@ function addScrewPair(svg, x, y, direction) {
   });
 }
 
-function addLaminationScrew(svg, x, y1, y2) {
-  [-7, 7].forEach((dx) => {
-    svg.push(`<line x1="${x + dx}" y1="${y1}" x2="${x + dx}" y2="${y2}" stroke="#cbd5e1" stroke-width="2.2"/>`);
-    svg.push(`<circle cx="${x + dx}" cy="${y1}" r="3.5" fill="#64748b" stroke="#e5e7eb" stroke-width="1"/>`);
+function laminationScrewCenters(postX, postIndex, postW, postCount, xScale) {
+  const offset = (result?.post || plan.shelfPost || 3.5) * 0.68 * xScale;
+  const center = postX + postW / 2;
+  if (postIndex === 0) return [center + offset - 5, center + offset + 5];
+  if (postIndex === postCount - 1) return [center - offset - 5, center - offset + 5];
+  return [center - offset, center + offset];
+}
+
+function addLaminationScrews(svg, centers, y1, y2) {
+  centers.forEach((x) => {
+    svg.push(`<line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}" stroke="#cbd5e1" stroke-width="2.2"/>`);
+    svg.push(`<circle cx="${x}" cy="${y1}" r="3.5" fill="#64748b" stroke="#e5e7eb" stroke-width="1"/>`);
   });
 }
 
