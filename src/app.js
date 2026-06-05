@@ -713,15 +713,7 @@ function renderBuildSteps(force = false) {
 }
 
 function buildStepHtml(step, index) {
-  const image = viewer.captureImage({
-    stage: step.stage ?? 999,
-    vis: step.vis || buildStepVisibility(),
-    showDimensions: Boolean(step.dimensionContext),
-    dimensionContext: step.dimensionContext,
-    width: 760,
-    height: 430,
-    grid: true
-  });
+  const image = buildStepImage(step, { width: 760, height: 430, grid: true });
   return `
     <li class="buildStep">
       <div class="buildStepText">
@@ -734,6 +726,100 @@ function buildStepHtml(step, index) {
       </div>
     </li>
   `;
+}
+
+function buildStepImage(step, options = {}) {
+  if (step.image === 'cut-layout') return cutLayoutImage(options.width || 760, options.height || 430);
+  return viewer.captureImage({
+    stage: step.stage ?? 999,
+    vis: step.vis || buildStepVisibility(),
+    showDimensions: Boolean(step.dimensionContext),
+    dimensionContext: step.dimensionContext,
+    width: options.width || 760,
+    height: options.height || 430,
+    grid: options.grid !== false,
+    camera: options.camera,
+    target: options.target
+  });
+}
+
+function cutLayoutImage(width, height) {
+  const woodParts = (result.parts || [])
+    .filter((part) => Number.isFinite(part.length) && Number.isFinite(part.width) && Number.isFinite(part.thickness))
+    .filter((part) => !/screw|caster/i.test(part.part));
+  if (!woodParts.length) return null;
+
+  const pad = 32;
+  const labelW = 190;
+  const rowGap = 12;
+  const rowH = Math.max(42, Math.min(64, (height - pad * 2 - rowGap * (woodParts.length - 1)) / woodParts.length));
+  const drawingW = width - labelW - pad * 2;
+  const maxLength = Math.max(...woodParts.map((part) => part.length));
+  const scale = drawingW / Math.max(maxLength, 1);
+  const colors = [0xb08f64, 0xc5a178, 0x8f5f37, 0xd7bd83, 0xa97949];
+  const svg = [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+    '<defs>',
+    '<linearGradient id="floor" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#0c1117"/><stop offset="1" stop-color="#111827"/></linearGradient>',
+    '<filter id="shadow" x="-20%" y="-40%" width="140%" height="180%"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#020617" flood-opacity="0.55"/></filter>',
+    '</defs>',
+    '<rect width="100%" height="100%" fill="url(#floor)"/>'
+  ];
+  for (let x = pad; x < width; x += 32) svg.push(`<line x1="${x}" y1="${pad}" x2="${x}" y2="${height - pad}" stroke="#1f2937" stroke-width="1"/>`);
+  for (let y = pad; y < height; y += 32) svg.push(`<line x1="${pad}" y1="${y}" x2="${width - pad}" y2="${y}" stroke="#1f2937" stroke-width="1"/>`);
+  svg.push(`<text x="${pad}" y="${pad - 6}" fill="#bfdbfe" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700">Cut pieces laid out by part group</text>`);
+
+  woodParts.forEach((part, index) => {
+    const y = pad + 14 + index * (rowH + rowGap);
+    const boardX = pad + labelW;
+    const boardW = Math.max(34, part.length * scale);
+    const boardH = Math.max(10, Math.min(20, part.width * 4.2));
+    const shown = Math.min(part.qty, Math.max(1, Math.floor((rowH - 18) / 4)));
+    const color = colors[index % colors.length];
+    const stroke = shadeSvgColor(color, -0.28).toString(16).padStart(6, '0');
+    const fill = color.toString(16).padStart(6, '0');
+    svg.push(`<text x="${pad}" y="${y + 14}" fill="#e5e7eb" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700">${svgTextLines(part.part, 22).map((line, lineIndex) => `<tspan x="${pad}" dy="${lineIndex ? 15 : 0}">${escapeHtml(line)}</tspan>`).join('')}</text>`);
+    svg.push(`<text x="${pad}" y="${y + 44}" fill="#93c5fd" font-family="Inter, Arial, sans-serif" font-size="12">${part.qty} pcs @ ${escapeHtml(formatLength(part.length, plan.unit))}</text>`);
+    for (let copy = 0; copy < shown; copy += 1) {
+      const dy = copy * 4;
+      svg.push(`<rect x="${boardX + dy}" y="${y + 7 + dy}" width="${boardW}" height="${boardH}" rx="2" fill="#${fill}" stroke="#${stroke}" stroke-width="1.2" filter="url(#shadow)"/>`);
+      svg.push(`<line x1="${boardX + dy + 8}" y1="${y + 10 + dy}" x2="${boardX + boardW - 8 + dy}" y2="${y + 10 + dy}" stroke="#f5deb3" stroke-opacity="0.28"/>`);
+    }
+    if (part.qty > shown) {
+      svg.push(`<text x="${boardX + boardW + shown * 4 + 12}" y="${y + 21}" fill="#cbd5e1" font-family="Inter, Arial, sans-serif" font-size="12">stack of ${part.qty}</text>`);
+    }
+  });
+  svg.push('</svg>');
+  return `data:image/svg+xml;base64,${btoa(svg.join(''))}`;
+}
+
+function svgTextLines(text, maxChars) {
+  const words = String(text || '').split(/\s+/).filter(Boolean);
+  const lines = [];
+  let line = '';
+  words.forEach((word) => {
+    const next = line ? `${line} ${word}` : word;
+    if (next.length > maxChars && line) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = next;
+    }
+  });
+  if (line) lines.push(line);
+  return lines.slice(0, 2);
+}
+
+function shadeSvgColor(hex, amount) {
+  const r = (hex >> 16) & 255;
+  const g = (hex >> 8) & 255;
+  const b = hex & 255;
+  const mix = amount >= 0 ? 255 : 0;
+  const t = Math.abs(amount);
+  const nr = Math.round(r + (mix - r) * t);
+  const ng = Math.round(g + (mix - g) * t);
+  const nb = Math.round(b + (mix - b) * t);
+  return (nr << 16) | (ng << 8) | nb;
 }
 
 function buildStepVisibility() {
@@ -1343,11 +1429,7 @@ function printBuildStepsHtml(definition) {
     <section class="steps pageBreak">
       <h2>Step-by-step Build Instructions</h2>
       ${steps.map((step, index) => {
-        const image = viewer.captureImage({
-          stage: step.stage ?? 999,
-          vis: step.vis || buildStepVisibility(),
-          showDimensions: Boolean(step.dimensionContext),
-          dimensionContext: step.dimensionContext,
+        const image = buildStepImage(step, {
           camera: printStepCamera(step),
           target: printCameraTarget(),
           width: 820,
