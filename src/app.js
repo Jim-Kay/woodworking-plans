@@ -11,6 +11,7 @@ const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 const PLAN_STORAGE_KEY = 'floatingFramePlanner:lastState';
 let purchaseBoardLength = 96;
 let buildStepAnimationViewers = [];
+let modalBuildStepAnimation = null;
 
 const fields = {
   canvasW: $('#canvasW'),
@@ -134,6 +135,8 @@ function bindInputs() {
   $('#btnShare').addEventListener('click', copyShareLink);
   $('#btnOpenAdvanced').addEventListener('click', () => $('#advancedDialog').showModal());
   $('#btnSelectCanvas').addEventListener('click', () => $('#canvasDialog').showModal());
+  $('#btnCloseBuildAnimation').addEventListener('click', () => $('#buildAnimationDialog').close());
+  $('#buildAnimationDialog').addEventListener('close', cleanupModalBuildStepAnimation);
   $('#btnExportCsv').addEventListener('click', exportCsv);
   $('#btnCopyList').addEventListener('click', copyCutList);
   $('#btnPrint').addEventListener('click', printPlan);
@@ -205,6 +208,10 @@ function bindInputs() {
   });
 
   $('#btnRefreshBuildSteps').addEventListener('click', () => renderBuildSteps(true));
+  $('#buildStepsPanel').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-build-animation-fullscreen]');
+    if (button) openBuildAnimationDialog(button.dataset.buildAnimationFullscreen, button.dataset.buildAnimationTitle);
+  });
 
   $$('#tabBuilder, #tabCutList, #tabBuildSteps, #tabOpenScad, #tabPhysics').forEach((button) => {
     button.addEventListener('click', () => {
@@ -750,7 +757,7 @@ function buildStepHtml(step, index) {
               <div class="buildStepScene buildStepVideoScene">
                 ${typeof animation === 'string'
                   ? `<img src="${animation}" alt="${escapeHtml(step.title)} animated assembly sequence" />`
-                  : `<canvas class="buildStepAnimationCanvas" data-build-animation="${escapeHtml(animation.type)}" aria-label="${escapeHtml(step.title)} animated assembly sequence"></canvas>`}
+                  : `<button class="buildStepFullscreen" type="button" data-build-animation-fullscreen="${escapeHtml(animation.type)}" data-build-animation-title="${escapeHtml(step.title)}">Full screen</button><canvas class="buildStepAnimationCanvas" data-build-animation="${escapeHtml(animation.type)}" aria-label="${escapeHtml(step.title)} animated assembly sequence"></canvas>`}
               </div>
             </div>
           ` : ''}
@@ -791,9 +798,7 @@ function buildStepAnimation(step, options = {}) {
 
 function cleanupBuildStepAnimations() {
   buildStepAnimationViewers.forEach((entry) => {
-    entry.cancelled = true;
-    if (entry.frame) cancelAnimationFrame(entry.frame);
-    entry.viewer?.dispose?.();
+    stopBuildStepAnimation(entry);
   });
   buildStepAnimationViewers = [];
 }
@@ -801,44 +806,74 @@ function cleanupBuildStepAnimations() {
 function initBuildStepAnimations(container) {
   cleanupBuildStepAnimations();
   container.querySelectorAll('[data-build-animation]').forEach((canvas) => {
-    const type = canvas.dataset.buildAnimation;
-    const miniViewer = new FrameViewer(canvas);
-    const entry = { viewer: miniViewer, canvas, cancelled: false, frame: null, startedAt: null };
+    const entry = startBuildStepAnimation(canvas, canvas.dataset.buildAnimation);
     buildStepAnimationViewers.push(entry);
-    const tick = (now) => {
-      if (entry.cancelled) return;
-      if (canvas.offsetParent) {
-        if (entry.startedAt === null) entry.startedAt = now;
-        const progress = ((now - entry.startedAt) % 8000) / 8000;
-        const options = buildAnimationOptions(type);
-        const animationPlan = {
-          ...plan,
-          stage: options.stage,
-          vis: buildStepVisibility(),
-          showDimensions: options.showDimensions,
-          dimensionContext: options.dimensionContext,
-          buildAnimation: { type, progress }
-        };
-        miniViewer.update(animationPlan, result);
-        const span = Math.max(result?.shelfW || 60, result?.shelfH || 60, result?.shelfD || 30) * 0.1;
-        const camera = options.camera(span);
-        miniViewer.setCameraPosition(camera, { x: 0, y: span * 0.42, z: 0 });
-      } else {
-        entry.startedAt = null;
-      }
-      entry.frame = requestAnimationFrame(tick);
-    };
-    entry.frame = requestAnimationFrame(tick);
   });
 }
 
+function openBuildAnimationDialog(type, title) {
+  const dialog = $('#buildAnimationDialog');
+  const scene = $('#buildAnimationDialogScene');
+  cleanupModalBuildStepAnimation();
+  $('#buildAnimationDialogTitle').textContent = title || 'Build Step Animation';
+  scene.innerHTML = `<canvas class="buildStepAnimationCanvas" data-build-animation="${escapeHtml(type)}" aria-label="${escapeHtml(title || 'Build step')} fullscreen animated assembly sequence"></canvas>`;
+  dialog.showModal();
+  const canvas = scene.querySelector('canvas');
+  modalBuildStepAnimation = startBuildStepAnimation(canvas, type, { forceVisible: true });
+}
+
+function cleanupModalBuildStepAnimation() {
+  if (modalBuildStepAnimation) stopBuildStepAnimation(modalBuildStepAnimation);
+  modalBuildStepAnimation = null;
+  const scene = $('#buildAnimationDialogScene');
+  if (scene) scene.innerHTML = '';
+}
+
+function startBuildStepAnimation(canvas, type, settings = {}) {
+  const miniViewer = new FrameViewer(canvas);
+  const entry = { viewer: miniViewer, canvas, type, cancelled: false, frame: null, startedAt: null, forceVisible: Boolean(settings.forceVisible) };
+  const tick = (now) => {
+    if (entry.cancelled) return;
+    if (entry.forceVisible || canvas.offsetParent) {
+      if (entry.startedAt === null) entry.startedAt = now;
+      const progress = ((now - entry.startedAt) % 8000) / 8000;
+      const options = buildAnimationOptions(type);
+      const animationPlan = {
+        ...plan,
+        stage: options.stage,
+        vis: buildStepVisibility(),
+        showDimensions: options.showDimensions,
+        dimensionContext: options.dimensionContext,
+        buildAnimation: { type, progress }
+      };
+      miniViewer.update(animationPlan, result);
+      const span = Math.max(result?.shelfW || 60, result?.shelfH || 60, result?.shelfD || 30) * 0.1;
+      const camera = options.camera(span);
+      const target = options.target(span);
+      miniViewer.setCameraPosition(camera, target);
+    } else {
+      entry.startedAt = null;
+    }
+    entry.frame = requestAnimationFrame(tick);
+  };
+  entry.frame = requestAnimationFrame(tick);
+  return entry;
+}
+
+function stopBuildStepAnimation(entry) {
+  entry.cancelled = true;
+  if (entry.frame) cancelAnimationFrame(entry.frame);
+  entry.viewer?.dispose?.();
+}
+
 function buildAnimationOptions(type) {
+  const defaultTarget = (span) => ({ x: 0, y: span * 0.42, z: 0 });
   const options = {
-    'front-frame': { stage: 1, dimensionContext: 'post', showDimensions: true, camera: (span) => ({ x: span * 0.75, y: span * 0.58, z: span * 1.15 }) },
-    'runner-rails': { stage: 2, dimensionContext: 'runner', showDimensions: true, camera: (span) => ({ x: span * 0.95, y: span * 0.65, z: span * 1.15 }) },
-    'tote-fit': { stage: 4, dimensionContext: 'runner', showDimensions: true, camera: (span) => ({ x: span * 0.9, y: span * 0.6, z: -span * 1.25 }) },
-    casters: { stage: 3, dimensionContext: null, showDimensions: false, camera: (span) => ({ x: span * 0.95, y: span * 0.5, z: span * 1.2 }) },
-    'final-load': { stage: 999, dimensionContext: null, showDimensions: false, camera: (span) => ({ x: span * 1.05, y: span * 0.72, z: span * 1.25 }) }
+    'front-frame': { stage: 1, dimensionContext: 'post', showDimensions: true, camera: (span) => ({ x: span * 0.75, y: span * 0.58, z: span * 1.15 }), target: defaultTarget },
+    'runner-rails': { stage: 2, dimensionContext: 'runner', showDimensions: true, camera: (span) => ({ x: span * 0.95, y: span * 0.65, z: span * 1.15 }), target: defaultTarget },
+    'tote-fit': { stage: 4, dimensionContext: 'runner', showDimensions: true, camera: (span) => ({ x: span * 0.9, y: span * 0.6, z: -span * 1.25 }), target: defaultTarget },
+    casters: { stage: 3, dimensionContext: null, showDimensions: false, camera: (span) => ({ x: span * 1.25, y: span * 0.32, z: span * 1.55 }), target: (span) => ({ x: 0, y: span * 0.04, z: 0 }) },
+    'final-load': { stage: 999, dimensionContext: null, showDimensions: false, camera: (span) => ({ x: span * 1.05, y: span * 0.72, z: span * 1.25 }), target: defaultTarget }
   };
   return options[type] || options['runner-rails'];
 }

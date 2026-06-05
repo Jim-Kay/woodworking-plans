@@ -372,6 +372,16 @@
       </form>
     </dialog>
 
+    <dialog id="buildAnimationDialog">
+      <div class="modal buildAnimationModal">
+        <div class="modalHeader">
+          <h2 id="buildAnimationDialogTitle">Build Step Animation</h2>
+          <button class="iconBtn" id="btnCloseBuildAnimation" type="button">Close</button>
+        </div>
+        <div class="buildAnimationDialogScene" id="buildAnimationDialogScene"></div>
+      </div>
+    </dialog>
+
     <script>
       if (window.location.protocol === 'file:') {
         document.getElementById('fileWarning')?.classList.remove('hidden');
