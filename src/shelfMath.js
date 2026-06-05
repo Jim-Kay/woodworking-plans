@@ -744,7 +744,7 @@ function buildToteRackAssembly(model) {
 function addToteRackStructuralFasteners(model, parts, connections, context) {
   const { postXForIndex, tieRailXForIndex, yForRow, zFront, zBack, bottomFrameY, topFrameY } = context;
   const radius = 0.045;
-  const shortScrew = model.stock * 1.12;
+  const laminationScrew = model.stock * (2.5 / 1.5);
   const jointScrew = model.stock * 1.75;
   const faceScrewOffsets = [-model.stock * 0.28, model.stock * 0.28];
   const stackZOffsets = [-model.rail * 0.26, model.rail * 0.26];
@@ -769,7 +769,7 @@ function addToteRackStructuralFasteners(model, parts, connections, context) {
       });
       stackZOffsets.forEach((dz, screwIndex) => {
         const stackScrewId = `screw.toteFrame.${side}.stack.post${i}.${screwIndex}`;
-        parts.push(screwPart(stackScrewId, 'doubled bottom frame screw', { x, y: bottomFrameY[0] - model.stock / 2, z: z + dz }, 'y', 1, shortScrew, radius, { group: 'fasteners', subgroup: 'frame', stageLabel: 'Frames', side, postIndex: i, screwIndex }));
+        parts.push(screwPart(stackScrewId, 'doubled bottom frame screw', { x, y: bottomFrameY[0] - model.stock / 2, z: z + dz }, 'y', 1, laminationScrew, radius, { group: 'fasteners', subgroup: 'frame', stageLabel: 'Frames', side, postIndex: i, screwIndex }));
         connections.push(fastenerConnection(`fasten.${stackScrewId}`, bottomLowerId, bottomUpperId, stackScrewId, 'doubled bottom frame screw'));
       });
     }
@@ -781,7 +781,7 @@ function addToteRackStructuralFasteners(model, parts, connections, context) {
     const lowerTieId = `rail.tie.bottom.0.post${i}`;
     [-model.rail * 0.28, model.rail * 0.28].forEach((dx, screwIndex) => {
       const stackScrewId = `screw.toteTie.stack.post${i}.${screwIndex}`;
-      parts.push(screwPart(stackScrewId, 'doubled depth tie screw', { x: x + dx, y: bottomFrameY[0] - model.stock / 2, z: 0 }, 'y', 1, shortScrew, radius, { group: 'fasteners', subgroup: 'tie', stageLabel: 'Depth ties', postIndex: i, screwIndex }));
+      parts.push(screwPart(stackScrewId, 'doubled depth tie screw', { x: x + dx, y: bottomFrameY[0] - model.stock / 2, z: 0 }, 'y', 1, laminationScrew, radius, { group: 'fasteners', subgroup: 'tie', stageLabel: 'Depth ties', postIndex: i, screwIndex }));
       connections.push(fastenerConnection(`fasten.${stackScrewId}`, lowerTieId, upperTieId, stackScrewId, 'doubled depth tie screw'));
     });
     ['front', 'back'].forEach((side) => {
