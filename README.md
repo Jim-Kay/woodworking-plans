@@ -78,6 +78,7 @@ The current test suite covers frame math, mounting rules, formatting, stage labe
 - `src/physicsSim.js` runs the Rapier-based assembly diagnostic.
 - `src/styles.css` contains the application styling.
 - `tests/frameMath.test.mjs` contains the Node-based calculation tests.
+- `docs/build-step-authoring.md` captures guidance for adding clear, buildable step-by-step instructions.
 
 ## Runtime Notes
 
