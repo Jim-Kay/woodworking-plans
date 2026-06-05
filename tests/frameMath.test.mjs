@@ -113,11 +113,14 @@ assert.equal(toteRack.assembly.parts.find((part) => part.id === 'post.front.0').
 assert.equal(toteRack.assembly.parts.find((part) => part.id === 'rail.runner.row0.bay0.left').position.x, -32.25);
 assert.equal(toteRack.assembly.parts.find((part) => part.id === 'post.front.0').position.z, -14.75);
 assert.equal(toteRack.assembly.parts.find((part) => part.id === 'rail.runner.row0.bay0.left').size.z, 33);
-assert.equal(toteRack.assembly.parts.filter((part) => part.id.startsWith('rail.tie.bottom.')).length, 8);
+assert.equal(toteRack.assembly.parts.filter((part) => part.id.startsWith('rail.tie.bottom.')).length, 4);
 assert.equal(toteRack.assembly.parts.filter((part) => part.id.startsWith('rail.tie.top.')).length, 0);
 assert.equal(toteRack.assembly.parts.find((part) => part.id === 'rail.tie.bottom.0.post0').position.x, -32.75);
 assert.equal(toteRack.assembly.parts.find((part) => part.id === 'rail.tie.bottom.0.post3').position.x, 32.75);
-assert.equal(toteRack.assembly.parts.filter((part) => part.material === 'fastener').length, 160);
+assert.equal(toteRack.assembly.parts.some((part) => part.id === 'rail.tie.bottom.0.post1'), false);
+assert.equal(toteRack.assembly.parts.some((part) => part.id === 'rail.tie.bottom.0.post2'), false);
+assert.equal(toteRack.parts.find((part) => part.part === 'End doubled bottom depth tie rails').qty, 4);
+assert.equal(toteRack.assembly.parts.filter((part) => part.material === 'fastener').length, 148);
 assert.equal(toteRack.assembly.parts.find((part) => part.id === 'screw.toteFrame.front.stack.post0.0').meta.length, 2.5);
 assert.equal(toteRack.assembly.parts.find((part) => part.id === 'screw.toteFrame.front.stack.post0.0').position.x, -31.37);
 assert.deepEqual(toteRack.assembly.parts

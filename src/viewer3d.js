@@ -540,7 +540,7 @@ export class FrameViewer {
     const bays = result.bays;
     const slats = result.slats;
     const labels = result.style === 'tote-rack'
-      ? ['Plan', 'Frames', 'Depth ties', 'Runner rails', 'Casters', 'Totes']
+      ? ['Plan', 'Frames', 'Runner rails', 'Casters', 'Totes']
       : ['Plan', 'Posts', 'Rails', 'Shelf slats', 'Fasteners'];
     const maxStage = Math.min(plan.stage ?? labels.length - 1, labels.length - 1);
     const shouldShow = (name) => plan.vis?.[name] !== false;
@@ -571,7 +571,7 @@ export class FrameViewer {
           if (group === 'totes') return 'Totes';
           if (group === 'hardware' || group === 'fasteners') return 'Casters';
           if (group === 'rails' && part.meta?.subgroup === 'runner') return 'Runner rails';
-          if (group === 'rails' && part.meta?.subgroup === 'tie') return 'Depth ties';
+          if (group === 'rails' && part.meta?.subgroup === 'tie') return 'Frames';
           if (group === 'rails') return 'Frames';
           return null;
         }
