@@ -769,7 +769,7 @@ function addToteRackStructuralFasteners(model, parts, connections, context) {
       });
       stackZOffsets.forEach((dz, screwIndex) => {
         const stackScrewId = `screw.toteFrame.${side}.stack.post${i}.${screwIndex}`;
-        parts.push(screwPart(stackScrewId, 'doubled bottom frame screw', { x, y: bottomFrameY[0] - model.stock / 2, z: z + dz }, 'y', 1, laminationScrew, radius, { group: 'fasteners', subgroup: 'frame', stageLabel: 'Frames', side, postIndex: i, screwIndex }));
+        parts.push(screwPart(stackScrewId, 'doubled bottom frame screw', { x, y: bottomFrameY[0] - model.stock / 2, z: z + dz }, 'y', 1, laminationScrew, radius, { group: 'fasteners', subgroup: 'frame', stageLabel: 'Frames', side, postIndex: i, screwIndex, minBite: model.stock * 0.62 }));
         connections.push(fastenerConnection(`fasten.${stackScrewId}`, bottomLowerId, bottomUpperId, stackScrewId, 'doubled bottom frame screw'));
       });
     }
@@ -781,7 +781,7 @@ function addToteRackStructuralFasteners(model, parts, connections, context) {
     const lowerTieId = `rail.tie.bottom.0.post${i}`;
     [-model.rail * 0.28, model.rail * 0.28].forEach((dx, screwIndex) => {
       const stackScrewId = `screw.toteTie.stack.post${i}.${screwIndex}`;
-      parts.push(screwPart(stackScrewId, 'doubled depth tie screw', { x: x + dx, y: bottomFrameY[0] - model.stock / 2, z: 0 }, 'y', 1, laminationScrew, radius, { group: 'fasteners', subgroup: 'tie', stageLabel: 'Depth ties', postIndex: i, screwIndex }));
+      parts.push(screwPart(stackScrewId, 'doubled depth tie screw', { x: x + dx, y: bottomFrameY[0] - model.stock / 2, z: 0 }, 'y', 1, laminationScrew, radius, { group: 'fasteners', subgroup: 'tie', stageLabel: 'Depth ties', postIndex: i, screwIndex, minBite: model.stock * 0.62 }));
       connections.push(fastenerConnection(`fasten.${stackScrewId}`, lowerTieId, upperTieId, stackScrewId, 'doubled depth tie screw'));
     });
     ['front', 'back'].forEach((side) => {
@@ -914,7 +914,7 @@ export function buildShelfAssembly(model) {
   return { type: 'shelves', units: 'in', parts, connections };
 }
 
-function validateShelfConstruction(assembly, warnings) {
+export function validateShelfConstruction(assembly, warnings) {
   const woodParts = assembly.parts.filter((part) => part.material === 'wood');
   const boxes = woodParts.map(partBox);
   const structuralParts = assembly.parts.filter((part) => isStructuralMaterial(part.material));
@@ -963,7 +963,46 @@ function validateShelfConstruction(assembly, warnings) {
   });
   validation.missingFastener = missingFastener || null;
   if (missingFastener) warnings.push(`${missingFastener.label} is not fastened by its screw; check fastener placement.`);
+
+  const weakBite = assembly.connections
+    .filter((connection) => connection.type === 'fastenedBy')
+    .map((connection) => fastenerBiteCheck(connection, byId))
+    .find((item) => item && item.bite < item.minBite);
+  validation.weakBite = weakBite || null;
+  if (weakBite) warnings.push(`${weakBite.label} only bites ${formatShelfLength(weakBite.bite)} into one connected board; use at least ${formatShelfLength(weakBite.minBite)}.`);
   return validation;
+}
+
+function fastenerBiteCheck(connection, byId) {
+  const fastener = byId.get(connection.fastener);
+  if (!fastener?.meta?.minBite) return null;
+  const from = byId.get(connection.from);
+  const to = byId.get(connection.to);
+  if (!from || !to) return null;
+  const bites = [fastenerBiteIntoPart(fastener, from), fastenerBiteIntoPart(fastener, to)].filter(Number.isFinite);
+  if (bites.length < 2) return null;
+  return {
+    id: connection.id,
+    fastener: connection.fastener,
+    label: connection.label || fastener.role || connection.fastener,
+    bite: Math.min(...bites),
+    minBite: fastener.meta.minBite
+  };
+}
+
+function fastenerBiteIntoPart(fastener, part) {
+  const axis = fastener.meta?.axis;
+  if (!axis) return NaN;
+  const screwBounds = partBox(fastener);
+  const boardBounds = partBox(part);
+  const overlapMin = Math.max(screwBounds[`min${axis.toUpperCase()}`], boardBounds[`min${axis.toUpperCase()}`]);
+  const overlapMax = Math.min(screwBounds[`max${axis.toUpperCase()}`], boardBounds[`max${axis.toUpperCase()}`]);
+  return Math.max(0, overlapMax - overlapMin);
+}
+
+function formatShelfLength(value) {
+  if (!Number.isFinite(value)) return '-';
+  return `${value.toFixed(3).replace(/\.0+$/, '').replace(/(\.\d*[1-9])0+$/, '$1')} in`;
 }
 
 function isStructuralMaterial(material) {

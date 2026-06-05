@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { DEFAULT_PLAN } from '../src/catalogs.js';
 import { applyClipConstraints, applyMountingRules, applyOuterSize, calculatePlan, clonePlan, formatLength, getScrewLengthRange, getStageLabels, normalizeBuild, recommendedLinerWidth } from '../src/frameMath.js';
-import { calculateShelfPlan } from '../src/shelfMath.js';
+import { calculateShelfPlan, validateShelfConstruction } from '../src/shelfMath.js';
 
 const base = clonePlan(DEFAULT_PLAN);
 const result = calculatePlan(base);
@@ -122,7 +122,18 @@ assert.equal(toteRack.assembly.parts.find((part) => part.id === 'screw.toteFrame
 assert.equal(toteRack.validation.screwOverlap, null);
 assert.equal(toteRack.validation.badScrew, null);
 assert.equal(toteRack.validation.missingFastener, null);
+assert.equal(toteRack.validation.weakBite, null);
 assert.equal(toteRack.validation.componentOverlaps.count, 0);
+
+const weakBiteAssembly = clonePlan(toteRack.assembly);
+const weakBiteScrew = weakBiteAssembly.parts.find((part) => part.id === 'screw.toteFrame.front.stack.post0.0');
+weakBiteScrew.meta.length = 1.68;
+weakBiteScrew.size.y = 1.68;
+weakBiteScrew.position.y = weakBiteScrew.meta.start.y + weakBiteScrew.meta.direction * weakBiteScrew.meta.length / 2;
+const weakBiteWarnings = [];
+const weakBiteValidation = validateShelfConstruction(weakBiteAssembly, weakBiteWarnings);
+assert.equal(weakBiteValidation.weakBite.fastener, 'screw.toteFrame.front.stack.post0.0');
+assert.match(weakBiteWarnings.join('\n'), /only bites/);
 
 const customToteRack = calculateShelfPlan({
   build: 'tote-rack',
