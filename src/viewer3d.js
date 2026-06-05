@@ -724,6 +724,9 @@ function animatedAssemblyPart(plan, result, part) {
   const animation = plan?.buildAnimation;
   if (!animation?.type || result?.style !== 'tote-rack') return part;
   if (animation.type === 'front-frame') return animatedFrontFramePart(animation, part);
+  if (animation.type === 'tote-fit') return animatedToteFitPart(animation, result, part);
+  if (animation.type === 'casters') return animatedCasterPart(animation, part);
+  if (animation.type === 'final-load') return animatedFinalLoadPart(animation, result, part);
   if (animation.type !== 'runner-rails') return part;
   const meta = part.meta || {};
   const isRunnerRail = meta.group === 'rails' && meta.subgroup === 'runner';
@@ -769,6 +772,63 @@ function animatedAssemblyPart(plan, result, part) {
         z: meta.start.z + offsetZ,
         y: meta.start.y + offsetY
       }
+    }
+  };
+}
+
+function animatedToteFitPart(animation, result, part) {
+  const meta = part.meta || {};
+  if (meta.group !== 'totes') return part;
+  const rows = Math.max(1, result.rows || result.levels || 1);
+  const columns = Math.max(1, result.columns || result.bays || 1);
+  const order = (Number(meta.row) || 0) * columns + (Number(meta.bay) || 0);
+  const total = rows * columns;
+  const progress = Number(animation.progress) || 0;
+  const start = 0.08 + order * Math.min(0.065, 0.54 / Math.max(1, total));
+  const end = start + 0.12;
+  if (progress < start) return null;
+  const t = easeOutCubic(clamp01((progress - start) / (end - start)));
+  return {
+    ...part,
+    position: {
+      ...part.position,
+      z: part.position.z - 18 * (1 - t),
+      y: part.position.y + 3 * (1 - t)
+    }
+  };
+}
+
+function animatedCasterPart(animation, part) {
+  const meta = part.meta || {};
+  const caster = meta.group === 'hardware' && meta.kind === 'caster';
+  const casterFastener = meta.group === 'fasteners' && /^screw\.toteCaster\./.test(part.id || '');
+  if (!caster && !casterFastener) return part;
+  const progress = Number(animation.progress) || 0;
+  const cornerOrder = { frontLeft: 0, frontRight: 1, backLeft: 2, backRight: 3 };
+  const index = caster ? cornerOrder[meta.corner] ?? 0 : Number(String(part.id || '').split('.')[2]) || 0;
+  const start = 0.12 + index * 0.12;
+  const end = start + 0.12;
+  if (caster) return animatedPartFromPhase(part, progress, start, end, { y: -8 });
+  return animatedFastenerFromPhase(part, progress, end + 0.02, end + 0.12, { y: -5 });
+}
+
+function animatedFinalLoadPart(animation, result, part) {
+  const meta = part.meta || {};
+  if (meta.group !== 'totes') return part;
+  const rows = Math.max(1, result.rows || result.levels || 1);
+  const row = Number(meta.row) || 0;
+  const bay = Number(meta.bay) || 0;
+  const progress = Number(animation.progress) || 0;
+  const start = 0.08 + row * Math.min(0.18, 0.52 / rows) + bay * 0.025;
+  const end = start + 0.14;
+  if (progress < start) return null;
+  const t = easeOutCubic(clamp01((progress - start) / (end - start)));
+  return {
+    ...part,
+    position: {
+      ...part.position,
+      z: part.position.z - 16 * (1 - t),
+      y: part.position.y + 2.5 * (1 - t)
     }
   };
 }

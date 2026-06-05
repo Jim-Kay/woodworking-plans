@@ -785,8 +785,7 @@ function buildStepImage(step, options = {}) {
 }
 
 function buildStepAnimation(step, options = {}) {
-  if (step.animation?.type === 'front-frame') return { type: 'front-frame' };
-  if (step.animation?.type === 'runner-rails') return { type: 'runner-rails' };
+  if (['front-frame', 'runner-rails', 'tote-fit', 'casters', 'final-load'].includes(step.animation?.type)) return { type: step.animation.type };
   return null;
 }
 
@@ -811,19 +810,18 @@ function initBuildStepAnimations(container) {
       if (canvas.offsetParent) {
         if (entry.startedAt === null) entry.startedAt = now;
         const progress = ((now - entry.startedAt) % 8000) / 8000;
+        const options = buildAnimationOptions(type);
         const animationPlan = {
           ...plan,
-          stage: type === 'front-frame' ? 1 : 2,
+          stage: options.stage,
           vis: buildStepVisibility(),
-          showDimensions: true,
-          dimensionContext: type === 'front-frame' ? 'post' : 'runner',
+          showDimensions: options.showDimensions,
+          dimensionContext: options.dimensionContext,
           buildAnimation: { type, progress }
         };
         miniViewer.update(animationPlan, result);
         const span = Math.max(result?.shelfW || 60, result?.shelfH || 60, result?.shelfD || 30) * 0.1;
-        const camera = type === 'front-frame'
-          ? { x: span * 0.75, y: span * 0.58, z: span * 1.15 }
-          : { x: span * 0.95, y: span * 0.65, z: span * 1.15 };
+        const camera = options.camera(span);
         miniViewer.setCameraPosition(camera, { x: 0, y: span * 0.42, z: 0 });
       } else {
         entry.startedAt = null;
@@ -832,6 +830,17 @@ function initBuildStepAnimations(container) {
     };
     entry.frame = requestAnimationFrame(tick);
   });
+}
+
+function buildAnimationOptions(type) {
+  const options = {
+    'front-frame': { stage: 1, dimensionContext: 'post', showDimensions: true, camera: (span) => ({ x: span * 0.75, y: span * 0.58, z: span * 1.15 }) },
+    'runner-rails': { stage: 2, dimensionContext: 'runner', showDimensions: true, camera: (span) => ({ x: span * 0.95, y: span * 0.65, z: span * 1.15 }) },
+    'tote-fit': { stage: 4, dimensionContext: 'runner', showDimensions: true, camera: (span) => ({ x: span * 0.9, y: span * 0.6, z: -span * 1.25 }) },
+    casters: { stage: 3, dimensionContext: null, showDimensions: false, camera: (span) => ({ x: span * 0.95, y: span * 0.5, z: span * 1.2 }) },
+    'final-load': { stage: 999, dimensionContext: null, showDimensions: false, camera: (span) => ({ x: span * 1.05, y: span * 0.72, z: span * 1.25 }) }
+  };
+  return options[type] || options['runner-rails'];
 }
 
 function formatBuildInstruction(text) {
