@@ -784,7 +784,7 @@ function animatedFrontFramePart(animation, part) {
   const post = group === 'posts';
   if (!post && !frameRail && !tieRail && !frameFastener && !tieFastener) return part;
 
-  if (frameRail && meta.level === 'bottom' && meta.stackIndex === 0) return part;
+  if (frameRail && meta.level === 'bottom' && meta.stackIndex === 1) return part;
 
   if (post) {
     return animatedPartFromPhase(part, progress, 0.08, 0.2, { y: 18 });
@@ -802,7 +802,7 @@ function animatedFrontFramePart(animation, part) {
     return animatedFastenerFromPhase(part, progress, 0.48, 0.58, { y: 6 });
   }
 
-  if (frameRail && meta.level === 'bottom' && meta.stackIndex === 1) {
+  if (frameRail && meta.level === 'bottom' && meta.stackIndex === 0) {
     return animatedPartFromPhase(part, progress, 0.58, 0.68, { y: -7 });
   }
 
