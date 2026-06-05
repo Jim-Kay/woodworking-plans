@@ -20,23 +20,24 @@ export function calculateShelfPlan(plan) {
   if (!ok) return { type: 'shelves', ok: false, errors, warnings, parts: [], boardFeet: 0 };
 
   const uprightQty = (bays + 1) * 2;
-  const frontBackRailQty = levels * bays * 2;
+  const frontBackRailQty = levels * 2;
   const sideRailQty = levels * (bays + 1);
   const slatQty = levels * slats;
-  const screwQty = levels * bays * 8;
+  const screwQty = levels * (bays + 1) * 4;
   const bayStep = Math.max(stock, (width - stock) / bays);
   const bayWidth = Math.max(0, bayStep - post);
-  const railLength = Math.max(stock, bayStep - stock);
-  const depthRailLength = Math.max(stock, depth - stock * 2);
+  const railLength = Math.max(stock, width);
+  const depthRailLength = Math.max(stock, depth - stock * 4);
   const slatLength = Math.max(stock, width);
   const shelfSpacing = levels > 1 ? (height - rail) / (levels - 1) : height;
   if (shelfSpacing < 12) warnings.push('Shelf spacing is under 12 in; check stored item height.');
   if (bayWidth > 48) warnings.push('Bay width is over 48 in; consider adding more bays or heavier front/back rails.');
+  if (railLength > 96) warnings.push('Continuous front/back rails are over 96 in; splice rails or reduce shelf width if full-length stock is not available.');
 
   const parts = [
     { part: 'Vertical posts', qty: uprightQty, length: height, width: post, thickness: stock, notes: 'Use 2x4-style posts; wide face runs left/right, 1.5 in edge runs front/back.' },
-    { part: 'Front/back shelf rails', qty: frontBackRailQty, length: railLength, width: rail, thickness: stock, notes: 'One front and one back rail per bay; each segment stops at the side-rail faces.' },
-    { part: 'Side depth rails', qty: sideRailQty, length: depthRailLength, width: rail, thickness: stock, notes: 'Depth rails run between front/back post faces.' },
+    { part: 'Front/back shelf rails', qty: frontBackRailQty, length: railLength, width: rail, thickness: stock, notes: 'One continuous front and one continuous back rail per shelf level; fewer cuts, but requires full-width stock.' },
+    { part: 'Side depth rails', qty: sideRailQty, length: depthRailLength, width: rail, thickness: stock, notes: 'Depth rails fit between the continuous front and back rails.' },
     { part: 'Shelf slats', qty: slatQty, length: slatLength, width: deck, thickness: stock, notes: `${slats} slats per shelf; cut to the outside width so the ends align with the side rails.` },
     { part: 'Structural screws', qty: screwQty, length: 2.5, width: NaN, thickness: NaN, notes: 'Two screws where each front/back rail crosses a post.' }
   ];
@@ -888,23 +889,20 @@ export function buildShelfAssembly(model) {
 
   for (let level = 0; level < model.levels; level += 1) {
     const y = yForLevel(level);
-    for (let bay = 0; bay < model.bays; bay += 1) {
-      const x = xStart + bay * model.bayStep + model.bayStep / 2;
-      const frontRailId = `rail.front.level${level}.bay${bay}`;
-      const backRailId = `rail.back.level${level}.bay${bay}`;
-      parts.push(assemblyPart(frontRailId, 'front rail', 'wood', { x: model.railLength, y: model.rail, z: model.stock }, { x, y, z: zFrontRail }, { group: 'rails', level, bay, side: 'front' }));
-      parts.push(assemblyPart(backRailId, 'back rail', 'wood', { x: model.railLength, y: model.rail, z: model.stock }, { x, y, z: zBackRail }, { group: 'rails', level, bay, side: 'back' }));
-      connections.push(contactConnection(`contact.${frontRailId}.leftPost`, frontRailId, `post.front.${bay}`, 'rail end bears on front post'));
-      connections.push(contactConnection(`contact.${frontRailId}.rightPost`, frontRailId, `post.front.${bay + 1}`, 'rail end bears on front post'));
-      connections.push(contactConnection(`contact.${backRailId}.leftPost`, backRailId, `post.back.${bay}`, 'rail end bears on back post'));
-      connections.push(contactConnection(`contact.${backRailId}.rightPost`, backRailId, `post.back.${bay + 1}`, 'rail end bears on back post'));
+    const frontRailId = `rail.front.level${level}`;
+    const backRailId = `rail.back.level${level}`;
+    parts.push(assemblyPart(frontRailId, 'front rail', 'wood', { x: model.railLength, y: model.rail, z: model.stock }, { x: 0, y, z: zFrontRail }, { group: 'rails', level, side: 'front' }));
+    parts.push(assemblyPart(backRailId, 'back rail', 'wood', { x: model.railLength, y: model.rail, z: model.stock }, { x: 0, y, z: zBackRail }, { group: 'rails', level, side: 'back' }));
+    for (let i = 0; i <= model.bays; i += 1) {
+      connections.push(contactConnection(`contact.${frontRailId}.post${i}`, frontRailId, `post.front.${i}`, 'continuous front rail bears on post'));
+      connections.push(contactConnection(`contact.${backRailId}.post${i}`, backRailId, `post.back.${i}`, 'continuous back rail bears on post'));
     }
     for (let i = 0; i <= model.bays; i += 1) {
-      const x = xStart + i * model.bayStep;
+      const x = postXForIndex(i);
       const sideRailId = `rail.side.level${level}.post${i}`;
       parts.push(assemblyPart(sideRailId, 'side depth rail', 'wood', { x: model.stock, y: model.rail, z: model.depthRailLength }, { x, y, z: 0 }, { group: 'rails', level, postIndex: i, side: 'depth' }));
-      connections.push(contactConnection(`contact.${sideRailId}.frontPost`, sideRailId, `post.front.${i}`, 'side rail bears on front post'));
-      connections.push(contactConnection(`contact.${sideRailId}.backPost`, sideRailId, `post.back.${i}`, 'side rail bears on back post'));
+      connections.push(contactConnection(`contact.${sideRailId}.frontRail`, sideRailId, frontRailId, 'side rail butts into front rail'));
+      connections.push(contactConnection(`contact.${sideRailId}.backRail`, sideRailId, backRailId, 'side rail butts into back rail'));
     }
   }
 
@@ -1030,22 +1028,22 @@ function addShelfScrewParts(model, parts, connections, xStart, yForLevel) {
   const shankLength = model.stock * 1.55;
   const radius = 0.09;
   const railScrewOffset = model.rail * 0.32;
-  const endInset = model.stock * 0.25;
+  const postXForIndex = (index) => {
+    if (index === 0) return -model.width / 2 + model.post / 2;
+    if (index === model.bays) return model.width / 2 - model.post / 2;
+    return xStart + index * model.bayStep;
+  };
   for (let level = 0; level < model.levels; level += 1) {
     const y = yForLevel(level);
-    for (let bay = 0; bay < model.bays; bay += 1) {
-      const leftX = xStart + bay * model.bayStep + model.stock / 2 + endInset;
-      const rightX = xStart + (bay + 1) * model.bayStep - model.stock / 2 - endInset;
-      [leftX, rightX].forEach((x, endIndex) => {
-        const postIndex = bay + endIndex;
-        [-railScrewOffset, railScrewOffset].forEach((dy, index) => {
-          const frontId = `screw.front.level${level}.bay${bay}.end${endIndex}.${index}`;
-          const backId = `screw.back.level${level}.bay${bay}.end${endIndex}.${index}`;
-          parts.push(screwPart(frontId, 'front rail screw', { x, y: y + dy, z: -model.depth / 2 }, 'z', 1, shankLength, radius, { group: 'fasteners', level, bay, endIndex, index, side: 'front' }));
-          parts.push(screwPart(backId, 'back rail screw', { x, y: y + dy, z: model.depth / 2 }, 'z', -1, shankLength, radius, { group: 'fasteners', level, bay, endIndex, index, side: 'back' }));
-          connections.push(fastenerConnection(`fasten.${frontId}`, `rail.front.level${level}.bay${bay}`, `post.front.${postIndex}`, frontId, 'front rail screw'));
-          connections.push(fastenerConnection(`fasten.${backId}`, `rail.back.level${level}.bay${bay}`, `post.back.${postIndex}`, backId, 'back rail screw'));
-        });
+    for (let postIndex = 0; postIndex <= model.bays; postIndex += 1) {
+      const x = postXForIndex(postIndex);
+      [-railScrewOffset, railScrewOffset].forEach((dy, index) => {
+        const frontId = `screw.front.level${level}.post${postIndex}.${index}`;
+        const backId = `screw.back.level${level}.post${postIndex}.${index}`;
+        parts.push(screwPart(frontId, 'front rail screw', { x, y: y + dy, z: -model.depth / 2 }, 'z', 1, shankLength, radius, { group: 'fasteners', level, postIndex, index, side: 'front' }));
+        parts.push(screwPart(backId, 'back rail screw', { x, y: y + dy, z: model.depth / 2 }, 'z', -1, shankLength, radius, { group: 'fasteners', level, postIndex, index, side: 'back' }));
+        connections.push(fastenerConnection(`fasten.${frontId}`, `rail.front.level${level}`, `post.front.${postIndex}`, frontId, 'front rail screw'));
+        connections.push(fastenerConnection(`fasten.${backId}`, `rail.back.level${level}`, `post.back.${postIndex}`, backId, 'back rail screw'));
       });
     }
   }

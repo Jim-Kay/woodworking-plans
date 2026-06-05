@@ -77,8 +77,14 @@ const shelves = calculateShelfPlan({
 assert.equal(shelves.ok, true);
 assert.deepEqual(shelves.warnings, []);
 assert.equal(shelves.slatLength, 96);
+assert.equal(shelves.parts.find((part) => part.part === 'Front/back shelf rails').qty, 8);
+assert.equal(shelves.parts.find((part) => part.part === 'Front/back shelf rails').length, 96);
+assert.equal(shelves.parts.find((part) => part.part === 'Side depth rails').length, 18);
 assert.equal(shelves.assembly.parts.find((part) => part.id === 'post.front.0').position.x, -46.25);
-assert.equal(shelves.assembly.parts.find((part) => part.id === 'rail.side.level0.post0').position.x, -47.25);
+assert.equal(shelves.assembly.parts.find((part) => part.id === 'rail.front.level0').size.x, 96);
+assert.equal(shelves.assembly.parts.some((part) => part.id === 'rail.front.level0.bay0'), false);
+assert.equal(shelves.assembly.parts.find((part) => part.id === 'rail.side.level0.post0').position.x, -46.25);
+assert.equal(shelves.assembly.parts.find((part) => part.id === 'rail.side.level0.post0').size.z, 18);
 assert.equal(shelves.assembly.connections.some((connection) => connection.type === 'fastenedBy'), true);
 
 const toteRack = calculateShelfPlan({

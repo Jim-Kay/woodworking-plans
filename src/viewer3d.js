@@ -903,7 +903,8 @@ function animatedShelfFinalFastenerPart(animation, part) {
   const progress = Number(animation.progress) || 0;
   if (meta.group !== 'fasteners') return part;
   const level = Number(meta.level) || 0;
-  const start = 0.08 + level * 0.08 + (Number(meta.bay) || 0) * 0.015;
+  const sequence = Number.isFinite(Number(meta.postIndex)) ? Number(meta.postIndex) : Number(meta.bay) || 0;
+  const start = 0.08 + level * 0.08 + sequence * 0.015;
   return animatedFastenerFromPhase(part, progress, start, start + 0.12, { z: meta.side === 'front' ? -5 : 5 });
 }
 
@@ -948,7 +949,7 @@ function isStandardShelfFastener(part) {
 
 function isShelfCornerFastener(part, result) {
   const meta = part.meta || {};
-  const postIndex = Number(meta.bay) + Number(meta.endIndex);
+  const postIndex = Number.isFinite(Number(meta.postIndex)) ? Number(meta.postIndex) : Number(meta.bay) + Number(meta.endIndex);
   return isShelfCornerIndex(postIndex, result);
 }
 
