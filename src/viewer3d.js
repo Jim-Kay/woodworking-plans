@@ -722,7 +722,9 @@ export class FrameViewer {
 
 function animatedAssemblyPart(plan, result, part) {
   const animation = plan?.buildAnimation;
-  if (!animation?.type || result?.style !== 'tote-rack') return part;
+  if (!animation?.type) return part;
+  if (result?.style === 'rolling') return animatedRollingShelfPart(animation, result, part);
+  if (result?.style !== 'tote-rack') return part;
   if (animation.type === 'front-frame') return animatedFrontFramePart(animation, part);
   if (animation.type === 'tote-fit') return animatedToteFitPart(animation, result, part);
   if (animation.type === 'casters') return animatedCasterPart(animation, part);
@@ -774,6 +776,148 @@ function animatedAssemblyPart(plan, result, part) {
       }
     }
   };
+}
+
+function animatedRollingShelfPart(animation, result, part) {
+  if (!/^rolling-/.test(animation.type || '')) return part;
+  if (animation.type === 'rolling-post-assemblies') return animatedRollingPostAssemblyPart(animation, part);
+  if (animation.type === 'rolling-rails') return animatedRollingRailPart(animation, result, part);
+  if (animation.type === 'rolling-deck') return animatedRollingDeckPart(animation, result, part);
+  if (animation.type === 'rolling-finish') return animatedRollingFinishPart(animation, part);
+  return part;
+}
+
+function animatedRollingPostAssemblyPart(animation, part) {
+  const meta = part.meta || {};
+  const group = meta.group;
+  const post = group === 'posts';
+  const postFastener = isRollingPostFastener(part);
+  if (!post && !postFastener) return null;
+  const progress = Number(animation.progress) || 0;
+  const cornerDelay = rollingCornerIndex(meta.corner) * 0.025;
+  const outward = rollingOutwardSign(meta.corner);
+
+  if (post) {
+    if (meta.section === 'lower') return part;
+    if (meta.section === 'upper') return animatedPartFromPhase(part, progress, 0.08 + cornerDelay, 0.2 + cornerDelay, { y: 14 });
+    if (meta.section === 'splice') return animatedPartFromPhase(part, progress, 0.22 + cornerDelay, 0.34 + cornerDelay, { z: outward * 10 });
+    if (meta.section === 'top-splice') return animatedPartFromPhase(part, progress, 0.36 + cornerDelay, 0.48 + cornerDelay, { z: outward * 10, y: 5 });
+    if (meta.section === 'caster-block') return animatedPartFromPhase(part, progress, 0.5 + cornerDelay, 0.62 + cornerDelay, { z: outward * 10 });
+    return part;
+  }
+
+  if (/^screw\.splice\./.test(part.id || '')) return animatedFastenerFromPhase(part, progress, 0.34 + cornerDelay, 0.46 + cornerDelay, { z: outward * 5 });
+  if (/^screw\.topSplice\./.test(part.id || '')) return animatedFastenerFromPhase(part, progress, 0.5 + cornerDelay, 0.62 + cornerDelay, { z: outward * 5 });
+  if (/^screw\.casterBlock\./.test(part.id || '')) return animatedFastenerFromPhase(part, progress, 0.64 + cornerDelay, 0.78 + cornerDelay, { z: outward * 5 });
+  return null;
+}
+
+function animatedRollingRailPart(animation, result, part) {
+  const meta = part.meta || {};
+  const group = meta.group;
+  const progress = Number(animation.progress) || 0;
+  if (group === 'posts' || isRollingPostFastener(part)) return part;
+  const rail = group === 'rails' && meta.side !== 'center';
+  const railFastener = isRollingRailFastener(part);
+  if (!rail && !railFastener) return null;
+  const levels = Math.max(1, result?.levels || 1);
+  const level = Math.max(0, Math.min(levels - 1, Number(meta.level) || rollingLevelFromId(part.id)));
+  const levelDelay = level * Math.min(0.12, 0.48 / levels);
+  const start = 0.08 + levelDelay;
+  const railEnd = start + 0.12;
+  const screwStart = railEnd + 0.035;
+  const screwEnd = screwStart + 0.1;
+
+  if (rail) {
+    const offset = meta.side === 'front' ? { z: -14 } :
+      meta.side === 'back' ? { z: 14 } :
+      meta.side === 'left' ? { x: -12 } :
+      { x: 12 };
+    return animatedPartFromPhase(part, progress, start, railEnd, offset);
+  }
+
+  const offset = /\.x\d+\./.test(part.id || '')
+    ? { z: part.position.z <= 0 ? -5 : 5, y: 2 }
+    : { x: part.position.x <= 0 ? -5 : 5, y: 2 };
+  return animatedFastenerFromPhase(part, progress, screwStart, screwEnd, offset);
+}
+
+function animatedRollingDeckPart(animation, result, part) {
+  const meta = part.meta || {};
+  const group = meta.group;
+  const progress = Number(animation.progress) || 0;
+  if (group === 'posts' || isRollingPostFastener(part)) return part;
+  if (group === 'rails' && meta.side !== 'center') return part;
+  if (isRollingRailFastener(part)) return part;
+  const centerSupport = group === 'rails' && meta.side === 'center';
+  const slat = group === 'slats';
+  const deckFastener = isRollingDeckFastener(part);
+  if (!centerSupport && !slat && !deckFastener) return null;
+  const levels = Math.max(1, result?.levels || 1);
+  const level = Math.max(0, Math.min(levels - 1, Number(meta.level) || rollingLevelFromId(part.id)));
+  const levelDelay = level * Math.min(0.12, 0.5 / levels);
+  const supportStart = 0.08 + levelDelay;
+  const supportEnd = supportStart + 0.1;
+  const slatStart = supportEnd + 0.04;
+  const slatEnd = slatStart + 0.12;
+  const screwStart = slatEnd + 0.03;
+  const screwEnd = screwStart + 0.1;
+
+  if (centerSupport) return animatedPartFromPhase(part, progress, supportStart, supportEnd, { y: 10 });
+  if (slat) {
+    const index = Number(meta.index) || 0;
+    const stagger = Math.min(0.04, 0.16 / Math.max(1, result?.slats || 1)) * index;
+    return animatedPartFromPhase(part, progress, slatStart + stagger, slatEnd + stagger, { y: 9 });
+  }
+
+  return animatedFastenerFromPhase(part, progress, screwStart, screwEnd, { y: 5 });
+}
+
+function animatedRollingFinishPart(animation, part) {
+  const meta = part.meta || {};
+  const group = meta.group;
+  const progress = Number(animation.progress) || 0;
+  if (group === 'posts' || group === 'rails' || group === 'slats' || isRollingPostFastener(part) || isRollingRailFastener(part) || isRollingDeckFastener(part)) return part;
+  const caster = group === 'hardware' && meta.kind === 'caster';
+  const casterFastener = isRollingCasterFastener(part);
+  if (!caster && !casterFastener) return null;
+  const cornerDelay = rollingCornerIndex(meta.corner) * 0.11;
+  if (caster) return animatedPartFromPhase(part, progress, 0.12 + cornerDelay, 0.25 + cornerDelay, { y: -8 });
+  return animatedFastenerFromPhase(part, progress, 0.27 + cornerDelay, 0.39 + cornerDelay, { y: -5 });
+}
+
+function isRollingPostFastener(part) {
+  return /^(screw\.splice|screw\.topSplice|screw\.casterBlock)\./.test(part.id || '');
+}
+
+function isRollingRailFastener(part) {
+  return /^screw\.rolling\.level\d+\.(x|z)\d+\./.test(part.id || '');
+}
+
+function isRollingDeckFastener(part) {
+  return /^screw\.rolling\.level\d+\.(centerSupport|slat)/.test(part.id || '');
+}
+
+function isRollingCasterFastener(part) {
+  return /^screw\.caster\./.test(part.id || '');
+}
+
+function rollingLevelFromId(id) {
+  const match = String(id || '').match(/level(\d+)/);
+  return match ? Number(match[1]) : 0;
+}
+
+function rollingCornerIndex(corner) {
+  return ({
+    'front.left': 0,
+    'front.right': 1,
+    'back.left': 2,
+    'back.right': 3
+  })[corner] ?? 0;
+}
+
+function rollingOutwardSign(corner) {
+  return String(corner || '').startsWith('front') ? -1 : 1;
 }
 
 function animatedToteFitPart(animation, result, part) {

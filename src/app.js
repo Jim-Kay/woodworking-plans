@@ -793,7 +793,17 @@ function buildStepImage(step, options = {}) {
 }
 
 function buildStepAnimation(step, options = {}) {
-  if (['front-frame', 'runner-rails', 'tote-fit', 'casters', 'final-load'].includes(step.animation?.type)) return { type: step.animation.type };
+  if ([
+    'front-frame',
+    'runner-rails',
+    'tote-fit',
+    'casters',
+    'final-load',
+    'rolling-post-assemblies',
+    'rolling-rails',
+    'rolling-deck',
+    'rolling-finish'
+  ].includes(step.animation?.type)) return { type: step.animation.type };
   return null;
 }
 
@@ -894,7 +904,11 @@ function buildAnimationOptions(type) {
     'runner-rails': { stage: 2, dimensionContext: 'runner', showDimensions: true, camera: (span) => ({ x: span * 0.95, y: span * 0.65, z: span * 1.15 }), target: defaultTarget },
     'tote-fit': { stage: 4, dimensionContext: 'runner', showDimensions: true, camera: (span) => ({ x: span * 0.9, y: span * 0.6, z: -span * 1.25 }), target: defaultTarget },
     casters: { stage: 3, dimensionContext: null, showDimensions: false, camera: (span) => ({ x: span * 1.25, y: span * 0.32, z: span * 1.55 }), target: (span) => ({ x: 0, y: span * 0.04, z: 0 }) },
-    'final-load': { stage: 999, dimensionContext: null, showDimensions: false, camera: (span) => ({ x: span * 1.05, y: span * 0.72, z: span * 1.25 }), target: defaultTarget }
+    'final-load': { stage: 999, dimensionContext: null, showDimensions: false, camera: (span) => ({ x: span * 1.05, y: span * 0.72, z: span * 1.25 }), target: defaultTarget },
+    'rolling-post-assemblies': { stage: 999, dimensionContext: null, showDimensions: false, camera: (span) => ({ x: span * 0.75, y: span * 0.62, z: span * 1.18 }), target: defaultTarget },
+    'rolling-rails': { stage: 999, dimensionContext: null, showDimensions: false, camera: (span) => ({ x: span * 1.0, y: span * 0.66, z: span * 1.25 }), target: defaultTarget },
+    'rolling-deck': { stage: 999, dimensionContext: null, showDimensions: false, camera: (span) => ({ x: span * 1.05, y: span * 0.82, z: span * 1.18 }), target: defaultTarget },
+    'rolling-finish': { stage: 999, dimensionContext: null, showDimensions: false, camera: (span) => ({ x: span * 1.0, y: span * 0.48, z: span * 1.28 }), target: (span) => ({ x: 0, y: span * 0.3, z: 0 }) }
   };
   return options[type] || options['runner-rails'];
 }
