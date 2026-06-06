@@ -640,6 +640,7 @@ export class FrameViewer {
           d: part.size.y * SCALE,
           h: part.size.z * SCALE,
           rotation: part.rotation,
+          polygon: part.meta?.polygon,
           material: materialForPart(part),
           visible: true,
           partInfo: part
@@ -1903,7 +1904,9 @@ function addRail(group, opts) {
   const w = Math.max(opts.w, 0.001);
   const d = Math.max(opts.d, 0.001);
   const h = Math.max(opts.h, 0.001);
-  const geo = opts.miter ? makeMiteredRailGeometry(w, d, h, opts.side) : new THREE.BoxGeometry(w, d, h);
+  const geo = opts.polygon?.length >= 3 ? makePolygonPrismGeometry(opts.polygon, opts.x, opts.y, h) :
+    opts.miter ? makeMiteredRailGeometry(w, d, h, opts.side) :
+      new THREE.BoxGeometry(w, d, h);
   const mesh = new THREE.Mesh(geo, opts.material);
   mesh.position.set(opts.x, opts.y, opts.z);
   if (opts.rotation) {
@@ -1915,6 +1918,30 @@ function addRail(group, opts) {
   const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 1), new THREE.LineBasicMaterial({ color: 0x0f172a, transparent: true, opacity: 0.7 }));
   mesh.add(edges);
   group.add(mesh);
+}
+
+function makePolygonPrismGeometry(polygon, centerX, centerY, thickness) {
+  const z0 = -thickness / 2;
+  const z1 = thickness / 2;
+  const points = polygon.map((point) => ({
+    x: point.x * SCALE - centerX,
+    y: point.y * SCALE - centerY
+  }));
+  const vertices = [];
+  points.forEach((point) => vertices.push(point.x, point.y, z0));
+  points.forEach((point) => vertices.push(point.x, point.y, z1));
+  const indices = [];
+  for (let i = 1; i < points.length - 1; i += 1) indices.push(0, i, i + 1);
+  for (let i = 1; i < points.length - 1; i += 1) indices.push(points.length, points.length + i + 1, points.length + i);
+  for (let i = 0; i < points.length; i += 1) {
+    const next = (i + 1) % points.length;
+    indices.push(i, next, points.length + next, i, points.length + next, points.length + i);
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  return geometry;
 }
 
 function makeMiteredRailGeometry(w, d, h, side) {

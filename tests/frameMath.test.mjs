@@ -197,6 +197,11 @@ assert.equal(wideToteRack.parts.find((part) => part.part === 'Brace screws').qty
 assert.deepEqual(wideToteRack.assembly.parts
   .filter((part) => part.id.startsWith('brace.back.'))
   .map((part) => part.id), ['brace.back.left', 'brace.back.right']);
+assert.equal(wideToteRack.assembly.parts.find((part) => part.id === 'brace.back.left').meta.mitered, true);
+assert.equal(wideToteRack.assembly.parts.find((part) => part.id === 'brace.back.left').meta.bounds.minX, -45.75);
+assert.equal(wideToteRack.assembly.parts.find((part) => part.id === 'brace.back.left').meta.bounds.maxX, 0);
+assert.equal(wideToteRack.assembly.parts.find((part) => part.id === 'brace.back.right').meta.bounds.minX, 0);
+assert.equal(wideToteRack.assembly.parts.find((part) => part.id === 'brace.back.right').meta.bounds.maxX, 45.75);
 assert.equal(wideToteRack.assembly.parts.find((part) => part.id === 'screw.toteBrace.left.centerTop.0').position.x, -0.375);
 assert.equal(wideToteRack.assembly.parts.find((part) => part.id === 'screw.toteBrace.right.centerTop.0').position.x, 0.375);
 assert.match(wideToteRack.warnings.join('\n'), /center casters/);

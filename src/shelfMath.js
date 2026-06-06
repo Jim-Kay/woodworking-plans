@@ -130,7 +130,7 @@ function calculateToteRackPlan(plan) {
   const backBraceThickness = 0.75;
   const backBraceCenterOffset = stock * 0.25;
   const backBraceRise = Math.max(stock, postLength - rail * 2);
-  const backBraceRun = Math.max(stock, width / 2 - stock / 2 - backBraceCenterOffset);
+  const backBraceRun = Math.max(stock, width / 2);
   const backBraceLength = Math.hypot(backBraceRun, backBraceRise);
   if (verticalClearance < 2) warnings.push('Vertical clearance is under 2 in; totes may be hard to lift over the support rails.');
   if (sideClearance < 0.125) warnings.push('Lid side gap is under 1/8 in; leave room for tote variation and rack assembly tolerance.');
@@ -756,39 +756,44 @@ function buildToteRackAssembly(model) {
     const topY = postTopY - model.rail;
     const centerPostIndex = Math.round(model.columns / 2);
     const centerX = postXForIndex(centerPostIndex);
+    const leftOutsideX = -model.width / 2;
+    const rightOutsideX = model.width / 2;
     const braceEndpoints = [
       {
         direction: 'left',
-        start: { name: 'leftBottom', x: postXForIndex(0), y: bottomY, targetId: 'post.back.0' },
-        end: { name: 'centerTop', x: centerX - model.backBraceCenterOffset, y: topY, targetId: `post.back.${centerPostIndex}` }
+        start: { name: 'leftBottom', x: leftOutsideX, y: bottomY, screwX: postXForIndex(0), targetId: 'post.back.0' },
+        end: { name: 'centerTop', x: centerX, y: topY, screwX: centerX - model.backBraceCenterOffset, targetId: `post.back.${centerPostIndex}` },
+        clips: [{ axis: 'x', value: leftOutsideX, sign: 1 }, { axis: 'x', value: centerX, sign: -1 }]
       },
       {
         direction: 'right',
-        start: { name: 'centerTop', x: centerX + model.backBraceCenterOffset, y: topY, targetId: `post.back.${centerPostIndex}` },
-        end: { name: 'rightBottom', x: postXForIndex(model.columns), y: bottomY, targetId: `post.back.${model.columns}` }
+        start: { name: 'centerTop', x: centerX, y: topY, screwX: centerX + model.backBraceCenterOffset, targetId: `post.back.${centerPostIndex}` },
+        end: { name: 'rightBottom', x: rightOutsideX, y: bottomY, screwX: postXForIndex(model.columns), targetId: `post.back.${model.columns}` },
+        clips: [{ axis: 'x', value: centerX, sign: 1 }, { axis: 'x', value: rightOutsideX, sign: -1 }]
       }
     ];
-    braceEndpoints.forEach(({ direction, start, end }, braceIndex) => {
+    braceEndpoints.forEach(({ direction, start, end, clips }, braceIndex) => {
       const dx = end.x - start.x;
       const dy = end.y - start.y;
       const braceLength = Math.hypot(dx, dy);
       const angle = Math.atan2(dy, dx);
+      const polygon = miteredBracePolygon(start, end, model.backBraceWidth, clips);
+      const bounds = polygonBounds(polygon);
       const braceId = `brace.back.${direction}`;
       parts.push(assemblyPart(
         braceId,
         'back diagonal 1x4 brace',
         'wood',
-        { x: braceLength, y: model.backBraceWidth, z: model.backBraceThickness },
-        { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2, z: braceZ },
-        { ...braceRailMeta, braceIndex, direction, intentionalOverlap: true },
-        { x: 0, y: 0, z: angle }
+        { x: bounds.maxX - bounds.minX, y: bounds.maxY - bounds.minY, z: model.backBraceThickness },
+        { x: (bounds.minX + bounds.maxX) / 2, y: (bounds.minY + bounds.maxY) / 2, z: braceZ },
+        { ...braceRailMeta, braceIndex, direction, intentionalOverlap: true, mitered: true, angle, cutLength: braceLength, polygon, bounds }
       ));
       connections.push(contactConnection(`contact.${braceId}.${start.name}`, braceId, start.targetId, 'diagonal brace end fastens to back post'));
       connections.push(contactConnection(`contact.${braceId}.${end.name}`, braceId, end.targetId, 'diagonal brace end fastens to back post'));
-      [start, end].forEach(({ name, x, y, targetId }) => {
+      [start, end].forEach(({ name, screwX, y, targetId }) => {
         [-0.48, 0.48].forEach((dy, screwIndex) => {
           const screwId = `screw.toteBrace.${direction}.${name}.${screwIndex}`;
-          parts.push(screwPart(screwId, 'back brace screw', { x, y: y + dy, z: braceStartZ }, 'z', -1, braceScrewLength, braceScrewRadius, { group: 'fasteners', subgroup: 'brace', stageLabel: 'Back bracing', braceIndex, endName: name, screwIndex }));
+          parts.push(screwPart(screwId, 'back brace screw', { x: screwX, y: y + dy, z: braceStartZ }, 'z', -1, braceScrewLength, braceScrewRadius, { group: 'fasteners', subgroup: 'brace', stageLabel: 'Back bracing', braceIndex, endName: name, screwIndex }));
           connections.push(fastenerConnection(`fasten.${screwId}`, braceId, targetId, screwId, 'back brace screw'));
         });
       });
@@ -892,6 +897,54 @@ function laminationScrewXOffset(model, postIndex, screwIndex) {
   if (postIndex === 0) return offset;
   if (postIndex === model.columns) return -offset;
   return screwIndex === 0 ? -offset : offset;
+}
+
+function miteredBracePolygon(start, end, width, clips) {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const length = Math.hypot(dx, dy) || 1;
+  const perp = { x: -dy / length * width / 2, y: dx / length * width / 2 };
+  let polygon = [
+    { x: start.x + perp.x, y: start.y + perp.y },
+    { x: end.x + perp.x, y: end.y + perp.y },
+    { x: end.x - perp.x, y: end.y - perp.y },
+    { x: start.x - perp.x, y: start.y - perp.y }
+  ];
+  clips.forEach((clip) => {
+    polygon = clipPolygonByLine(polygon, clip);
+  });
+  return polygon;
+}
+
+function clipPolygonByLine(polygon, clip) {
+  const inside = (point) => clip.sign * (point[clip.axis] - clip.value) >= -0.0001;
+  const intersect = (a, b) => {
+    const delta = b[clip.axis] - a[clip.axis];
+    const t = Math.abs(delta) < 0.0001 ? 0 : (clip.value - a[clip.axis]) / delta;
+    return {
+      x: a.x + (b.x - a.x) * t,
+      y: a.y + (b.y - a.y) * t
+    };
+  };
+  const output = [];
+  polygon.forEach((current, index) => {
+    const previous = polygon[(index + polygon.length - 1) % polygon.length];
+    const currentInside = inside(current);
+    const previousInside = inside(previous);
+    if (currentInside && !previousInside) output.push(intersect(previous, current));
+    if (currentInside) output.push(current);
+    if (!currentInside && previousInside) output.push(intersect(previous, current));
+  });
+  return output;
+}
+
+function polygonBounds(polygon) {
+  return polygon.reduce((bounds, point) => ({
+    minX: Math.min(bounds.minX, point.x),
+    maxX: Math.max(bounds.maxX, point.x),
+    minY: Math.min(bounds.minY, point.y),
+    maxY: Math.max(bounds.maxY, point.y)
+  }), { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity });
 }
 
 function addToteRackCasters(model, parts, connections, zFront, zBack) {
@@ -1160,6 +1213,17 @@ function fastenerConnection(id, from, to, fastener, label) {
 }
 
 function partBox(part) {
+  if (part.meta?.bounds) {
+    return box(
+      part.id,
+      (part.meta.bounds.minX + part.meta.bounds.maxX) / 2,
+      (part.meta.bounds.minY + part.meta.bounds.maxY) / 2,
+      part.position.z,
+      part.meta.bounds.maxX - part.meta.bounds.minX,
+      part.meta.bounds.maxY - part.meta.bounds.minY,
+      part.size.z
+    );
+  }
   const rotationZ = Number(part.rotation?.z) || 0;
   if (Math.abs(rotationZ) > 0.0001) {
     const cos = Math.abs(Math.cos(rotationZ));
