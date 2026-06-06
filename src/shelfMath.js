@@ -125,11 +125,12 @@ function calculateToteRackPlan(plan) {
   const capacity = columns * rows;
   const midCasterCount = columns >= 4 ? 2 : 0;
   const casterCount = 4 + midCasterCount;
-  const backBraceQty = columns >= 3 && rows >= 3 ? 2 : 0;
+  const backBraceQty = columns >= 4 && rows >= 3 ? 2 : 0;
   const backBraceWidth = 3.5;
   const backBraceThickness = 0.75;
-  const backBraceRise = Math.max(stock, postLength - rail);
-  const backBraceRun = Math.max(stock, width - stock * 2);
+  const backBraceCenterOffset = stock * 0.25;
+  const backBraceRise = Math.max(stock, postLength - rail * 2);
+  const backBraceRun = Math.max(stock, width / 2 - stock / 2 - backBraceCenterOffset);
   const backBraceLength = Math.hypot(backBraceRun, backBraceRise);
   if (verticalClearance < 2) warnings.push('Vertical clearance is under 2 in; totes may be hard to lift over the support rails.');
   if (sideClearance < 0.125) warnings.push('Lid side gap is under 1/8 in; leave room for tote variation and rack assembly tolerance.');
@@ -144,7 +145,7 @@ function calculateToteRackPlan(plan) {
     { part: 'Doubled bottom frame rails', qty: 4, length: frameRailLength, width: rail, thickness: stock, notes: 'Two stacked full-width rails across the front and back create a stronger caster-bearing base.' },
     { part: 'Tote runner rails', qty: rows * columns * 2, length: supportRailLength, width: rail, thickness: stock, notes: 'Two front-to-back runners for each tote bay; runners touch the posts directly and leave a controlled neck clearance under the tote lip.' },
     { part: 'End doubled bottom depth tie rails', qty: tieRailPositions.length * 2, length: tieRailLength, width: rail, thickness: stock, notes: 'Two stacked depth ties at the left and right ends only; tote runner rails provide the intermediate front-to-back rigidity.' },
-    { part: 'Back diagonal 1x4 braces', qty: backBraceQty, length: backBraceLength, width: backBraceWidth, thickness: backBraceThickness, notes: backBraceQty ? 'Optional X bracing across the back face; trim ends to fit and fasten to the back posts/top and bottom rails after the rack is square.' : 'Not required for small racks; add X bracing on taller or wider builds if the rack racks side-to-side.' },
+    { part: 'Back diagonal 1x4 braces', qty: backBraceQty, length: backBraceLength, width: backBraceWidth, thickness: backBraceThickness, notes: backBraceQty ? 'Two rear chevron braces for wide racks; trim ends to fit and fasten each end into a back post after the rack is square.' : 'Not required for small racks; add rear diagonal bracing on wider builds if the rack racks side-to-side.' },
     { part: 'Swivel casters', qty: casterCount, length: casterHeight, width: 3.62, thickness: 2.44, notes: midCasterCount ? 'Four corner casters plus one front-center and one back-center caster for long racks.' : 'Mount to the doubled bottom frame rails if the rack needs to roll.' },
     { part: 'Brace screws', qty: backBraceQty * 4, length: 1.5, width: NaN, thickness: NaN, notes: 'Two screws at each end of each 1x4 back brace; size for 3/4 in brace stock into the back frame.' },
     { part: 'Structural screws', qty: rows * columns * 8 + (columns + 1) * 8, length: 2.5, width: NaN, thickness: NaN, notes: 'Fasten runner and tie rail ends into posts; add wall anchors for tall racks.' }
@@ -153,7 +154,7 @@ function calculateToteRackPlan(plan) {
     const boardFeetForPart = (p.qty * p.length * p.width * p.thickness) / 144;
     return Number.isFinite(boardFeetForPart) ? sum + boardFeetForPart : sum;
   }, 0);
-  const model = { width, height, totalHeight, depth, rows, columns, toteW, toteLipWidth, toteNeckWidth, toteNeckClearance, lipBearing, minimumNeckClearance, minimumLipBearing, toteD, toteH, sideClearance, verticalClearance, railInset, post, postLength, stock, rail, bayWidth, postStep, railLength, depthRailLength, frameRailLength, tieRailLength, tieRailPositions, supportRailLength, rowPitch, casterHeight, toteLipThickness, baseStackHeight, runnerClearWidth, runnerCenterSpacing, midCasterCount, casterCount, backBraceQty, backBraceWidth, backBraceThickness, backBraceLength, backBraceRun, backBraceRise };
+  const model = { width, height, totalHeight, depth, rows, columns, toteW, toteLipWidth, toteNeckWidth, toteNeckClearance, lipBearing, minimumNeckClearance, minimumLipBearing, toteD, toteH, sideClearance, verticalClearance, railInset, post, postLength, stock, rail, bayWidth, postStep, railLength, depthRailLength, frameRailLength, tieRailLength, tieRailPositions, supportRailLength, rowPitch, casterHeight, toteLipThickness, baseStackHeight, runnerClearWidth, runnerCenterSpacing, midCasterCount, casterCount, backBraceQty, backBraceWidth, backBraceThickness, backBraceLength, backBraceRun, backBraceRise, backBraceCenterOffset };
   const assembly = buildToteRackAssembly(model);
   const validation = validateShelfConstruction(assembly, warnings);
   return {
@@ -747,41 +748,47 @@ function buildToteRackAssembly(model) {
   }
 
   if (model.backBraceQty) {
-    const braceCenterY = postBottomY + model.postLength / 2;
     const braceZ = zBack + model.post / 2 + model.backBraceThickness / 2;
-    const braceAngle = Math.atan2(model.backBraceRise, model.backBraceRun);
     const braceStartZ = braceZ + model.backBraceThickness / 2;
     const braceScrewLength = 1.5;
     const braceScrewRadius = 0.04;
-    [
-      ['up', braceAngle],
-      ['down', -braceAngle]
-    ].forEach(([direction, angle], braceIndex) => {
+    const bottomY = postBottomY + model.rail;
+    const topY = postTopY - model.rail;
+    const centerPostIndex = Math.round(model.columns / 2);
+    const centerX = postXForIndex(centerPostIndex);
+    const braceEndpoints = [
+      {
+        direction: 'left',
+        start: { name: 'leftBottom', x: postXForIndex(0), y: bottomY, targetId: 'post.back.0' },
+        end: { name: 'centerTop', x: centerX - model.backBraceCenterOffset, y: topY, targetId: `post.back.${centerPostIndex}` }
+      },
+      {
+        direction: 'right',
+        start: { name: 'centerTop', x: centerX + model.backBraceCenterOffset, y: topY, targetId: `post.back.${centerPostIndex}` },
+        end: { name: 'rightBottom', x: postXForIndex(model.columns), y: bottomY, targetId: `post.back.${model.columns}` }
+      }
+    ];
+    braceEndpoints.forEach(({ direction, start, end }, braceIndex) => {
+      const dx = end.x - start.x;
+      const dy = end.y - start.y;
+      const braceLength = Math.hypot(dx, dy);
+      const angle = Math.atan2(dy, dx);
       const braceId = `brace.back.${direction}`;
       parts.push(assemblyPart(
         braceId,
         'back diagonal 1x4 brace',
         'wood',
-        { x: model.backBraceLength, y: model.backBraceWidth, z: model.backBraceThickness },
-        { x: 0, y: braceCenterY, z: braceZ },
+        { x: braceLength, y: model.backBraceWidth, z: model.backBraceThickness },
+        { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2, z: braceZ },
         { ...braceRailMeta, braceIndex, direction, intentionalOverlap: true },
         { x: 0, y: 0, z: angle }
       ));
-      connections.push(contactConnection(`contact.${braceId}.leftPost`, braceId, `post.back.0`, 'diagonal brace fastens to back frame'));
-      connections.push(contactConnection(`contact.${braceId}.rightPost`, braceId, `post.back.${model.columns}`, 'diagonal brace fastens to back frame'));
-      const endpoints = direction === 'up'
-        ? [
-            ['leftBottom', -model.backBraceRun / 2, braceCenterY - model.backBraceRise / 2, `post.back.0`],
-            ['rightTop', model.backBraceRun / 2, braceCenterY + model.backBraceRise / 2, `post.back.${model.columns}`]
-          ]
-        : [
-            ['leftTop', -model.backBraceRun / 2, braceCenterY + model.backBraceRise / 2, `post.back.0`],
-            ['rightBottom', model.backBraceRun / 2, braceCenterY - model.backBraceRise / 2, `post.back.${model.columns}`]
-          ];
-      endpoints.forEach(([endName, x, y, targetId]) => {
+      connections.push(contactConnection(`contact.${braceId}.${start.name}`, braceId, start.targetId, 'diagonal brace end fastens to back post'));
+      connections.push(contactConnection(`contact.${braceId}.${end.name}`, braceId, end.targetId, 'diagonal brace end fastens to back post'));
+      [start, end].forEach(({ name, x, y, targetId }) => {
         [-0.48, 0.48].forEach((dy, screwIndex) => {
-          const screwId = `screw.toteBrace.${direction}.${endName}.${screwIndex}`;
-          parts.push(screwPart(screwId, 'back brace screw', { x, y: y + dy, z: braceStartZ }, 'z', -1, braceScrewLength, braceScrewRadius, { group: 'fasteners', subgroup: 'brace', stageLabel: 'Back bracing', braceIndex, endName, screwIndex }));
+          const screwId = `screw.toteBrace.${direction}.${name}.${screwIndex}`;
+          parts.push(screwPart(screwId, 'back brace screw', { x, y: y + dy, z: braceStartZ }, 'z', -1, braceScrewLength, braceScrewRadius, { group: 'fasteners', subgroup: 'brace', stageLabel: 'Back bracing', braceIndex, endName: name, screwIndex }));
           connections.push(fastenerConnection(`fasten.${screwId}`, braceId, targetId, screwId, 'back brace screw'));
         });
       });
