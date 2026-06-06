@@ -113,6 +113,10 @@ assert.equal(toteRack.assembly.parts.filter((part) => part.id.startsWith('rail.r
 assert.equal(toteRack.assembly.parts.filter((part) => part.id.startsWith('block.runner.')).length, 0);
 assert.equal(toteRack.assembly.parts.find((part) => part.id === 'tote.row0.bay0').meta.neckWidth, 17.5);
 assert.equal(toteRack.assembly.parts.filter((part) => part.meta?.kind === 'caster').length, 4);
+assert.equal(toteRack.assembly.parts.filter((part) => part.id.startsWith('brace.back.')).length, 2);
+assert.equal(toteRack.assembly.parts.filter((part) => part.id.startsWith('screw.toteBrace.')).length, 8);
+assert.equal(toteRack.parts.find((part) => part.part === 'Back diagonal 1x4 braces').qty, 2);
+assert.equal(toteRack.parts.find((part) => part.part === 'Brace screws').qty, 8);
 assert.deepEqual(toteRack.assembly.parts.find((part) => part.id === 'post.front.0').size, { x: 1.5, y: 51, z: 3.5 });
 assert.deepEqual(toteRack.assembly.parts.find((part) => part.id === 'rail.frame.front.top').size, { x: 69, y: 1.5, z: 3.5 });
 assert.equal(toteRack.assembly.parts.find((part) => part.id === 'post.front.0').position.y, 28.5);
@@ -126,7 +130,7 @@ assert.equal(toteRack.assembly.parts.find((part) => part.id === 'rail.tie.bottom
 assert.equal(toteRack.assembly.parts.some((part) => part.id === 'rail.tie.bottom.0.post1'), false);
 assert.equal(toteRack.assembly.parts.some((part) => part.id === 'rail.tie.bottom.0.post2'), false);
 assert.equal(toteRack.parts.find((part) => part.part === 'End doubled bottom depth tie rails').qty, 4);
-assert.equal(toteRack.assembly.parts.filter((part) => part.material === 'fastener').length, 148);
+assert.equal(toteRack.assembly.parts.filter((part) => part.material === 'fastener').length, 156);
 assert.equal(toteRack.assembly.parts.find((part) => part.id === 'screw.toteFrame.front.stack.post0.0').meta.length, 2.5);
 assert.equal(toteRack.assembly.parts.find((part) => part.id === 'screw.toteFrame.front.stack.post0.0').position.x, -31.37);
 assert.deepEqual(toteRack.assembly.parts
@@ -167,5 +171,32 @@ assert.equal(customToteRack.shelfW, 49.5);
 assert.equal(customToteRack.runnerClearWidth, 19.5);
 assert.equal(customToteRack.toteNeckClearance, 0.25);
 assert.equal(customToteRack.lipBearing, 1);
+
+const wideToteRack = calculateShelfPlan({
+  build: 'tote-rack',
+  toteW: 20.5,
+  toteLipWidth: 1.5,
+  toteD: 30.5,
+  toteH: 14.25,
+  toteColumns: 4,
+  toteRows: 4,
+  toteSideClearance: 0.25,
+  toteVerticalClearance: 3,
+  toteRailInset: 1.25,
+  shelfPost: 3.5,
+  shelfRail: 3.5
+});
+assert.equal(wideToteRack.capacity, 16);
+assert.equal(wideToteRack.casterCount, 6);
+assert.equal(wideToteRack.assembly.parts.filter((part) => part.meta?.kind === 'caster').length, 6);
+assert.equal(wideToteRack.assembly.parts.some((part) => part.id === 'caster.tote.frontCenter'), true);
+assert.equal(wideToteRack.assembly.parts.some((part) => part.id === 'caster.tote.backCenter'), true);
+assert.equal(wideToteRack.parts.find((part) => part.part === 'Swivel casters').qty, 6);
+assert.equal(wideToteRack.parts.find((part) => part.part === 'Back diagonal 1x4 braces').qty, 2);
+assert.match(wideToteRack.warnings.join('\n'), /center casters/);
+assert.equal(wideToteRack.validation.screwOverlap, null);
+assert.equal(wideToteRack.validation.badScrew, null);
+assert.equal(wideToteRack.validation.missingFastener, null);
+assert.equal(wideToteRack.validation.componentOverlaps.count, 0);
 
 console.log('frameMath tests passed');

@@ -639,6 +639,7 @@ export class FrameViewer {
           w: part.size.x * SCALE,
           d: part.size.y * SCALE,
           h: part.size.z * SCALE,
+          rotation: part.rotation,
           material: materialForPart(part),
           visible: true,
           partInfo: part
@@ -1114,7 +1115,7 @@ function animatedCasterPart(animation, part) {
   const casterFastener = meta.group === 'fasteners' && /^screw\.toteCaster\./.test(part.id || '');
   if (!caster && !casterFastener) return part;
   const progress = Number(animation.progress) || 0;
-  const cornerOrder = { frontLeft: 0, frontRight: 1, backLeft: 2, backRight: 3 };
+  const cornerOrder = { frontLeft: 0, frontRight: 1, backLeft: 2, backRight: 3, frontCenter: 4, backCenter: 5 };
   const index = caster ? cornerOrder[meta.corner] ?? 0 : Number(String(part.id || '').split('.')[2]) || 0;
   const start = 0.12 + index * 0.12;
   const end = start + 0.12;
@@ -1905,6 +1906,9 @@ function addRail(group, opts) {
   const geo = opts.miter ? makeMiteredRailGeometry(w, d, h, opts.side) : new THREE.BoxGeometry(w, d, h);
   const mesh = new THREE.Mesh(geo, opts.material);
   mesh.position.set(opts.x, opts.y, opts.z);
+  if (opts.rotation) {
+    mesh.rotation.set(opts.rotation.x || 0, opts.rotation.y || 0, opts.rotation.z || 0);
+  }
   if (opts.partInfo) mesh.userData.partInfo = opts.partInfo;
   mesh.castShadow = true;
   mesh.receiveShadow = true;
