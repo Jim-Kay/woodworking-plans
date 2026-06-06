@@ -903,12 +903,16 @@ function miteredBracePolygon(start, end, width, clips) {
   const dx = end.x - start.x;
   const dy = end.y - start.y;
   const length = Math.hypot(dx, dy) || 1;
+  const unit = { x: dx / length, y: dy / length };
   const perp = { x: -dy / length * width / 2, y: dx / length * width / 2 };
+  const extension = width * 2;
+  const extendedStart = { x: start.x - unit.x * extension, y: start.y - unit.y * extension };
+  const extendedEnd = { x: end.x + unit.x * extension, y: end.y + unit.y * extension };
   let polygon = [
-    { x: start.x + perp.x, y: start.y + perp.y },
-    { x: end.x + perp.x, y: end.y + perp.y },
-    { x: end.x - perp.x, y: end.y - perp.y },
-    { x: start.x - perp.x, y: start.y - perp.y }
+    { x: extendedStart.x + perp.x, y: extendedStart.y + perp.y },
+    { x: extendedEnd.x + perp.x, y: extendedEnd.y + perp.y },
+    { x: extendedEnd.x - perp.x, y: extendedEnd.y - perp.y },
+    { x: extendedStart.x - perp.x, y: extendedStart.y - perp.y }
   ];
   clips.forEach((clip) => {
     polygon = clipPolygonByLine(polygon, clip);

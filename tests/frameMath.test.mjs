@@ -202,6 +202,10 @@ assert.equal(wideToteRack.assembly.parts.find((part) => part.id === 'brace.back.
 assert.equal(wideToteRack.assembly.parts.find((part) => part.id === 'brace.back.left').meta.bounds.maxX, 0);
 assert.equal(wideToteRack.assembly.parts.find((part) => part.id === 'brace.back.right').meta.bounds.minX, 0);
 assert.equal(wideToteRack.assembly.parts.find((part) => part.id === 'brace.back.right').meta.bounds.maxX, 45.75);
+assert.equal(wideToteRack.assembly.parts.find((part) => part.id === 'brace.back.left').meta.polygon.length, 4);
+assert.equal(wideToteRack.assembly.parts.find((part) => part.id === 'brace.back.right').meta.polygon.length, 4);
+assert.deepEqual(wideToteRack.assembly.parts.find((part) => part.id === 'brace.back.left').meta.polygon.map((point) => point.x), [-45.75, 0, 0, -45.75]);
+assert.deepEqual(wideToteRack.assembly.parts.find((part) => part.id === 'brace.back.right').meta.polygon.map((point) => point.x), [0, 45.75, 45.75, 0]);
 assert.equal(wideToteRack.assembly.parts.find((part) => part.id === 'screw.toteBrace.left.centerTop.0').position.x, -0.375);
 assert.equal(wideToteRack.assembly.parts.find((part) => part.id === 'screw.toteBrace.right.centerTop.0').position.x, 0.375);
 assert.match(wideToteRack.warnings.join('\n'), /center casters/);
