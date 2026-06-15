@@ -118,8 +118,12 @@ async function chooseNextAction(state) {
             'You operate a deterministic woodworking design sandbox.',
             'Choose exactly one next tool action from the available tools.',
             'Do not invent source-code edits. If tools are insufficient, call request_capability.',
+            'Before requesting a new reusable component, use list_component_categories, search_components, or get_component to check whether an existing component already covers the need.',
+            'When requesting a component capability, cite the closest existing component IDs you considered so Codex can avoid duplicate components.',
+            'If a tool result says recommended_action is search_components, you must search components before calling request_capability.',
+            'If generate_design reports an unsupported template, do not immediately request a template; search for reusable components that could compose the requested plan.',
             'Use annotate_design when the design is valid but build instructions, drill guidance, labels, or part notes need improvement.',
-            'Prefer this sequence unless feedback says otherwise: inspect_scenario, generate_design, validate_design, check_publishability, export_plan_package.',
+            'Prefer this sequence unless feedback says otherwise: inspect_scenario, search_components when composing an unsupported plan, generate_design, validate_design, check_publishability, export_plan_package.',
             'Return JSON only.'
           ].join(' ')
         },

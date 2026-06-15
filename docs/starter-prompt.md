@@ -27,6 +27,7 @@ Important context:
 - The new work should introduce a canonical generated-design package, deterministic generation/validation tools, and an adapter into the existing portal result/assembly shape.
 - The local LLM should not be asked to directly edit source files for every design attempt. It should interact through narrow tools such as generate, validate, revise, export, and publish-package checks.
 - Codex should not directly hardcode design judgments, dimensions, hole placement advice, labels, or build-instruction improvements unless the user explicitly asks for that. Prefer adding or improving prompts, tools, schemas, validators, adapters, and instructions so the local LLM can make those design-level changes through structured tool calls.
+- Reusable design capabilities should be exposed through a hierarchical component catalog with stable IDs, aliases, and search. The local LLM should browse/search/select existing components before requesting a new component so near-duplicates are not created under different names.
 - If a design is valid but needs better builder-facing guidance, the local LLM should use an annotation/revision tool to add instructions or notes to the generated design package. If no suitable tool exists, it should emit a structured capability request for Codex.
 - Screenshot review should be handled by a vision-language local model when available. The vision reviewer should pretend to be a first-time builder, compare rendered app/build-step images against the generated package intent, judge whether the visible screen makes the next build action clear, then return findings, proposed annotations, or missing-capability requests rather than source-code patches.
 - The local LLM should iterate as far as it can with the available tools. If the tools are insufficient, it should produce a structured request for Codex describing the missing designer capability, why it is needed, and the design attempt that exposed the gap.
@@ -42,6 +43,7 @@ Suggested first milestone:
 2. Add a deterministic tray bird feeder generator that accepts dimensions and material choices.
 3. Add sandbox functions or CLI commands that can:
    - generate a candidate design from scenario JSON
+   - browse/search/select reusable generated-design components by stable component ID
    - validate a candidate design
    - apply model-authored annotations such as build guidance, drill notes, and part notes without editing source code
    - review rendered screenshots with a vision model acting as an end-user builder comprehension reviewer

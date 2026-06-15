@@ -160,6 +160,10 @@ npm run sandbox -- export_plan_package generated/runs/demo/design.json generated
 
 - `inspect_scenario`
 - `list_templates`
+- `list_component_categories`
+- `list_components`
+- `search_components`
+- `get_component`
 - `generate_design`
 - `summarize_design`
 - `validate_design`
@@ -173,14 +177,27 @@ npm run sandbox -- export_plan_package generated/runs/demo/design.json generated
 The intended model sequence is usually:
 
 1. Inspect the scenario and tool surface.
-2. Generate a design from the selected template.
-3. Validate the generated design.
-4. Revise if validation fails.
-5. Use `annotate_design` when the design is structurally valid but needs better build guidance, drill instructions, labels, or part notes.
-6. Check publishability.
-7. Export a plan package, or request a missing capability from Codex.
+2. Browse or search the component catalog when composing an unsupported plan family or considering a missing capability.
+3. Select exact component IDs with `get_component` before relying on them in a scenario or capability request.
+4. Generate a design from the selected template.
+5. Validate the generated design.
+6. Revise if validation fails.
+7. Use `annotate_design` when the design is structurally valid but needs better build guidance, drill instructions, labels, or part notes.
+8. Check publishability.
+9. Export a plan package, or request a missing capability from Codex.
 
 Codex should generally improve prompts, tool schemas, validators, adapters, and portal support. The local model should make design-level choices through sandbox tools: dimensions, parameter revisions, build guidance, labels, notes, and missing-capability requests. If the model cannot express a desired improvement through the current tools, that is a signal for Codex to add a narrower tool rather than directly hardcoding the design improvement.
+
+The component catalog is the deduplication layer for reusable design capabilities. Before requesting a new component, the model should:
+
+1. Use `list_component_categories` to choose the right area.
+2. Use `search_components` with domain language and aliases, such as `key hooks`, `wall screw holes`, or `edge clearance`.
+3. Use `get_component` on the closest matches.
+4. If no existing component covers the need, call `request_capability` and include the closest component IDs considered.
+
+This avoids creating duplicate components under slightly different names, such as `key_hook_row`, `linear_hook_array`, and `repeated_wall_pegs`.
+
+Unsupported templates should recover through component discovery before escalation. For example, a `wall_key_rack` scenario should search for `hardware.linear_hook_array`, `hardware.wall_mount_hole_pair`, `geometry.rectangular_panel`, `patterns.centered_linear_spacing`, and related validators before asking Codex for composition support. A good request is "add composition support using these existing components plus any missing glue," not "add a one-off wall key rack generator."
 
 The first local-model loop runner uses the same tool surface:
 

@@ -88,6 +88,28 @@ A local model should not be asked to edit arbitrary source files for every desig
 }
 ```
 
+The model should also be able to browse reusable design components before requesting new capabilities:
+
+```json
+{
+  "tool": "search_components",
+  "arguments": {
+    "query": "wall mounted key hooks pilot holes"
+  }
+}
+```
+
+```json
+{
+  "tool": "get_component",
+  "arguments": {
+    "component_id": "hardware.linear_hook_array"
+  }
+}
+```
+
+Component IDs are stable and hierarchical, such as `geometry.rectangular_panel`, `hardware.wall_mount_hole_pair`, `patterns.centered_linear_spacing`, and `validators.edge_clearance`. Capability requests for new components should include the closest component IDs the model considered so Codex can extend the catalog without creating duplicates.
+
 ## Development Sequence
 
 1. Define canonical generated-design JSON.
@@ -108,4 +130,3 @@ For the first pass, use JavaScript modules in this repo because:
 - a JS generator can share geometry utilities directly
 
 Longer term, a Python or C# generator service is reasonable if it provides better libraries or cleaner MCP hosting. The canonical JSON package is what keeps that choice reversible.
-

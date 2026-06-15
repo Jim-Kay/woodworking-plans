@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { canonicalToPortalResult } from '../src/generated/adapter.js';
 import { generateCanonicalOpenScad } from '../src/generated/openScad.js';
-import { generateDesign, exportPlanPackage, validateGeneratedDesign, checkPublishability, createCapabilityRequest, executeSandboxTool, listSandboxTools } from '../src/generated/sandbox.js';
+import { generateDesign, exportPlanPackage, validateGeneratedDesign, checkPublishability, createCapabilityRequest, executeSandboxTool, listComponentCategories, listComponents, listSandboxTools, searchComponents } from '../src/generated/sandbox.js';
 
 const scenario = {
   template_id: 'tray_bird_feeder',
@@ -100,21 +100,37 @@ assert.match(capabilityRequest.reason, /wind pressure/);
 
 const tools = listSandboxTools();
 assert.equal(tools.some((tool) => tool.name === 'generate_design'), true);
+assert.equal(tools.some((tool) => tool.name === 'search_components'), true);
 assert.equal(tools.some((tool) => tool.name === 'request_capability'), true);
+
+assert.equal(listComponentCategories().some((category) => category.id === 'hardware'), true);
+assert.equal(listComponents({ category_id: 'hardware' }).some((component) => component.component_id === 'hardware.linear_hook_array'), true);
+assert.equal(searchComponents({ query: 'key hooks pilot holes' }).some((component) => component.component_id === 'hardware.linear_hook_array'), true);
+assert.equal(searchComponents({ query: 'key hooks pilot holes', category_id: 'hardware' })[0].component_id, 'hardware.linear_hook_array');
 
 let toolState = { scenario };
 let executed = executeSandboxTool({ name: 'inspect_scenario', arguments: {} }, toolState);
 assert.equal(executed.result.ok, true);
 assert.equal(executed.result.templates.some((template) => template.template_id === 'tray_bird_feeder'), true);
+assert.equal(executed.result.component_categories.some((category) => category.id === 'patterns'), true);
 toolState = executed.state;
+
+executed = executeSandboxTool({ name: 'search_components', arguments: { query: 'wall mount screw holes', limit: 3 } }, toolState);
+assert.equal(executed.result.ok, true);
+assert.equal(executed.result.components.some((component) => component.component_id === 'hardware.wall_mount_hole_pair'), true);
+
+executed = executeSandboxTool({ name: 'get_component', arguments: { component_id: 'hardware.linear_hook_array' } }, toolState);
+assert.equal(executed.result.ok, true);
+assert.equal(executed.result.component.aliases.includes('key hooks'), true);
 
 executed = executeSandboxTool({
   name: 'generate_design',
   arguments: { template_id: 'wall_key_rack', design_id: 'unsupported_test' }
 }, toolState);
 assert.equal(executed.result.ok, false);
-assert.equal(executed.result.recommended_action, 'request_capability');
+assert.equal(executed.result.recommended_action, 'search_components');
 assert.match(executed.result.error, /Unsupported template_id/);
+assert.equal(executed.result.suggested_component_queries.some((query) => /key hooks/.test(query)), true);
 
 executed = executeSandboxTool({ name: 'generate_design', arguments: { parameters: { width_in: 13 } } }, toolState);
 assert.equal(executed.result.ok, true);

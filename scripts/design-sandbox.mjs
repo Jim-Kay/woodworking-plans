@@ -6,10 +6,14 @@ import {
   exportPlanPackage,
   generateCanonicalOpenScad,
   generateDesign,
+  getComponent,
+  listComponentCategories,
+  listComponents,
   listSandboxTools,
   listTemplates,
   readJson,
   reviseDesign,
+  searchComponents,
   validateGeneratedDesign,
   writeJson,
   writePlanPackage
@@ -28,6 +32,18 @@ try {
 async function dispatch(name, args) {
   if (name === 'list_tools') return listSandboxTools();
   if (name === 'list_templates') return listTemplates();
+  if (name === 'list_component_categories') return listComponentCategories();
+  if (name === 'list_components') {
+    const [categoryId, includeDetails] = args;
+    return listComponents({ category_id: categoryId || null, include_details: includeDetails === '--details' });
+  }
+  if (name === 'search_components') {
+    const query = required(args.join(' '), 'search query');
+    return searchComponents({ query });
+  }
+  if (name === 'get_component') {
+    return getComponent(required(args[0], 'component_id')) || { ok: false, error: `Unknown component_id: ${args[0] || 'missing'}` };
+  }
 
   if (name === 'generate_design') {
     const [scenarioPath, outPath] = args;
@@ -103,6 +119,10 @@ function usage() {
     'Usage:',
     '  node scripts/design-sandbox.mjs list_tools',
     '  node scripts/design-sandbox.mjs list_templates',
+    '  node scripts/design-sandbox.mjs list_component_categories',
+    '  node scripts/design-sandbox.mjs list_components [category_id] [--details]',
+    '  node scripts/design-sandbox.mjs search_components query terms...',
+    '  node scripts/design-sandbox.mjs get_component component_id',
     '  node scripts/design-sandbox.mjs generate_design scenario.json [design.json]',
     '  node scripts/design-sandbox.mjs validate_design design.json [validation.json]',
     '  node scripts/design-sandbox.mjs revise_design design.json revision.json [design.json]',

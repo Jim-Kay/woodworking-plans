@@ -1,12 +1,13 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { canonicalToPortalResult } from './adapter.js';
+import { getComponent, listComponentCategories, listComponents, searchComponents } from './componentCatalog.js';
 import { generateCanonicalOpenScad } from './openScad.js';
 import { createCapabilityRequest, listTemplates } from './schema.js';
 import { generateTrayBirdFeederDesign } from './trayBirdFeeder.js';
 import { checkPublishability, validateGeneratedDesign } from './validator.js';
 
-export { checkPublishability, createCapabilityRequest, generateCanonicalOpenScad, listTemplates, validateGeneratedDesign };
+export { checkPublishability, createCapabilityRequest, generateCanonicalOpenScad, getComponent, listComponentCategories, listComponents, listTemplates, searchComponents, validateGeneratedDesign };
 
 const DESIGN_PARAMETER_KEYS = ['width_in', 'depth_in', 'side_height_in', 'bottom_thickness_in', 'side_thickness_in', 'material', 'hanging', 'drainage_holes'];
 
@@ -27,6 +28,53 @@ export const SANDBOX_TOOLS = [
       type: 'object',
       additionalProperties: false,
       properties: {}
+    }
+  },
+  {
+    name: 'list_component_categories',
+    description: 'List hierarchical generated-design component categories before selecting or requesting components.',
+    input_schema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {}
+    }
+  },
+  {
+    name: 'list_components',
+    description: 'List reusable generated-design components, optionally scoped to one category.',
+    input_schema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        category_id: { type: 'string' },
+        include_details: { type: 'boolean' }
+      }
+    }
+  },
+  {
+    name: 'search_components',
+    description: 'Search reusable generated-design components by intent, alias, output, or example use before requesting a new component.',
+    input_schema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['query'],
+      properties: {
+        query: { type: 'string' },
+        category_id: { type: 'string' },
+        limit: { type: 'number' }
+      }
+    }
+  },
+  {
+    name: 'get_component',
+    description: 'Inspect one reusable component by exact component_id.',
+    input_schema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['component_id'],
+      properties: {
+        component_id: { type: 'string' }
+      }
     }
   },
   {
@@ -239,6 +287,7 @@ export function executeSandboxTool(toolCall, state = {}) {
         ok: true,
         scenario: nextState.scenario || null,
         templates: listTemplates(),
+        component_categories: listComponentCategories(),
         current_design: summarizeGeneratedDesign(nextState.design),
         current_validation: nextState.validation || null,
         current_publishability: nextState.finalPackage?.publishability || null
@@ -248,6 +297,45 @@ export function executeSandboxTool(toolCall, state = {}) {
 
   if (name === 'list_templates') {
     return { state: nextState, result: { ok: true, templates: listTemplates() } };
+  }
+
+  if (name === 'list_component_categories') {
+    return { state: nextState, result: { ok: true, categories: listComponentCategories() } };
+  }
+
+  if (name === 'list_components') {
+    return {
+      state: nextState,
+      result: {
+        ok: true,
+        components: listComponents({
+          category_id: args.category_id || null,
+          include_details: args.include_details === true
+        })
+      }
+    };
+  }
+
+  if (name === 'search_components') {
+    return {
+      state: nextState,
+      result: {
+        ok: true,
+        query: String(args.query || ''),
+        components: searchComponents({
+          query: args.query,
+          category_id: args.category_id || null,
+          limit: args.limit
+        })
+      }
+    };
+  }
+
+  if (name === 'get_component') {
+    const component = getComponent(args.component_id);
+    return component
+      ? { state: nextState, result: { ok: true, component } }
+      : { state: nextState, result: { ok: false, error: `Unknown component_id: ${args.component_id || 'missing'}`, recommended_action: 'search_components' } };
   }
 
   if (name === 'generate_design') {
@@ -423,13 +511,35 @@ function normalizeToolArguments(args = {}) {
 
 function unsupportedTemplateResult(scenario = {}) {
   if (listTemplates().some((template) => template.template_id === scenario.template_id)) return null;
+  const suggestedQueries = componentSearchQueriesForScenario(scenario);
   return {
     ok: false,
     error: `Unsupported template_id: ${scenario.template_id || 'missing'}`,
-    recommended_action: 'request_capability',
-    capability: `Add generated design template for ${scenario.template_id || 'the requested plan type'}.`,
+    recommended_action: 'search_components',
+    next_steps: [
+      'Search the component catalog for reusable geometry, hardware, pattern, validator, build-step, and rendering components.',
+      'Inspect the closest matching component IDs with get_component.',
+      'Only then request a missing capability, citing the closest component IDs considered.'
+    ],
+    suggested_component_queries: suggestedQueries,
+    capability: `Add reusable composition support for ${scenario.template_id || 'the requested plan type'}.`,
     available_templates: listTemplates().map((template) => template.template_id)
   };
+}
+
+function componentSearchQueriesForScenario(scenario = {}) {
+  const values = [
+    scenario.template_id,
+    scenario.intent,
+    ...(Array.isArray(scenario.builder_goals) ? scenario.builder_goals : []),
+    ...Object.keys(scenario.parameters || {})
+  ].filter(Boolean).join(' ');
+  const queries = [];
+  if (/key|hook|peg|coat|mug/i.test(values)) queries.push('key hooks pegs repeated hardware pilot holes');
+  if (/wall|mount|screw|hanger/i.test(values)) queries.push('wall mount screw holes edge clearance');
+  if (/board|panel|back|height|width|thickness/i.test(values)) queries.push('rectangular board panel centered spacing');
+  if (!queries.length) queries.push(values || 'reusable generated design components');
+  return queries;
 }
 
 export async function writePlanPackage(outDir, planPackage) {
