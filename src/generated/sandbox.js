@@ -72,6 +72,42 @@ export const SANDBOX_TOOLS = [
     }
   },
   {
+    name: 'annotate_design',
+    description: 'Apply local-model-authored build guidance to the current design without editing source code.',
+    input_schema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        step_instructions: {
+          type: 'array',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['step_id', 'instructions'],
+            properties: {
+              step_id: { type: 'string' },
+              instructions: { type: 'array', items: { type: 'string' } },
+              mode: { type: 'string', enum: ['append', 'replace'] }
+            }
+          }
+        },
+        part_notes: {
+          type: 'array',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['part_id', 'notes'],
+            properties: {
+              part_id: { type: 'string' },
+              notes: { type: 'array', items: { type: 'string' } }
+            }
+          }
+        },
+        design_notes: { type: 'array', items: { type: 'string' } }
+      }
+    }
+  },
+  {
     name: 'export_openscad',
     description: 'Export the current design to canonical OpenSCAD text.',
     input_schema: {
@@ -139,6 +175,39 @@ export function reviseDesign(design, revision = {}) {
     parameters: { ...(design.parameters || {}), ...(revision.parameters || {}) }
   };
   return generateDesign(scenario);
+}
+
+export function annotateDesign(design, annotation = {}) {
+  const next = structuredClone(design);
+  const stepInstructions = Array.isArray(annotation.step_instructions) ? annotation.step_instructions : [];
+  const partNotes = Array.isArray(annotation.part_notes) ? annotation.part_notes : [];
+  const designNotes = cleanStringArray(annotation.design_notes);
+
+  for (const patch of stepInstructions) {
+    const step = next.assembly_steps?.find((item) => item.id === patch.step_id);
+    if (!step) continue;
+    const instructions = cleanStringArray(patch.instructions);
+    if (!instructions.length) continue;
+    step.instructions = patch.mode === 'replace' ? instructions : [...(step.instructions || []), ...instructions];
+  }
+
+  for (const patch of partNotes) {
+    const part = next.parts?.find((item) => item.id === patch.part_id);
+    if (!part) continue;
+    const notes = cleanStringArray(patch.notes);
+    if (!notes.length) continue;
+    part.meta = {
+      ...(part.meta || {}),
+      guidance_notes: [...(part.meta?.guidance_notes || []), ...notes]
+    };
+  }
+
+  next.annotations = {
+    ...(next.annotations || {}),
+    design_notes: [...(next.annotations?.design_notes || []), ...designNotes],
+    authored_by: 'local-design-sandbox'
+  };
+  return next;
 }
 
 export function exportPlanPackage(design) {
@@ -217,6 +286,21 @@ export function executeSandboxTool(toolCall, state = {}) {
         ok: true,
         design: nextState.design,
         summary: summarizeGeneratedDesign(nextState.design)
+      }
+    };
+  }
+
+  if (name === 'annotate_design') {
+    if (!nextState.design) return { state: nextState, result: { ok: false, error: 'No design exists yet.' } };
+    nextState.design = annotateDesign(nextState.design, args);
+    nextState.validation = null;
+    nextState.finalPackage = null;
+    return {
+      state: nextState,
+      result: {
+        ok: true,
+        summary: summarizeGeneratedDesign(nextState.design),
+        annotation_summary: summarizeAnnotations(nextState.design)
       }
     };
   }
@@ -301,8 +385,28 @@ export function summarizeGeneratedDesign(value) {
     reference_part_count: value.parts?.filter((part) => part.physical === false).length || 0,
     cut_list_count: value.cut_list?.length || 0,
     assembly_step_count: value.assembly_steps?.length || 0,
-    joint_count: value.joints?.length || 0
+    joint_count: value.joints?.length || 0,
+    annotation_count: annotationCount(value)
   };
+}
+
+function summarizeAnnotations(design) {
+  return {
+    design_notes: design.annotations?.design_notes?.length || 0,
+    step_instruction_count: (design.assembly_steps || []).reduce((sum, step) => sum + (step.instructions?.length || 0), 0),
+    part_note_count: (design.parts || []).reduce((sum, part) => sum + (part.meta?.guidance_notes?.length || 0), 0)
+  };
+}
+
+function annotationCount(design) {
+  return (design.annotations?.design_notes?.length || 0)
+    + (design.parts || []).reduce((sum, part) => sum + (part.meta?.guidance_notes?.length || 0), 0);
+}
+
+function cleanStringArray(value) {
+  return (Array.isArray(value) ? value : [])
+    .map((item) => String(item || '').trim())
+    .filter(Boolean);
 }
 
 function normalizeToolArguments(args = {}) {

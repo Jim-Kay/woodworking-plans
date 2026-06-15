@@ -162,6 +162,7 @@ npm run sandbox -- export_plan_package generated/runs/demo/design.json generated
 - `summarize_design`
 - `validate_design`
 - `revise_design`
+- `annotate_design`
 - `export_openscad`
 - `check_publishability`
 - `export_plan_package`
@@ -172,8 +173,12 @@ The intended model sequence is usually:
 1. Inspect the scenario and tool surface.
 2. Generate a design from the selected template.
 3. Validate the generated design.
-4. Revise if validation fails, or check publishability if it passes.
-5. Export a plan package, or request a missing capability from Codex.
+4. Revise if validation fails.
+5. Use `annotate_design` when the design is structurally valid but needs better build guidance, drill instructions, labels, or part notes.
+6. Check publishability.
+7. Export a plan package, or request a missing capability from Codex.
+
+Codex should generally improve prompts, tool schemas, validators, adapters, and portal support. The local model should make design-level choices through sandbox tools: dimensions, parameter revisions, build guidance, labels, notes, and missing-capability requests. If the model cannot express a desired improvement through the current tools, that is a signal for Codex to add a narrower tool rather than directly hardcoding the design improvement.
 
 The first local-model loop runner uses the same tool surface:
 

@@ -26,6 +26,8 @@ Important context:
 - The existing result/assembly model is useful as a portal adapter target, but should not be treated as the long-term canonical generated-design model.
 - The new work should introduce a canonical generated-design package, deterministic generation/validation tools, and an adapter into the existing portal result/assembly shape.
 - The local LLM should not be asked to directly edit source files for every design attempt. It should interact through narrow tools such as generate, validate, revise, export, and publish-package checks.
+- Codex should not directly hardcode design judgments, dimensions, hole placement advice, labels, or build-instruction improvements unless the user explicitly asks for that. Prefer adding or improving prompts, tools, schemas, validators, adapters, and instructions so the local LLM can make those design-level changes through structured tool calls.
+- If a design is valid but needs better builder-facing guidance, the local LLM should use an annotation/revision tool to add instructions or notes to the generated design package. If no suitable tool exists, it should emit a structured capability request for Codex.
 - The local LLM should iterate as far as it can with the available tools. If the tools are insufficient, it should produce a structured request for Codex describing the missing designer capability, why it is needed, and the design attempt that exposed the gap.
 - The first generated project should be a simple tray-style bird feeder, not a load-bearing stool. It should prove the canonical schema, sandbox loop, validation, OpenSCAD export, and portal-publish pathway with low structural risk.
 - A simple storage shelf can be the second generated project, used to compare against the existing shelf implementation.
@@ -40,6 +42,7 @@ Suggested first milestone:
 3. Add sandbox functions or CLI commands that can:
    - generate a candidate design from scenario JSON
    - validate a candidate design
+   - apply model-authored annotations such as build guidance, drill notes, and part notes without editing source code
    - export OpenSCAD and a simple plan package
    - report missing tool/capability requests in a Codex-readable format
 4. Generate canonical parts, joints/connections, assembly steps, validation warnings, and a simple cut list.

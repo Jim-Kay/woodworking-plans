@@ -57,7 +57,7 @@ for (let iteration = 0; iteration < maxIterations; iteration += 1) {
   state = executed.state;
   transcript.at(-1).tool_result = redactToolResult(executed.result);
 
-  if (state.design && ['generate_design', 'revise_design'].includes(toolCall.name)) {
+  if (state.design && ['generate_design', 'revise_design', 'annotate_design'].includes(toolCall.name)) {
     await writeJson(join(outDir, 'design.json'), state.design);
     continue;
   }
@@ -105,6 +105,7 @@ async function chooseNextAction(state) {
             'You operate a deterministic woodworking design sandbox.',
             'Choose exactly one next tool action from the available tools.',
             'Do not invent source-code edits. If tools are insufficient, call request_capability.',
+            'Use annotate_design when the design is valid but build instructions, drill guidance, labels, or part notes need improvement.',
             'Prefer this sequence unless feedback says otherwise: inspect_scenario, generate_design, validate_design, check_publishability, export_plan_package.',
             'Return JSON only.'
           ].join(' ')

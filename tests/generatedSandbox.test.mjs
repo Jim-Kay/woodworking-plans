@@ -117,6 +117,29 @@ executed = executeSandboxTool({ name: 'validate_design', arguments: {} }, toolSt
 assert.equal(executed.result.ok, true);
 toolState = executed.state;
 
+executed = executeSandboxTool({
+  name: 'annotate_design',
+  arguments: {
+    step_instructions: [
+      {
+        step_id: 'step.drill',
+        instructions: ['Qwen-authored note: drill test holes in scrap before drilling the feeder parts.']
+      }
+    ],
+    part_notes: [
+      {
+        part_id: 'bottom.panel',
+        notes: ['Qwen-authored note: mark drainage holes from the panel edges before drilling.']
+      }
+    ],
+    design_notes: ['Qwen reviewed the package and added drill-layout guidance.']
+  }
+}, toolState);
+assert.equal(executed.result.ok, true);
+assert.match(executed.state.design.assembly_steps.find((step) => step.id === 'step.drill').instructions.join('\n'), /Qwen-authored note/);
+assert.match(executed.state.design.parts.find((part) => part.id === 'bottom.panel').meta.guidance_notes.join('\n'), /mark drainage holes/);
+toolState = executed.state;
+
 executed = executeSandboxTool({ name: 'check_publishability', arguments: {} }, toolState);
 assert.equal(executed.result.ok, true);
 toolState = executed.state;
