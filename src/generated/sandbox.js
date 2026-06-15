@@ -251,7 +251,10 @@ export function executeSandboxTool(toolCall, state = {}) {
   }
 
   if (name === 'generate_design') {
-    nextState.design = generateDesign(scenarioFromToolArguments(nextState.scenario, args));
+    const scenario = scenarioFromToolArguments(nextState.scenario, args);
+    const unsupportedTemplate = unsupportedTemplateResult(scenario);
+    if (unsupportedTemplate) return { state: nextState, result: unsupportedTemplate };
+    nextState.design = generateDesign(scenario);
     nextState.validation = null;
     nextState.finalPackage = null;
     return {
@@ -277,6 +280,8 @@ export function executeSandboxTool(toolCall, state = {}) {
 
   if (name === 'revise_design') {
     if (!nextState.design) return { state: nextState, result: { ok: false, error: 'No design exists yet.' } };
+    const unsupportedTemplate = unsupportedTemplateResult(nextState.design);
+    if (unsupportedTemplate) return { state: nextState, result: unsupportedTemplate };
     nextState.design = reviseDesign(nextState.design, { parameters: parameterArguments(args) });
     nextState.validation = null;
     nextState.finalPackage = null;
@@ -414,6 +419,17 @@ function normalizeToolArguments(args = {}) {
     return { ...args, parameters: args.parameters.parameters };
   }
   return args;
+}
+
+function unsupportedTemplateResult(scenario = {}) {
+  if (listTemplates().some((template) => template.template_id === scenario.template_id)) return null;
+  return {
+    ok: false,
+    error: `Unsupported template_id: ${scenario.template_id || 'missing'}`,
+    recommended_action: 'request_capability',
+    capability: `Add generated design template for ${scenario.template_id || 'the requested plan type'}.`,
+    available_templates: listTemplates().map((template) => template.template_id)
+  };
 }
 
 export async function writePlanPackage(outDir, planPackage) {

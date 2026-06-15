@@ -108,6 +108,14 @@ assert.equal(executed.result.ok, true);
 assert.equal(executed.result.templates.some((template) => template.template_id === 'tray_bird_feeder'), true);
 toolState = executed.state;
 
+executed = executeSandboxTool({
+  name: 'generate_design',
+  arguments: { template_id: 'wall_key_rack', design_id: 'unsupported_test' }
+}, toolState);
+assert.equal(executed.result.ok, false);
+assert.equal(executed.result.recommended_action, 'request_capability');
+assert.match(executed.result.error, /Unsupported template_id/);
+
 executed = executeSandboxTool({ name: 'generate_design', arguments: { parameters: { width_in: 13 } } }, toolState);
 assert.equal(executed.result.ok, true);
 assert.equal(executed.state.design.parameters.width_in, 13);
