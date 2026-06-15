@@ -340,6 +340,10 @@ export class FrameViewer {
     this.hideHoverTooltip();
     this.setGridFloor(0);
     if (!this.plan || !this.result?.ok) return;
+    if (this.result.type === 'generated') {
+      this.buildGenerated();
+      return;
+    }
     if (this.result.type === 'shelves') {
       this.buildShelves();
       return;
@@ -453,6 +457,73 @@ export class FrameViewer {
     }
 
     if (!this.manualCamera) this.fitCamera(outerW, outerH, faceDepth + canvasT);
+  }
+
+  buildGenerated() {
+    const plan = this.plan;
+    const result = this.result;
+    const assembly = result.assembly;
+    if (!assembly?.parts?.length) return;
+    this.setGridFloor(assemblyFloorY(assembly) * SCALE);
+    const labels = ['Plan', ...(result.buildSteps || []).map((step) => step.title)];
+    const maxStage = Math.min(plan.stage ?? labels.length - 1, labels.length - 1);
+    const visibleThrough = (label) => maxStage === 0 || labels.indexOf(label) <= maxStage || maxStage >= labels.length - 1;
+    const shouldShow = (key) => plan.vis?.[key] !== false;
+    const materialForPart = (part) => {
+      const group = part.meta?.group;
+      if (group === 'panels') return makeModelMaterial(plan, 0xb8894b, 0.72);
+      if (group === 'rails') return makeModelMaterial(plan, 0x8f5a2e, 0.68);
+      if (group === 'references') return makeModelMaterial(plan, 0x60a5fa, 0.45, { transparent: true, opacity: 0.45, depthWrite: false });
+      return makeModelMaterial(plan, 0xb8894b, 0.72);
+    };
+    const stageForPart = (part) => {
+      const group = part.meta?.group;
+      if (group === 'references') return 'Drill outdoor holes';
+      if (group === 'panels') return 'Cut parts';
+      if (group === 'rails') return 'Cut parts';
+      return 'Assemble tray';
+    };
+    const visKeyForGroup = (group) => {
+      if (group === 'panels') return 'panels';
+      if (group === 'rails') return 'rails';
+      if (group === 'references') return 'references';
+      return 'hardware';
+    };
+
+    assembly.parts.forEach((part) => {
+      const group = part.meta?.group;
+      if (!shouldShow(visKeyForGroup(group)) || !visibleThrough(stageForPart(part))) return;
+      const size = part.size;
+      const position = part.position;
+      if (part.material === 'guide') {
+        const diameter = Math.max(size.x, size.y) * SCALE;
+        const height = Math.max(size.z, 0.01) * SCALE;
+        const geo = new THREE.CylinderGeometry(diameter / 2, diameter / 2, height, 32);
+        const mesh = new THREE.Mesh(geo, materialForPart(part));
+        mesh.position.set(position.x * SCALE, position.z * SCALE, position.y * SCALE);
+        mesh.userData.partInfo = part;
+        this.root.add(mesh);
+        return;
+      }
+      addRail(this.root, {
+        x: position.x * SCALE,
+        y: position.z * SCALE,
+        z: position.y * SCALE,
+        w: size.x * SCALE,
+        d: size.z * SCALE,
+        h: size.y * SCALE,
+        material: materialForPart(part),
+        visible: true,
+        partInfo: part
+      });
+    });
+
+    if (!this.manualCamera) {
+      const width = Math.max(result.feederW || 12, 1) * SCALE;
+      const depth = Math.max(result.feederD || 8, 1) * SCALE;
+      const height = Math.max(result.feederH || 3, 1) * SCALE;
+      this.fitCamera(width, depth, height);
+    }
   }
 
   buildFrameFromAssembly(opts) {

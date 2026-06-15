@@ -1,0 +1,9 @@
+{
+  "capability": "wind-load simulation",
+  "reason": "The current sandbox can validate dimensions, references, cut lists, and basic export completeness, but cannot evaluate wind loads for a pole-mounted roof.",
+  "design_id": "tray_bird_feeder_demo",
+  "evidence": [
+    "User requested pole-mounted outdoor roof design.",
+    "Existing validators do not model wind pressure, uplift, or fastener pull-out."
+  ]
+}

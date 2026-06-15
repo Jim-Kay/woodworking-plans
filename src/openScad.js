@@ -1,6 +1,9 @@
 import { addCustomizerPartLabels, nudgeOpenScadFastenerHeads } from './assembly.js';
 
 export function generateOpenScad(plan, result) {
+  if (result.type === 'generated' && result.openscad) {
+    return result.openscad;
+  }
   if (result.type === 'shelves' && result.assembly?.parts?.length) {
     return refineOpenScadExport(nudgeOpenScadFastenerHeads(generateShelfOpenScad(plan, result)));
   }

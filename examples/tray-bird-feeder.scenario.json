@@ -1,0 +1,14 @@
+{
+  "template_id": "tray_bird_feeder",
+  "design_id": "tray_bird_feeder_demo",
+  "parameters": {
+    "width_in": 12,
+    "depth_in": 8,
+    "side_height_in": 1.5,
+    "bottom_thickness_in": 0.75,
+    "side_thickness_in": 0.75,
+    "material": "cedar_fence_picket",
+    "hanging": true,
+    "drainage_holes": true
+  }
+}

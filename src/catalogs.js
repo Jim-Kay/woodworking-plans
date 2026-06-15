@@ -56,6 +56,14 @@ export const DEFAULT_PLAN = {
   toteSideClearance: 0.25,
   toteVerticalClearance: 3,
   toteRailInset: 1.25,
+  feederW: 12,
+  feederD: 8,
+  feederSideH: 1.5,
+  feederBottomT: 0.75,
+  feederSideT: 0.75,
+  feederMaterial: 'cedar_fence_picket',
+  feederHanging: true,
+  feederDrainage: true,
   vis: { face: true, liner: true, spacers: true, canvas: true, hardware: true },
   stage: 0
 };

@@ -1001,6 +1001,28 @@ label {
 .controlGrid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .controlGrid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
+.checkGrid {
+  display: grid;
+  gap: 8px;
+}
+
+.checkGrid label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 8px 10px;
+  border: var(--bd);
+  border-radius: 7px;
+  background: rgba(18, 26, 38, .72);
+  color: #cfe0ff;
+}
+
+.checkGrid input {
+  width: auto;
+  margin: 0;
+}
+
 .mountStatus {
   min-height: 22px;
   margin-top: 10px;

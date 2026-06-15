@@ -129,6 +129,24 @@ export const PLAN_CATALOG = [
     ],
     tags: ['storage', 'totes', '27 gallon', 'adjustable'],
     thumbnail: 'tote-rack'
+  },
+  {
+    id: 'generated-tray-bird-feeder',
+    title: 'Generated Tray Bird Feeder',
+    family: 'Generated Plans',
+    status: 'ready',
+    build: 'generated-tray-bird-feeder',
+    defaults: { build: 'generated-tray-bird-feeder', feederW: 12, feederD: 8, feederSideH: 1.5, feederBottomT: 0.75, feederSideT: 0.75, feederMaterial: 'cedar_fence_picket', feederHanging: true, feederDrainage: true },
+    summary: 'A canonical generated-design package rendered through the existing portal adapter.',
+    materials: 'Cedar or outdoor-friendly stock, screws, cord or chain',
+    details: {
+      description: 'A tray-style bird feeder generated from the canonical sandbox design model. This plan proves the generated package, validation, OpenSCAD export, and portal adapter path before adding more complex generated furniture.',
+      materials: ['Cedar fence picket or other outdoor-friendly stock', 'Exterior screws or brads', 'Cord, chain, or hanging wire', 'Exterior-safe finish if desired'],
+      tools: ['Saw', 'Drill/driver', 'Clamps', 'Sander'],
+      notes: ['Generated plans are produced from canonical design JSON, then adapted into the portal viewer and cut-list shape.', 'Drainage holes are recommended for outdoor use.']
+    },
+    tags: ['generated', 'bird feeder', 'canonical'],
+    thumbnail: 'bird-feeder'
   }
 ];
 
@@ -145,6 +163,7 @@ export function buildForPlanId(id) {
 }
 
 export function planIdForBuild(build) {
+  if (build === 'generated-tray-bird-feeder') return 'generated-tray-bird-feeder';
   if (build === 'tote-rack') return 'tote-rack-27';
   if (build === 'rolling-shelves') return 'rolling-storage-shelf';
   if (build === 'shelves') return 'basement-shelves';

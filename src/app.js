@@ -2,6 +2,7 @@ import { CANVAS_CATALOG, DEFAULT_PLAN, Z_CLIP_CATALOG } from './catalogs.js';
 import { applyMountingRules, applyOuterSize, calculatePlan, clonePlan, formatLength, fromInches, getStageLabels, normalizeBuild, toInches } from './frameMath.js';
 import { PLAN_CATALOG, buildForPlanId, getPlanDefinition, planIdForBuild, resolvePlanId } from './plans.js';
 import { calculateShelfPlan } from './shelfMath.js';
+import { calculateGeneratedPlan } from './generated/portal.js';
 import { generateOpenScad } from './openScad.js';
 import { runPhysicsDiagnostic } from './physicsSim.js';
 import { FrameViewer } from './viewer3d.js';
@@ -51,7 +52,15 @@ const fields = {
   toteRows: $('#toteRows'),
   toteSideClearance: $('#toteSideClearance'),
   toteVerticalClearance: $('#toteVerticalClearance'),
-  toteRailInset: $('#toteRailInset')
+  toteRailInset: $('#toteRailInset'),
+  feederW: $('#feederW'),
+  feederD: $('#feederD'),
+  feederSideH: $('#feederSideH'),
+  feederBottomT: $('#feederBottomT'),
+  feederSideT: $('#feederSideT'),
+  feederMaterial: $('#feederMaterial'),
+  feederHanging: $('#feederHanging'),
+  feederDrainage: $('#feederDrainage')
 };
 
 const cameraFields = {
@@ -63,8 +72,8 @@ const cameraFields = {
   targetZ: $('#targetZ')
 };
 
-const STRING_PLAN_KEYS = ['unit', 'join', 'build', 'finishColor', 'finishSheen', 'canvasAppearance', 'modelPalette', 'modelOpacity', 'modelScene', 'mountMethod', 'mountClip'];
-const BOOLEAN_PLAN_KEYS = ['showDimensions'];
+const STRING_PLAN_KEYS = ['unit', 'join', 'build', 'finishColor', 'finishSheen', 'canvasAppearance', 'modelPalette', 'modelOpacity', 'modelScene', 'mountMethod', 'mountClip', 'feederMaterial'];
+const BOOLEAN_PLAN_KEYS = ['showDimensions', 'feederHanging', 'feederDrainage'];
 
 const urlParams = new URLSearchParams(window.location.search);
 const urlPlan = hydratePlanFromUrl();
@@ -113,8 +122,10 @@ function bindInputs() {
         const outerW = toInches(fields.outerW.value, plan.unit);
         const outerH = toInches(fields.outerH.value, plan.unit);
         plan = applyOuterSize(plan, outerW, outerH);
-      } else if (key === 'finishColor' || key === 'finishSheen' || key === 'canvasAppearance' || key === 'mountClip') {
+      } else if (key === 'finishColor' || key === 'finishSheen' || key === 'canvasAppearance' || key === 'mountClip' || key === 'feederMaterial') {
         plan[key] = el.value;
+      } else if (key === 'feederHanging' || key === 'feederDrainage') {
+        plan[key] = el.checked;
       } else if (['shelfLevels', 'shelfBays', 'shelfSlats', 'toteColumns', 'toteRows'].includes(key)) {
         plan[key] = Number(el.value);
       } else {
@@ -301,6 +312,9 @@ function selectPlan(planId) {
 }
 
 function planThumbnail(kind) {
+  if (kind === 'bird-feeder') {
+    return `<svg viewBox="0 0 320 190" aria-hidden="true"><rect width="320" height="190" rx="8" fill="#0c1117"/><g fill="#b7793c"><rect x="72" y="104" width="176" height="26" rx="2"/><rect x="58" y="78" width="20" height="58" rx="2"/><rect x="242" y="78" width="20" height="58" rx="2"/><rect x="78" y="76" width="164" height="16" rx="2"/></g><rect x="88" y="92" width="144" height="20" fill="#d6a15d"/><g fill="#60a5fa" opacity=".75"><circle cx="116" cy="104" r="5"/><circle cx="150" cy="104" r="5"/><circle cx="184" cy="104" r="5"/><circle cx="218" cy="104" r="5"/></g><path d="M102 78C110 42 210 42 218 78" fill="none" stroke="#d1d5db" stroke-width="5"/><path d="M160 39v-18" stroke="#d1d5db" stroke-width="5" stroke-linecap="round"/><path d="M70 137h180" stroke="#6b3f1d" stroke-width="5"/><circle cx="104" cy="83" r="4" fill="#111827"/><circle cx="216" cy="83" r="4" fill="#111827"/></svg>`;
+  }
   if (kind === 'frame-strainer') {
     return `<svg viewBox="0 0 320 190" aria-hidden="true"><rect width="320" height="190" rx="8" fill="#0c1117"/><path d="M54 44h212l22 22v78H76L54 122z" fill="#5d3a25"/><path d="M80 66h166l16 16v42H96L80 108z" fill="#151923"/><path d="M92 76h142l10 10v28H102L92 104z" fill="#c79b5f"/><path d="M94 75h150" stroke="#f0c878" stroke-width="5"/><rect x="110" y="80" width="112" height="26" fill="#f4efe4" opacity=".9"/><path d="M54 122l22 22h212M266 44l22 22" stroke="#1d2635" stroke-width="2"/></svg>`;
   }
@@ -353,19 +367,28 @@ function renderCatalogDetails(details) {
 }
 
 function calculateCurrentPlan() {
+  if (isGeneratedPlan()) return calculateGeneratedPlan(plan);
   return isShelfPlan() ? calculateShelfPlan(plan) : calculatePlan(plan);
 }
 
 function applyPlanRules(nextPlan) {
-  return isShelfPlan() || ['shelves', 'tote-rack'].includes(nextPlan.build) ? nextPlan : applyMountingRules(nextPlan);
+  return isGeneratedBuild(nextPlan.build) || isShelfPlan() || ['shelves', 'tote-rack'].includes(nextPlan.build) ? nextPlan : applyMountingRules(nextPlan);
 }
 
 function isShelfPlan() {
   return currentPlanId === 'basement-shelves' || currentPlanId === 'rolling-storage-shelf' || currentPlanId === 'tote-rack-27' || plan.build === 'shelves' || plan.build === 'rolling-shelves' || plan.build === 'tote-rack';
 }
 
+function isGeneratedPlan() {
+  return currentPlanId === 'generated-tray-bird-feeder' || isGeneratedBuild(plan.build);
+}
+
+function isGeneratedBuild(build) {
+  return build === 'generated-tray-bird-feeder';
+}
+
 function renderFields() {
-  const numericKeys = ['canvasW', 'canvasH', 'canvasT', 'stretcherW', 'face', 'reveal', 'depth', 'faceLip', 'linerW', 'strainerDepth', 'stock', 'kerf', 'rabbet', 'shelfW', 'shelfH', 'shelfD', 'shelfLevels', 'shelfBays', 'shelfSlats', 'shelfPost', 'shelfRail', 'shelfDeck', 'toteW', 'toteLipWidth', 'toteD', 'toteH', 'toteColumns', 'toteRows', 'toteSideClearance', 'toteVerticalClearance', 'toteRailInset'];
+  const numericKeys = ['canvasW', 'canvasH', 'canvasT', 'stretcherW', 'face', 'reveal', 'depth', 'faceLip', 'linerW', 'strainerDepth', 'stock', 'kerf', 'rabbet', 'shelfW', 'shelfH', 'shelfD', 'shelfLevels', 'shelfBays', 'shelfSlats', 'shelfPost', 'shelfRail', 'shelfDeck', 'toteW', 'toteLipWidth', 'toteD', 'toteH', 'toteColumns', 'toteRows', 'toteSideClearance', 'toteVerticalClearance', 'toteRailInset', 'feederW', 'feederD', 'feederSideH', 'feederBottomT', 'feederSideT'];
   numericKeys.forEach((key) => {
     const displayValue = plan.build === 'rolling-shelves' && key === 'shelfDeck' && result?.deck ? result.deck : plan[key];
     const isCount = ['shelfLevels', 'shelfBays', 'shelfSlats', 'toteColumns', 'toteRows'].includes(key);
@@ -375,6 +398,9 @@ function renderFields() {
   if (fields.outerH && document.activeElement !== fields.outerH) fields.outerH.value = roundDisplay(fromInches(result.outerH, plan.unit));
   if (fields.finishColor) fields.finishColor.value = plan.finishColor;
   if (fields.finishSheen) fields.finishSheen.value = plan.finishSheen;
+  if (fields.feederMaterial) fields.feederMaterial.value = plan.feederMaterial;
+  if (fields.feederHanging) fields.feederHanging.checked = Boolean(plan.feederHanging);
+  if (fields.feederDrainage) fields.feederDrainage.checked = Boolean(plan.feederDrainage);
   const rolling = plan.build === 'rolling-shelves';
   const toteRack = plan.build === 'tote-rack';
   fields.shelfBays?.closest('label')?.classList.toggle('hidden', rolling || toteRack);
@@ -387,6 +413,8 @@ function renderFields() {
   $$('[data-frame-controls]').forEach((el) => el.classList.toggle('hidden', isShelfPlan()));
   $$('[data-shelf-controls]').forEach((el) => el.classList.toggle('hidden', !isShelfPlan()));
   $$('[data-tote-controls]').forEach((el) => el.classList.toggle('hidden', !toteRack));
+  $$('[data-generated-controls]').forEach((el) => el.classList.toggle('hidden', !isGeneratedPlan()));
+  $$('[data-frame-controls]').forEach((el) => el.classList.toggle('hidden', isShelfPlan() || isGeneratedPlan()));
   $$('[data-shelf-controls]').forEach((el) => {
     const title = el.querySelector('.quickSectionTitle span')?.textContent || '';
     if (title === 'Shelf Size') el.classList.toggle('hidden', !isShelfPlan() || toteRack);
@@ -404,7 +432,12 @@ function renderFields() {
   document.querySelectorAll('[data-vis-label="liner"]').forEach((label) => {
     label.textContent = normalizeBuild(plan.build) === 'strainer' ? 'Strainer' : 'Liner';
   });
-  if (isShelfPlan()) {
+  if (isGeneratedPlan()) {
+    document.querySelector('[data-stage-part="primary"]').textContent = 'Panel';
+    document.querySelector('[data-stage-part="support"]').textContent = 'Rails';
+    document.querySelector('[data-stage-part="surface"]').textContent = 'References';
+    document.querySelector('[data-stage-part="hardware"]').textContent = 'Hardware';
+  } else if (isShelfPlan()) {
     document.querySelector('[data-stage-part="primary"]').textContent = 'Posts';
     document.querySelector('[data-stage-part="support"]').textContent = 'Rails';
     document.querySelector('[data-stage-part="surface"]').textContent = toteRack ? 'Totes' : 'Slats';
@@ -436,6 +469,13 @@ function renderToggles() {
         ['slats', plan.build === 'tote-rack' ? 'Totes' : 'Slats'],
         ['hardware', 'Fasteners']
       ]
+    : isGeneratedPlan()
+      ? [
+          ['panels', 'Panel'],
+          ['rails', 'Rails'],
+          ['references', 'References'],
+          ['hardware', 'Hardware']
+        ]
     : [
         ['face', 'Face'],
         ['liner', normalizeBuild(plan.build) === 'strainer' ? 'Strainer' : 'Liner'],
@@ -460,6 +500,21 @@ function renderToggles() {
 }
 
 function renderDimensionSummary() {
+  if (isGeneratedPlan()) {
+    const rows = [
+      ['Template', result.generatedDesign?.template_id || 'generated'],
+      ['Tray size', `${formatLength(result.feederW, plan.unit)} x ${formatLength(result.feederD, plan.unit)} x ${formatLength(result.feederH, plan.unit)}`],
+      ['Side height', formatLength(plan.feederSideH, plan.unit)],
+      ['Bottom thickness', formatLength(plan.feederBottomT, plan.unit)],
+      ['Side stock', formatLength(plan.feederSideT, plan.unit)],
+      ['Physical parts', result.physicalPartCount],
+      ['References', result.referencePartCount],
+      ['Estimated board feet', result.ok ? result.boardFeet.toFixed(2) : '-'],
+      ['Publishable', result.publishability?.ok ? 'Yes' : 'Needs work']
+    ];
+    $('#dimensionSummary').innerHTML = rows.map(([key, value]) => `<div class="kvitem"><span>${escapeHtml(key)}</span><b>${escapeHtml(value)}</b></div>`).join('');
+    return;
+  }
   if (isShelfPlan()) {
     if (plan.build === 'tote-rack') {
       const rows = [
@@ -543,14 +598,19 @@ function renderStatus() {
   const badges = [];
   if (result.ok) {
     badges.push(`<span class="badge ok">Ready</span>`);
-    if (isShelfPlan()) badges.push(`<span class="badge">Shelves: ${result.levels} levels, ${result.bays} bays</span>`);
+    if (isGeneratedPlan()) badges.push(`<span class="badge">Generated: ${escapeHtml(result.generatedDesign?.template_id || 'canonical')}</span>`);
+    else if (isShelfPlan()) badges.push(`<span class="badge">Shelves: ${result.levels} levels, ${result.bays} bays</span>`);
     else badges.push(`<span class="badge">Outer: ${escapeHtml(formatLength(result.outerW, plan.unit))} x ${escapeHtml(formatLength(result.outerH, plan.unit))}</span>`);
   }
   result.errors.forEach((error) => badges.push(`<span class="badge err">${escapeHtml(error)}</span>`));
   result.warnings.forEach((warning) => badges.push(`<span class="badge warn">${escapeHtml(warning)}</span>`));
   status.innerHTML = badges.join('');
   const mountStatus = $('#mountStatus');
-  if (isShelfPlan()) return;
+  if (isShelfPlan() || isGeneratedPlan()) {
+    mountStatus.textContent = isGeneratedPlan() ? 'Generated package is adapter-backed.' : '';
+    mountStatus.className = 'mountStatus okText';
+    return;
+  }
   mountStatus.textContent = result.effectiveMountMethod === 'Z-clips' ? 'Selected Z-clip fits.' : result.effectiveMountMethod === 'Screws' ? 'Screw mounting active.' : 'No mounting selected.';
   mountStatus.className = `mountStatus ${result.warnings.length ? 'warnText' : 'okText'}`;
 }
@@ -705,7 +765,7 @@ function renderBuildSteps(force = false) {
   if (!force && view?.classList.contains('hidden')) return;
   if (!force && target.dataset.cacheKey === cacheKey) return;
   const definition = getPlanDefinition(currentPlanId);
-  const steps = definition.buildSteps || [];
+  const steps = isGeneratedPlan() ? result.buildSteps || [] : definition.buildSteps || [];
   target.dataset.cacheKey = cacheKey;
   if (!steps.length) {
     target.innerHTML = '<p class="purchaseNote">No step-by-step build sequence is available for this plan yet.</p>';
@@ -1149,7 +1209,9 @@ function shadeSvgColor(hex, amount) {
 }
 
 function buildStepVisibility() {
-  return isShelfPlan()
+  return isGeneratedPlan()
+    ? { panels: true, rails: true, references: true, hardware: true }
+    : isShelfPlan()
     ? { posts: true, rails: true, slats: true, hardware: true }
     : { face: true, liner: true, spacers: true, canvas: true, hardware: true };
 }
@@ -1481,7 +1543,9 @@ function miterGuideContent(part) {
 }
 
 function renderStage() {
-  const labels = isShelfPlan()
+  const labels = isGeneratedPlan()
+    ? ['Plan', ...(result.buildSteps || []).map((step) => step.title)]
+    : isShelfPlan()
     ? plan.build === 'tote-rack'
       ? ['Plan', 'Frames', 'Runner rails', 'Back bracing', 'Casters', 'Totes']
       : ['Plan', 'Posts', 'Rails', 'Shelf slats', 'Fasteners']
@@ -1684,7 +1748,14 @@ function printPlanDetailsHtml(definition) {
 }
 
 function printDimensionSummaryHtml() {
-  const rows = isShelfPlan()
+  const rows = isGeneratedPlan()
+    ? [
+        ['Template', result.generatedDesign?.template_id || 'generated'],
+        ['Tray size', `${formatLength(result.feederW, plan.unit)} x ${formatLength(result.feederD, plan.unit)} x ${formatLength(result.feederH, plan.unit)}`],
+        ['Side height', formatLength(plan.feederSideH, plan.unit)],
+        ['Physical parts', result.physicalPartCount]
+      ]
+    : isShelfPlan()
     ? [
         ['Overall size', `${formatLength(result.shelfW, plan.unit)} x ${formatLength(result.shelfH, plan.unit)} x ${formatLength(result.shelfD, plan.unit)}`],
         ['Levels', result.levels],
@@ -1778,7 +1849,9 @@ function printBuildStepsHtml(definition) {
 
 function printViewHtml() {
   const fullVis = buildStepVisibility();
-  const frameVis = isShelfPlan()
+  const frameVis = isGeneratedPlan()
+    ? { panels: true, rails: true, references: false, hardware: false }
+    : isShelfPlan()
     ? { posts: true, rails: true, slats: false, hardware: true }
     : { face: true, liner: true, spacers: true, canvas: false, hardware: true };
   const target = printCameraTarget();
@@ -1786,7 +1859,7 @@ function printViewHtml() {
   const shots = [
     { title: 'Top view, full assembly', camera: { x: 0.01, y: span * 1.8, z: 0.01 }, vis: fullVis },
     { title: 'Angled view, full assembly', camera: { x: span * 1.15, y: span * 0.75, z: span * 1.25 }, vis: fullVis },
-    { title: isShelfPlan() ? 'Structure without shelf surfaces' : 'Frame and supports', camera: { x: 0.01, y: span * 1.8, z: 0.01 }, vis: frameVis },
+    { title: isGeneratedPlan() ? 'Physical parts only' : isShelfPlan() ? 'Structure without shelf surfaces' : 'Frame and supports', camera: { x: 0.01, y: span * 1.8, z: 0.01 }, vis: frameVis },
     { title: 'Back view, full assembly', camera: { x: span * 1.1, y: span * 0.45, z: -span * 1.35 }, vis: fullVis }
   ].map((shot) => ({
     ...shot,
@@ -1804,14 +1877,16 @@ function printViewHtml() {
 }
 
 function printCameraSpan() {
-  const width = isShelfPlan() ? result?.shelfW || 48 : result?.outerW || 24;
-  const height = isShelfPlan() ? result?.shelfH || 72 : result?.outerH || 24;
-  const depth = isShelfPlan() ? result?.shelfD || 24 : plan.depth || 2;
+  const width = isGeneratedPlan() ? result?.feederW || 12 : isShelfPlan() ? result?.shelfW || 48 : result?.outerW || 24;
+  const height = isGeneratedPlan() ? result?.feederH || 3 : isShelfPlan() ? result?.shelfH || 72 : result?.outerH || 24;
+  const depth = isGeneratedPlan() ? result?.feederD || 8 : isShelfPlan() ? result?.shelfD || 24 : plan.depth || 2;
   return Math.max(width, height, depth, 24) * 0.13;
 }
 
 function printCameraTarget() {
-  return isShelfPlan()
+  return isGeneratedPlan()
+    ? { x: 0, y: (result?.feederH || 3) * 0.05, z: 0 }
+    : isShelfPlan()
     ? { x: 0, y: (result?.shelfH || 72) * 0.05, z: 0 }
     : { x: 0, y: Math.max(0.05, (plan.depth || 1) * 0.05), z: 0 };
 }

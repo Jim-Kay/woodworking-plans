@@ -6,7 +6,13 @@
   "scripts": {
     "start": "node scripts/serve.mjs",
     "dev": "node scripts/serve.mjs",
-    "test": "node tests/frameMath.test.mjs"
+    "sandbox": "node scripts/design-sandbox.mjs",
+    "sandbox:mcp": "node scripts/design-sandbox-mcp.mjs",
+    "sandbox:loop": "node scripts/llm-sandbox-loop.mjs",
+    "sandbox:review": "node scripts/llm-package-review.mjs",
+    "llm:check": "node scripts/llm-host-check.mjs",
+    "llm:benchmark": "node scripts/llm-sandbox-benchmark.mjs",
+    "test": "node tests/frameMath.test.mjs && node tests/generatedSandbox.test.mjs && node tests/generatedReview.test.mjs && node tests/sandboxMcpServer.test.mjs"
   },
   "dependencies": {},
   "devDependencies": {}
