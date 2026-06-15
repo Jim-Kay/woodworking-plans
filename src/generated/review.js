@@ -74,6 +74,75 @@ export const PACKAGE_REVIEW_SCHEMA = {
   }
 };
 
+export const VISUAL_REVIEW_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['view_label', 'matches_intent', 'confidence', 'findings', 'proposed_annotations', 'missing_capabilities'],
+  properties: {
+    view_label: { type: 'string' },
+    matches_intent: { type: 'boolean' },
+    confidence: { type: 'string', enum: ['low', 'medium', 'high'] },
+    findings: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['severity', 'category', 'message'],
+        properties: {
+          severity: { type: 'string', enum: ['info', 'warning', 'error'] },
+          category: { type: 'string' },
+          message: { type: 'string' }
+        }
+      }
+    },
+    proposed_annotations: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        step_instructions: {
+          type: 'array',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['step_id', 'instructions'],
+            properties: {
+              step_id: { type: 'string' },
+              instructions: { type: 'array', items: { type: 'string' } },
+              mode: { type: 'string', enum: ['append', 'replace'] }
+            }
+          }
+        },
+        part_notes: {
+          type: 'array',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['part_id', 'notes'],
+            properties: {
+              part_id: { type: 'string' },
+              notes: { type: 'array', items: { type: 'string' } }
+            }
+          }
+        },
+        design_notes: { type: 'array', items: { type: 'string' } }
+      }
+    },
+    missing_capabilities: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['capability', 'reason'],
+        properties: {
+          capability: { type: 'string' },
+          reason: { type: 'string' },
+          evidence: { type: 'array', items: { type: 'string' } }
+        }
+      }
+    }
+  }
+};
+
 export function buildPackageReviewInput(planPackage) {
   const design = planPackage.design || {};
   const validation = planPackage.validation || design.validation || {};
@@ -119,6 +188,16 @@ export function buildPackageReviewInput(planPackage) {
   };
 }
 
+export function buildVisualReviewInput(planPackage, options = {}) {
+  const packageInput = buildPackageReviewInput(planPackage);
+  return {
+    view_label: options.viewLabel || 'rendered design view',
+    review_focus: options.reviewFocus || 'Check whether the screenshot visually matches the generated woodworking design package and builder-facing instructions.',
+    package: packageInput,
+    visual_expectations: visualExpectations(packageInput)
+  };
+}
+
 export function buildReviewMessages(role, reviewInput) {
   return [
     {
@@ -142,6 +221,38 @@ export function buildReviewMessages(role, reviewInput) {
         package: reviewInput,
         expected_output: PACKAGE_REVIEW_SCHEMA
       }, null, 2)
+    }
+  ];
+}
+
+export function buildVisualReviewMessages(reviewInput, imageDataUrl) {
+  return [
+    {
+      role: 'system',
+      content: [
+        'You are the visual reviewer for a woodworking generated-design sandbox.',
+        'Compare the screenshot to the generated design package and the stated review focus.',
+        'Judge visual consistency only from visible evidence. If the screenshot is ambiguous, lower confidence rather than inventing detail.',
+        'Look for mismatches such as wrong assembly stage, misleading drill or screw markers, cut-list shapes that do not communicate the part, missing labels, unreadable instructions, or render artifacts.',
+        'Do not request source-code edits directly. Use proposed_annotations for design-level guidance, or missing_capabilities when the sandbox needs a new tool, renderer, validator, or portal feature.',
+        'Return JSON only.'
+      ].join(' ')
+    },
+    {
+      role: 'user',
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            visual_review: reviewInput,
+            expected_output: VISUAL_REVIEW_SCHEMA
+          }, null, 2)
+        },
+        {
+          type: 'image_url',
+          image_url: { url: imageDataUrl }
+        }
+      ]
     }
   ];
 }
@@ -173,6 +284,18 @@ export function normalizePackageReview(roleId, value) {
   };
 }
 
+export function normalizeVisualReview(value) {
+  const review = value && typeof value === 'object' ? value : {};
+  return {
+    view_label: String(review.view_label || '').trim(),
+    matches_intent: review.matches_intent === true,
+    confidence: ['low', 'medium', 'high'].includes(review.confidence) ? review.confidence : 'low',
+    findings: Array.isArray(review.findings) ? review.findings.map(normalizeFinding).filter((item) => item.message) : [],
+    proposed_annotations: normalizeProposedAnnotations(review.proposed_annotations),
+    missing_capabilities: Array.isArray(review.missing_capabilities) ? review.missing_capabilities.map(normalizeCapability).filter((item) => item.capability || item.reason) : []
+  };
+}
+
 function normalizeFinding(value) {
   return {
     severity: ['info', 'warning', 'error'].includes(value?.severity) ? value.severity : 'info',
@@ -192,7 +315,8 @@ function normalizeRevision(value) {
 function normalizeCapability(value) {
   return {
     capability: String(value?.capability || '').trim(),
-    reason: String(value?.reason || '').trim()
+    reason: String(value?.reason || '').trim(),
+    ...(Array.isArray(value?.evidence) ? { evidence: value.evidence.map((item) => String(item || '').trim()).filter(Boolean) } : {})
   };
 }
 
@@ -206,4 +330,56 @@ function dedupeCapabilities(items) {
     deduped.push(item);
   }
   return deduped;
+}
+
+function visualExpectations(packageInput) {
+  return {
+    design_id: packageInput.design.design_id,
+    template_id: packageInput.design.template_id,
+    physical_part_count: packageInput.design.physical_part_count,
+    reference_part_count: packageInput.design.reference_part_count,
+    assembly_steps: (packageInput.design.assembly_steps || []).map((step) => ({
+      id: step.id,
+      title: step.title,
+      stage: step.stage,
+      image: step.image,
+      instruction_count: step.instructions?.length || 0
+    })),
+    cut_list_count: packageInput.design.cut_list?.length || 0,
+    portal_build_step_count: packageInput.portal_result.build_step_count
+  };
+}
+
+function normalizeProposedAnnotations(value = {}) {
+  const annotations = value && typeof value === 'object' ? value : {};
+  return {
+    step_instructions: Array.isArray(annotations.step_instructions)
+      ? annotations.step_instructions.map(normalizeStepInstruction).filter((item) => item.step_id && item.instructions.length)
+      : [],
+    part_notes: Array.isArray(annotations.part_notes)
+      ? annotations.part_notes.map(normalizePartNote).filter((item) => item.part_id && item.notes.length)
+      : [],
+    design_notes: cleanStringArray(annotations.design_notes)
+  };
+}
+
+function normalizeStepInstruction(value) {
+  return {
+    step_id: String(value?.step_id || '').trim(),
+    instructions: cleanStringArray(value?.instructions),
+    ...(value?.mode === 'replace' ? { mode: 'replace' } : {})
+  };
+}
+
+function normalizePartNote(value) {
+  return {
+    part_id: String(value?.part_id || '').trim(),
+    notes: cleanStringArray(value?.notes)
+  };
+}
+
+function cleanStringArray(value) {
+  return (Array.isArray(value) ? value : [])
+    .map((item) => String(item || '').trim())
+    .filter(Boolean);
 }

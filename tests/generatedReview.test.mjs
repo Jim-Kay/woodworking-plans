@@ -2,9 +2,13 @@ import assert from 'node:assert/strict';
 import { exportPlanPackage, generateDesign } from '../src/generated/sandbox.js';
 import {
   PACKAGE_REVIEW_ROLES,
+  VISUAL_REVIEW_SCHEMA,
   buildPackageReviewInput,
   buildReviewMessages,
+  buildVisualReviewInput,
+  buildVisualReviewMessages,
   normalizePackageReview,
+  normalizeVisualReview,
   summarizePackageReviews
 } from '../src/generated/review.js';
 
@@ -62,5 +66,37 @@ assert.equal(summary.ok_to_publish, false);
 assert.equal(summary.review_count, 2);
 assert.equal(summary.warning_count, 1);
 assert.equal(summary.missing_capabilities.length, 1);
+
+const visualInput = buildVisualReviewInput(planPackage, {
+  viewLabel: 'Drill layout screenshot',
+  reviewFocus: 'Check whether the drill step clearly shows pre-assembly hole layout guidance.'
+});
+assert.equal(visualInput.view_label, 'Drill layout screenshot');
+assert.equal(visualInput.package.design.design_id, 'review_test_feeder');
+assert.equal(visualInput.visual_expectations.assembly_steps.some((step) => step.id === 'step.drill'), true);
+
+const visualMessages = buildVisualReviewMessages(visualInput, 'data:image/png;base64,abc123');
+assert.equal(visualMessages.length, 2);
+assert.match(visualMessages[0].content, /visual reviewer/);
+assert.equal(visualMessages[1].content[1].image_url.url, 'data:image/png;base64,abc123');
+assert.equal(VISUAL_REVIEW_SCHEMA.required.includes('matches_intent'), true);
+
+const visualReview = normalizeVisualReview({
+  view_label: 'Drill layout screenshot',
+  matches_intent: false,
+  confidence: 'certain',
+  findings: [{ severity: 'warning', category: 'stage', message: 'The drill view appears fully assembled.' }],
+  proposed_annotations: {
+    step_instructions: [{ step_id: 'step.drill', instructions: ['Show drilling before the rails are attached.'], mode: 'append' }],
+    part_notes: [{ part_id: 'bottom.panel', notes: ['Mark drainage holes at least 1 in from each panel edge.'] }],
+    design_notes: ['Visual review recommends clearer drill guidance.']
+  },
+  missing_capabilities: [{ capability: 'stage-specific screenshot capture', reason: 'The visual reviewer needs rendered pre-assembly views.', evidence: ['Screenshot shows rails attached.'] }]
+});
+assert.equal(visualReview.matches_intent, false);
+assert.equal(visualReview.confidence, 'low');
+assert.equal(visualReview.proposed_annotations.step_instructions[0].step_id, 'step.drill');
+assert.equal(visualReview.proposed_annotations.part_notes[0].part_id, 'bottom.panel');
+assert.equal(visualReview.missing_capabilities[0].evidence[0], 'Screenshot shows rails attached.');
 
 console.log('generated review tests passed');

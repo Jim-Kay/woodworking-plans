@@ -98,11 +98,13 @@ Use separate model tiers rather than expecting one local model to do everything:
 
 - **Fast iteration model**: a 7B/8B or efficient MoE model for cheap generate/validate/revise loops.
 - **Planner model**: a stronger 14B-30B class model for interpreting validation failures and choosing next attempts.
+- **Vision reviewer**: a vision-language model for screenshot checks against the package intent, rendered build steps, labels, and instructions.
 - **Escalation summarizer**: any reliable structured-output model that can turn repeated failures into a concise Codex feature request.
 
 Candidate families to test first:
 
 - Qwen coder/instruct models with documented function-calling support.
+- Qwen VL models for rendered screenshot review.
 - Mistral/Devstral coding models designed for agentic tool use.
 - Llama-family instruct models where the selected runtime has a reliable tool-call template.
 
@@ -188,6 +190,17 @@ $env:LLM_MODEL = 'qwen3:14b'
 npm run sandbox:loop -- examples/tray-bird-feeder.scenario.json generated/runs/llm-demo
 ```
 
+The loop can also run an optional visual review immediately after package export when a screenshot and vision model are configured:
+
+```powershell
+$env:LLM_BASE_URL = 'http://localhost:11434/v1'
+$env:LLM_MODEL = 'qwen3:14b'
+$env:LLM_VISION_MODEL = 'qwen2.5vl:7b'
+$env:LLM_VISION_SCREENSHOT = '.\path\to\screenshot.png'
+$env:VISION_REVIEW_VIEW = 'Generated tray feeder drill step'
+npm run sandbox:loop -- examples/tray-bird-feeder.scenario.json generated/runs/llm-demo
+```
+
 After a package is exported, run a role-based review pass:
 
 ```powershell
@@ -205,6 +218,18 @@ The review pass runs the package through focused roles:
 - Capability Scout
 
 These are advisory review passes over the deterministic package. If validation and publishability pass, the reviewers should default to `ok_to_publish=true` and report model-only concerns as warnings, recommended revisions, or missing capabilities unless the package contains a direct contradiction.
+
+If a vision-capable local model is available, run a screenshot review pass against a rendered app or build-step image:
+
+```powershell
+$env:LLM_VISION_BASE_URL = 'http://localhost:11434/v1'
+$env:LLM_VISION_MODEL = 'qwen2.5vl:7b'
+$env:VISION_REVIEW_VIEW = 'Generated tray feeder drill step'
+$env:VISION_REVIEW_FOCUS = 'Check whether the screenshot visually matches the drill-step intent and does not imply drilling after full assembly.'
+npm run sandbox:vision-review -- generated/runs/llm-demo/package .\path\to\screenshot.png generated/runs/llm-demo/visual-review.json
+```
+
+The current text-planner baseline on this workstation uses `qwen3:14b` and `qwen3:8b`, which are not vision models. Use a VL model such as `qwen2.5vl` or `qwen3-vl` for screenshots. The visual review output is advisory and structured for the next loop: it can propose `annotate_design` arguments, report visual mismatches, or request a missing capability such as better stage-specific screenshot capture.
 
 ## MCP Server
 

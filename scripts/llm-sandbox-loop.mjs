@@ -1,5 +1,11 @@
-import { mkdir, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { extname, join } from 'node:path';
+import {
+  VISUAL_REVIEW_SCHEMA,
+  buildVisualReviewInput,
+  buildVisualReviewMessages,
+  normalizeVisualReview
+} from '../src/generated/review.js';
 import {
   executeSandboxTool,
   listSandboxTools,
@@ -11,6 +17,9 @@ import {
 
 const baseUrl = (process.env.LLM_BASE_URL || 'http://localhost:11434/v1').replace(/\/$/, '');
 const model = process.env.LLM_MODEL || 'qwen3:14b';
+const visionBaseUrl = (process.env.LLM_VISION_BASE_URL || baseUrl).replace(/\/$/, '');
+const visionModel = process.env.LLM_VISION_MODEL || '';
+const visionScreenshot = process.env.LLM_VISION_SCREENSHOT || '';
 const scenarioPath = process.argv[2] || 'examples/tray-bird-feeder.scenario.json';
 const outDir = process.argv[3] || join('generated', 'runs', `llm-${new Date().toISOString().replaceAll(':', '-').replace(/\.\d+Z$/, 'Z')}`);
 const maxIterations = Number(process.env.LLM_MAX_ITERATIONS || 6);
@@ -78,6 +87,10 @@ for (let iteration = 0; iteration < maxIterations; iteration += 1) {
 
   if (toolCall.name === 'export_plan_package' && state.finalPackage) {
     await writePlanPackage(join(outDir, 'package'), state.finalPackage);
+    if (visionScreenshot && visionModel) {
+      state.visualReview = await runVisualReview(state.finalPackage, visionScreenshot);
+      await writeJson(join(outDir, 'visual-review.json'), state.visualReview);
+    }
     break;
   }
 
@@ -135,6 +148,40 @@ async function chooseNextAction(state) {
   return JSON.parse(content);
 }
 
+async function runVisualReview(planPackage, screenshotPath) {
+  const imageDataUrl = await readImageDataUrl(screenshotPath);
+  const reviewInput = buildVisualReviewInput(planPackage, {
+    viewLabel: process.env.VISION_REVIEW_VIEW || 'rendered portal screenshot',
+    reviewFocus: process.env.VISION_REVIEW_FOCUS || 'Check whether the screenshot visually matches the generated woodworking design package and builder-facing instructions.'
+  });
+  const response = await fetch(`${visionBaseUrl}/chat/completions`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${process.env.LLM_API_KEY || 'ollama'}` },
+    body: JSON.stringify({
+      model: visionModel,
+      temperature: 0,
+      messages: buildVisualReviewMessages(reviewInput, imageDataUrl),
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'generated_visual_review',
+          strict: true,
+          schema: VISUAL_REVIEW_SCHEMA
+        }
+      }
+    })
+  });
+
+  if (!response.ok) throw new Error(`Visual review failed with HTTP ${response.status}: ${await response.text()}`);
+  const data = await response.json();
+  return {
+    model: visionModel,
+    base_url: visionBaseUrl,
+    screenshot_path: screenshotPath,
+    ...normalizeVisualReview(parseJson(data.choices?.[0]?.message?.content || ''))
+  };
+}
+
 function redactToolResult(result) {
   if (!result || typeof result !== 'object') return result;
   if (result.design) return { ...result, design: undefined };
@@ -146,10 +193,34 @@ function redactToolResult(result) {
 function summary() {
   return [
     `model=${model}`,
+    `vision_model=${visionModel || 'not_configured'}`,
     `out_dir=${outDir}`,
     `iterations=${transcript.length}`,
     `design=${state.design?.design_id || 'none'}`,
     `validation=${state.validation?.status || state.finalPackage?.validation?.status || 'not_run'}`,
-    `publishable=${state.finalPackage?.publishability?.ok ?? false}`
+    `publishable=${state.finalPackage?.publishability?.ok ?? false}`,
+    `visual_review=${state.visualReview ? state.visualReview.matches_intent : 'not_run'}`
   ].join('\n');
+}
+
+async function readImageDataUrl(path) {
+  const bytes = await readFile(path);
+  return `data:${mimeType(path)};base64,${bytes.toString('base64')}`;
+}
+
+function mimeType(path) {
+  const ext = extname(path).toLowerCase();
+  if (ext === '.jpg' || ext === '.jpeg') return 'image/jpeg';
+  if (ext === '.webp') return 'image/webp';
+  return 'image/png';
+}
+
+function parseJson(value) {
+  try {
+    return JSON.parse(value);
+  } catch {
+    const match = value.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('Visual review response was not parseable JSON.');
+    return JSON.parse(match[0]);
+  }
 }
