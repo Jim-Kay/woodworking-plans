@@ -53,6 +53,10 @@ assert.equal(portalResult.ok, true);
 assert.equal(portalResult.parts.length, design.cut_list.length);
 assert.equal(portalResult.assembly.parts.length, design.parts.length);
 assert.equal(portalResult.buildSteps.length, design.assembly_steps.length);
+assert.equal(portalResult.buildSteps[0].image, 'cut-layout');
+assert.equal(portalResult.buildSteps[0].stage, 1);
+assert.equal(portalResult.buildSteps[1].vis.references, true);
+assert.equal(portalResult.buildSteps[2].vis.references, false);
 
 const planPackage = exportPlanPackage(design);
 assert.equal(planPackage.validation.ok, true);

@@ -39,12 +39,26 @@ export function canonicalToPortalResult(design, validation = design.validation) 
         label: joint.label
       }))
     },
-    buildSteps: (design.assembly_steps || []).map((step, index) => ({
-      title: step.title,
-      stage: index,
-      instructions: step.instructions || [],
-      partIds: step.part_ids || []
-    })),
+    buildSteps: (design.assembly_steps || []).map((step, index) => generatedBuildStep(step, index)),
     estimates: design.estimates || {}
   };
+}
+
+function generatedBuildStep(step, index) {
+  const normalizedTitle = String(step.title || '').toLowerCase();
+  const output = {
+    title: step.title,
+    stage: index + 1,
+    instructions: step.instructions || [],
+    partIds: step.part_ids || []
+  };
+  if (normalizedTitle.includes('cut')) {
+    output.image = 'cut-layout';
+    output.vis = { panels: true, rails: true, references: false };
+  } else if (normalizedTitle.includes('drill')) {
+    output.vis = { panels: true, rails: true, references: true };
+  } else {
+    output.vis = { panels: true, rails: true, references: false };
+  }
+  return output;
 }
