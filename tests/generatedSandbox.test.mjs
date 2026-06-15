@@ -33,6 +33,11 @@ const partIds = new Set(design.parts.map((part) => part.id));
 design.assembly_steps.forEach((step) => {
   step.part_ids.forEach((partId) => assert.equal(partIds.has(partId), true, `${step.id} references ${partId}`));
 });
+const drillStep = design.assembly_steps.find((step) => step.id === 'step.drill');
+assert.match(drillStep.instructions.join('\n'), /3\/8 in drainage holes/);
+assert.match(drillStep.instructions.join('\n'), /3 in from the left\/right ends/);
+assert.match(drillStep.instructions.join('\n'), /1\.6 in from the front\/back edges/);
+assert.match(drillStep.instructions.join('\n'), /at least 1 in from rail ends/);
 design.joints.forEach((joint) => {
   joint.part_ids.forEach((partId) => assert.equal(partIds.has(partId), true, `${joint.id} references ${partId}`));
 });

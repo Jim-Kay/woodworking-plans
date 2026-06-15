@@ -1189,6 +1189,10 @@ function generatedDrillLayoutImage(width, height) {
   const feederW = result.feederW || plan.feederW || 12;
   const feederD = result.feederD || plan.feederD || 8;
   const sideH = plan.feederSideH || 1.5;
+  const sideT = plan.feederSideT || 0.75;
+  const drainageXInset = feederW * 0.25;
+  const drainageYInset = feederD * 0.2;
+  const hangingInset = Math.max(1, sideT * 1.5);
   const scale = Math.min(drawingW / Math.max(feederW, 1), drawingH / Math.max(feederD + sideH * 2 + 1.5, 1));
   const panelW = feederW * scale;
   const panelH = feederD * scale;
@@ -1212,8 +1216,11 @@ function generatedDrillLayoutImage(width, height) {
   svg.push(`<text x="${pad}" y="${pad - 6}" fill="#bfdbfe" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700">Pre-assembly drill guide</text>`);
   svg.push(`<text x="${pad}" y="${pad + 24}" fill="#e5e7eb" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700">Bottom panel</text>`);
   svg.push(`<text x="${pad}" y="${pad + 44}" fill="#93c5fd" font-family="Inter, Arial, sans-serif" font-size="12">${escapeHtml(formatLength(feederW, plan.unit))} x ${escapeHtml(formatLength(feederD, plan.unit))}</text>`);
+  svg.push(`<text x="${pad}" y="${pad + 66}" fill="#cbd5e1" font-family="Inter, Arial, sans-serif" font-size="12">Drainage: ${escapeHtml(formatLength(drainageXInset, plan.unit))} from ends</text>`);
+  svg.push(`<text x="${pad}" y="${pad + 84}" fill="#cbd5e1" font-family="Inter, Arial, sans-serif" font-size="12">${escapeHtml(formatLength(drainageYInset, plan.unit))} from front/back edges</text>`);
   svg.push(`<text x="${pad}" y="${railYTop + 16}" fill="#e5e7eb" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700">Long side rails</text>`);
-  svg.push(`<text x="${pad}" y="${railYTop + 36}" fill="#93c5fd" font-family="Inter, Arial, sans-serif" font-size="12">Drill hanging holes before assembly</text>`);
+  svg.push(`<text x="${pad}" y="${railYTop + 36}" fill="#93c5fd" font-family="Inter, Arial, sans-serif" font-size="12">Hanging: ${escapeHtml(formatLength(hangingInset, plan.unit))} from rail ends</text>`);
+  svg.push(`<text x="${pad}" y="${railYTop + 54}" fill="#cbd5e1" font-family="Inter, Arial, sans-serif" font-size="12">Keep holes at least 1 in from rail ends</text>`);
   svg.push(`<rect x="${panelX}" y="${panelY}" width="${panelW}" height="${panelH}" rx="3" fill="#b88a4a" stroke="#6f4322" stroke-width="1.6" filter="url(#shadow)"/>`);
   svg.push(`<rect x="${panelX + 9}" y="${panelY + 9}" width="${Math.max(0, panelW - 18)}" height="${Math.max(0, panelH - 18)}" rx="2" fill="#c99d5c" opacity=".55"/>`);
   const drainage = [
@@ -1227,6 +1234,10 @@ function generatedDrillLayoutImage(width, height) {
     const cy = panelY + panelH * py;
     svg.push(`<circle cx="${cx}" cy="${cy}" r="${holeR}" fill="#94a3b8" stroke="#cbd5e1" stroke-width="1.2"/>`);
   });
+  svg.push(`<line x1="${panelX}" y1="${panelY + panelH + 12}" x2="${panelX + panelW * 0.25}" y2="${panelY + panelH + 12}" stroke="#93c5fd" stroke-width="1.2"/>`);
+  svg.push(`<text x="${panelX + panelW * 0.125}" y="${panelY + panelH + 28}" fill="#bfdbfe" font-family="Inter, Arial, sans-serif" font-size="11" text-anchor="middle">${escapeHtml(formatLength(drainageXInset, plan.unit))}</text>`);
+  svg.push(`<line x1="${panelX - 12}" y1="${panelY}" x2="${panelX - 12}" y2="${panelY + panelH * 0.2}" stroke="#93c5fd" stroke-width="1.2"/>`);
+  svg.push(`<text x="${panelX - 20}" y="${panelY + panelH * 0.1 + 4}" fill="#bfdbfe" font-family="Inter, Arial, sans-serif" font-size="11" text-anchor="end">${escapeHtml(formatLength(drainageYInset, plan.unit))}</text>`);
   [
     { y: railYTop, label: 'Back rail' },
     { y: railYBottom, label: 'Front rail' }
@@ -1238,8 +1249,10 @@ function generatedDrillLayoutImage(width, height) {
       const cy = rail.y + railH / 2;
       svg.push(`<circle cx="${cx}" cy="${cy}" r="${Math.max(3.5, holeR * 0.72)}" fill="#94a3b8" stroke="#cbd5e1" stroke-width="1.1"/>`);
     });
+    svg.push(`<line x1="${panelX}" y1="${rail.y - 8}" x2="${panelX + hangingInset * scale}" y2="${rail.y - 8}" stroke="#93c5fd" stroke-width="1.2"/>`);
+    svg.push(`<text x="${panelX + hangingInset * scale / 2}" y="${rail.y - 12}" fill="#bfdbfe" font-family="Inter, Arial, sans-serif" font-size="11" text-anchor="middle">${escapeHtml(formatLength(hangingInset, plan.unit))}</text>`);
   });
-  svg.push(`<text x="${panelX}" y="${height - 18}" fill="#e5e7eb" font-family="Inter, Arial, sans-serif" font-size="12">Blue marks are drill locations. Drill these while the panel and rails are still separate.</text>`);
+  svg.push(`<text x="${panelX}" y="${height - 18}" fill="#e5e7eb" font-family="Inter, Arial, sans-serif" font-size="12">Blue marks are drill locations. Use scrap underneath and drill while pieces are still separate.</text>`);
   svg.push('</svg>');
   return `data:image/svg+xml;base64,${btoa(svg.join(''))}`;
 }

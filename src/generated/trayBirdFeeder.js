@@ -11,6 +11,9 @@ export function generateTrayBirdFeederDesign(scenario = {}) {
   const sideT = parameters.side_thickness_in;
   const materialId = parameters.material;
   const designId = scenario.design_id || `tray_bird_feeder_${slug(width)}x${slug(depth)}`;
+  const drainageXInset = width * 0.25;
+  const drainageYInset = depth * 0.2;
+  const hangingInset = Math.max(1, sideT * 1.5);
 
   const parts = [
     physicalPart('bottom.panel', 'Bottom panel', materialId, [width, depth, bottomT], [0, 0, bottomT / 2], 'panel', { cut: { length_in: width, width_in: depth, thickness_in: bottomT } }),
@@ -22,22 +25,21 @@ export function generateTrayBirdFeederDesign(scenario = {}) {
 
   if (parameters.drainage_holes) {
     [
-      [-width * 0.25, -depth * 0.2],
-      [width * 0.25, -depth * 0.2],
-      [-width * 0.25, depth * 0.2],
-      [width * 0.25, depth * 0.2]
+      [-drainageXInset, -drainageYInset],
+      [drainageXInset, -drainageYInset],
+      [-drainageXInset, drainageYInset],
+      [drainageXInset, drainageYInset]
     ].forEach(([x, y], index) => {
       parts.push(referencePart(`drainage.hole.${index + 1}`, 'Drainage hole', [0.375, 0.375, bottomT], [x, y, bottomT / 2], 'drainage', { host_part_id: 'bottom.panel' }));
     });
   }
 
   if (parameters.hanging) {
-    const inset = Math.max(1, sideT * 1.5);
     [
-      [-width / 2 + inset, depth / 2 - sideT / 2],
-      [width / 2 - inset, depth / 2 - sideT / 2],
-      [-width / 2 + inset, -depth / 2 + sideT / 2],
-      [width / 2 - inset, -depth / 2 + sideT / 2]
+      [-width / 2 + hangingInset, depth / 2 - sideT / 2],
+      [width / 2 - hangingInset, depth / 2 - sideT / 2],
+      [-width / 2 + hangingInset, -depth / 2 + sideT / 2],
+      [width / 2 - hangingInset, -depth / 2 + sideT / 2]
     ].forEach(([x, y], index) => {
       parts.push(referencePart(`hanging.hole.${index + 1}`, 'Hanging cord hole', [0.25, 0.25, sideHeight], [x, y, bottomT + sideHeight / 2], 'hanging', { host_part_id: y > 0 ? 'side.back' : 'side.front' }));
     });
@@ -56,7 +58,7 @@ export function generateTrayBirdFeederDesign(scenario = {}) {
 
   const assemblySteps = [
     step('step.cut', 'Cut parts', ['bottom.panel', 'side.front', 'side.back', 'side.left', 'side.right'], ['Cut the bottom panel and four tray rails from the selected outdoor-friendly stock.']),
-    step('step.drill', 'Drill outdoor holes', featurePartIds(parts), ['Drill drainage and hanging holes before assembly while the pieces are easy to support.']),
+    step('step.drill', 'Drill outdoor holes', featurePartIds(parts), drillInstructions(parameters, drainageXInset, drainageYInset, hangingInset)),
     step('step.assemble', 'Assemble tray', ['bottom.panel', 'side.front', 'side.back', 'side.left', 'side.right'], ['Fasten the long rails to the bottom panel, then fit the end rails between them.']),
     step('step.finish', 'Sand and finish', ['bottom.panel', 'side.front', 'side.back', 'side.left', 'side.right'], ['Ease sharp edges and apply an exterior-safe finish if desired.'])
   ];
@@ -142,6 +144,19 @@ function step(id, title, part_ids, instructions) {
   return { id, title, part_ids, instructions };
 }
 
+function drillInstructions(parameters, drainageXInset, drainageYInset, hangingInset) {
+  const instructions = [];
+  if (parameters.drainage_holes) {
+    instructions.push(`Drill 3/8 in drainage holes in the bottom panel before assembly: place them about ${cleanNumber(drainageXInset)} in from the left/right ends and ${cleanNumber(drainageYInset)} in from the front/back edges.`);
+    instructions.push('Keep drainage holes at least 1-1/2 in from any panel edge so the bit does not break out the side.');
+  }
+  if (parameters.hanging) {
+    instructions.push(`Drill 1/4 in hanging-cord holes in the front and back rails before assembly: place each hole about ${cleanNumber(hangingInset)} in from the rail end and centered across the rail thickness.`);
+    instructions.push('Keep hanging holes at least 1 in from rail ends; move them inward if you use larger cord, chain, or eye hardware.');
+  }
+  return instructions.length ? instructions : ['No drainage or hanging holes are selected for this version.'];
+}
+
 function buildCutList(parts) {
   return parts
     .filter((part) => part.physical)
@@ -179,4 +194,8 @@ function number(value, fallback) {
 
 function slug(value) {
   return String(value).replace(/[^0-9a-z]+/gi, '_');
+}
+
+function cleanNumber(value) {
+  return Number(value.toFixed(3)).toString();
 }
