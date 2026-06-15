@@ -435,8 +435,8 @@ function renderFields() {
   if (isGeneratedPlan()) {
     document.querySelector('[data-stage-part="primary"]').textContent = 'Panel';
     document.querySelector('[data-stage-part="support"]').textContent = 'Rails';
-    document.querySelector('[data-stage-part="surface"]').textContent = 'References';
-    document.querySelector('[data-stage-part="hardware"]').textContent = 'Hardware';
+    document.querySelector('[data-stage-part="surface"]').textContent = 'Drill holes';
+    document.querySelector('[data-stage-part="hardware"]').textContent = 'Fasteners';
   } else if (isShelfPlan()) {
     document.querySelector('[data-stage-part="primary"]').textContent = 'Posts';
     document.querySelector('[data-stage-part="support"]').textContent = 'Rails';
@@ -473,8 +473,7 @@ function renderToggles() {
       ? [
           ['panels', 'Panel'],
           ['rails', 'Rails'],
-          ['references', 'References'],
-          ['hardware', 'Hardware']
+          ['references', 'Drill holes']
         ]
     : [
         ['face', 'Face'],
@@ -502,13 +501,13 @@ function renderToggles() {
 function renderDimensionSummary() {
   if (isGeneratedPlan()) {
     const rows = [
-      ['Template', result.generatedDesign?.template_id || 'generated'],
+      ['Plan type', 'Tray feeder'],
       ['Tray size', `${formatLength(result.feederW, plan.unit)} x ${formatLength(result.feederD, plan.unit)} x ${formatLength(result.feederH, plan.unit)}`],
       ['Side height', formatLength(plan.feederSideH, plan.unit)],
       ['Bottom thickness', formatLength(plan.feederBottomT, plan.unit)],
       ['Side stock', formatLength(plan.feederSideT, plan.unit)],
       ['Physical parts', result.physicalPartCount],
-      ['References', result.referencePartCount],
+      ['Drill holes', result.referencePartCount],
       ['Estimated board feet', result.ok ? result.boardFeet.toFixed(2) : '-'],
       ['Publishable', result.publishability?.ok ? 'Yes' : 'Needs work']
     ];
@@ -598,7 +597,7 @@ function renderStatus() {
   const badges = [];
   if (result.ok) {
     badges.push(`<span class="badge ok">Ready</span>`);
-    if (isGeneratedPlan()) badges.push(`<span class="badge">Generated: ${escapeHtml(result.generatedDesign?.template_id || 'canonical')}</span>`);
+    if (isGeneratedPlan()) badges.push('<span class="badge">Tray feeder</span>');
     else if (isShelfPlan()) badges.push(`<span class="badge">Shelves: ${result.levels} levels, ${result.bays} bays</span>`);
     else badges.push(`<span class="badge">Outer: ${escapeHtml(formatLength(result.outerW, plan.unit))} x ${escapeHtml(formatLength(result.outerH, plan.unit))}</span>`);
   }
@@ -607,7 +606,7 @@ function renderStatus() {
   status.innerHTML = badges.join('');
   const mountStatus = $('#mountStatus');
   if (isShelfPlan() || isGeneratedPlan()) {
-    mountStatus.textContent = isGeneratedPlan() ? 'Generated package is adapter-backed.' : '';
+    mountStatus.textContent = isGeneratedPlan() ? 'Blue guide marks show drill locations, not screws.' : '';
     mountStatus.className = 'mountStatus okText';
     return;
   }
@@ -1210,7 +1209,7 @@ function shadeSvgColor(hex, amount) {
 
 function buildStepVisibility() {
   return isGeneratedPlan()
-    ? { panels: true, rails: true, references: true, hardware: true }
+    ? { panels: true, rails: true, references: true }
     : isShelfPlan()
     ? { posts: true, rails: true, slats: true, hardware: true }
     : { face: true, liner: true, spacers: true, canvas: true, hardware: true };
@@ -1750,7 +1749,7 @@ function printPlanDetailsHtml(definition) {
 function printDimensionSummaryHtml() {
   const rows = isGeneratedPlan()
     ? [
-        ['Template', result.generatedDesign?.template_id || 'generated'],
+        ['Plan type', 'Tray feeder'],
         ['Tray size', `${formatLength(result.feederW, plan.unit)} x ${formatLength(result.feederD, plan.unit)} x ${formatLength(result.feederH, plan.unit)}`],
         ['Side height', formatLength(plan.feederSideH, plan.unit)],
         ['Physical parts', result.physicalPartCount]

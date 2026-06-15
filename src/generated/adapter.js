@@ -23,7 +23,13 @@ export function canonicalToPortalResult(design, validation = design.validation) 
         size: { ...part.size },
         position: { ...part.position },
         rotation: { ...(part.rotation || { x: 0, y: 0, z: 0 }) },
-        meta: { group: part.physical === false ? 'references' : `${part.role}s`, canonical_role: part.role, physical: part.physical !== false }
+        meta: {
+          group: part.physical === false ? 'references' : `${part.role}s`,
+          canonical_role: part.role,
+          physical: part.physical !== false,
+          host_part_id: part.meta?.host_part_id || null,
+          exported_as: part.meta?.exported_as || null
+        }
       })),
       connections: (design.joints || []).map((joint) => ({
         id: joint.id,

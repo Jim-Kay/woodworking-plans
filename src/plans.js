@@ -137,15 +137,15 @@ export const PLAN_CATALOG = [
     status: 'ready',
     build: 'generated-tray-bird-feeder',
     defaults: { build: 'generated-tray-bird-feeder', feederW: 12, feederD: 8, feederSideH: 1.5, feederBottomT: 0.75, feederSideT: 0.75, feederMaterial: 'cedar_fence_picket', feederHanging: true, feederDrainage: true },
-    summary: 'A canonical generated-design package rendered through the existing portal adapter.',
+    summary: 'A simple cedar tray feeder with low sides, drainage holes, and corner holes for hanging cord or chain.',
     materials: 'Cedar or outdoor-friendly stock, screws, cord or chain',
     details: {
-      description: 'A tray-style bird feeder generated from the canonical sandbox design model. This plan proves the generated package, validation, OpenSCAD export, and portal adapter path before adding more complex generated furniture.',
+      description: 'A beginner-friendly outdoor tray feeder sized for small birds and quick weekend assembly. The open tray holds seed, the low rails help keep feed contained, drainage holes let rainwater escape, and four rim holes provide locations for cord or chain if you want to hang it.',
       materials: ['Cedar fence picket or other outdoor-friendly stock', 'Exterior screws or brads', 'Cord, chain, or hanging wire', 'Exterior-safe finish if desired'],
       tools: ['Saw', 'Drill/driver', 'Clamps', 'Sander'],
-      notes: ['Generated plans are produced from canonical design JSON, then adapted into the portal viewer and cut-list shape.', 'Drainage holes are recommended for outdoor use.']
+      notes: ['The blue guide marks in the 3D view are drill locations, not screws.', 'Drainage holes are recommended for outdoor use.', 'Use exterior-rated fasteners and hang from cord, light chain, or wire sized for the loaded feeder.']
     },
-    tags: ['generated', 'bird feeder', 'canonical'],
+    tags: ['bird feeder', 'outdoor', 'cedar', 'weekend build'],
     thumbnail: 'bird-feeder'
   }
 ];
