@@ -178,7 +178,11 @@ async function runVisualReview(planPackage, screenshotPath) {
     model: visionModel,
     base_url: visionBaseUrl,
     screenshot_path: screenshotPath,
-    ...normalizeVisualReview(parseJson(data.choices?.[0]?.message?.content || ''))
+    ...normalizeVisualReview(parseJson(data.choices?.[0]?.message?.content || ''), {
+      viewLabel: reviewInput.view_label,
+      validStepIds: (planPackage.design?.assembly_steps || []).map((step) => step.id),
+      validPartIds: (planPackage.design?.parts || []).map((part) => part.id)
+    })
   };
 }
 

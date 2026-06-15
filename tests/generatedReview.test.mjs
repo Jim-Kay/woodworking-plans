@@ -72,19 +72,30 @@ const visualInput = buildVisualReviewInput(planPackage, {
   reviewFocus: 'Check whether the drill step clearly shows pre-assembly hole layout guidance.'
 });
 assert.equal(visualInput.view_label, 'Drill layout screenshot');
+assert.match(buildVisualReviewInput(planPackage).review_focus, /first-time builder/);
+assert.match(visualInput.review_focus, /pre-assembly hole layout/);
 assert.equal(visualInput.package.design.design_id, 'review_test_feeder');
 assert.equal(visualInput.visual_expectations.assembly_steps.some((step) => step.id === 'step.drill'), true);
 
 const visualMessages = buildVisualReviewMessages(visualInput, 'data:image/png;base64,abc123');
 assert.equal(visualMessages.length, 2);
-assert.match(visualMessages[0].content, /visual reviewer/);
+assert.match(visualMessages[0].content, /first-time builder/);
 assert.equal(visualMessages[1].content[1].image_url.url, 'data:image/png;base64,abc123');
 assert.equal(VISUAL_REVIEW_SCHEMA.required.includes('matches_intent'), true);
+assert.equal(VISUAL_REVIEW_SCHEMA.required.includes('builder_comprehension'), true);
 
 const visualReview = normalizeVisualReview({
   view_label: 'Drill layout screenshot',
   matches_intent: false,
   confidence: 'certain',
+  builder_comprehension: {
+    can_identify_next_action: true,
+    can_locate_relevant_parts: true,
+    can_locate_holes_or_fasteners: false,
+    text_matches_image: false,
+    assembly_stage_is_clear: false,
+    confusion_points: ['The text says drill before assembly, but the image shows the rails attached.']
+  },
   findings: [{ severity: 'warning', category: 'stage', message: 'The drill view appears fully assembled.' }],
   proposed_annotations: {
     step_instructions: [{ step_id: 'step.drill', instructions: ['Show drilling before the rails are attached.'], mode: 'append' }],
@@ -92,11 +103,37 @@ const visualReview = normalizeVisualReview({
     design_notes: ['Visual review recommends clearer drill guidance.']
   },
   missing_capabilities: [{ capability: 'stage-specific screenshot capture', reason: 'The visual reviewer needs rendered pre-assembly views.', evidence: ['Screenshot shows rails attached.'] }]
+}, {
+  viewLabel: 'Caller supplied drill screenshot label',
+  validStepIds: ['step.drill'],
+  validPartIds: ['bottom.panel']
 });
+assert.equal(visualReview.view_label, 'Caller supplied drill screenshot label');
 assert.equal(visualReview.matches_intent, false);
 assert.equal(visualReview.confidence, 'low');
+assert.equal(visualReview.builder_comprehension.can_identify_next_action, true);
+assert.equal(visualReview.builder_comprehension.can_locate_holes_or_fasteners, false);
+assert.equal(visualReview.builder_comprehension.confusion_points.length, 1);
 assert.equal(visualReview.proposed_annotations.step_instructions[0].step_id, 'step.drill');
 assert.equal(visualReview.proposed_annotations.part_notes[0].part_id, 'bottom.panel');
 assert.equal(visualReview.missing_capabilities[0].evidence[0], 'Screenshot shows rails attached.');
+
+const filteredVisualReview = normalizeVisualReview({
+  proposed_annotations: {
+    step_instructions: [
+      { step_id: '2', instructions: ['Loose visible step number should be ignored.'] },
+      { step_id: 'step.drill', instructions: ['Exact package step ID should survive.'] }
+    ],
+    part_notes: [
+      { part_id: '1', notes: ['Loose visible part number should be ignored.'] },
+      { part_id: 'bottom.panel', notes: ['Exact package part ID should survive.'] }
+    ]
+  }
+}, {
+  validStepIds: ['step.drill'],
+  validPartIds: ['bottom.panel']
+});
+assert.equal(filteredVisualReview.proposed_annotations.step_instructions.length, 1);
+assert.equal(filteredVisualReview.proposed_annotations.part_notes.length, 1);
 
 console.log('generated review tests passed');

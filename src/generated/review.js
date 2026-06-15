@@ -77,11 +77,24 @@ export const PACKAGE_REVIEW_SCHEMA = {
 export const VISUAL_REVIEW_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['view_label', 'matches_intent', 'confidence', 'findings', 'proposed_annotations', 'missing_capabilities'],
+  required: ['view_label', 'matches_intent', 'confidence', 'builder_comprehension', 'findings', 'proposed_annotations', 'missing_capabilities'],
   properties: {
     view_label: { type: 'string' },
     matches_intent: { type: 'boolean' },
     confidence: { type: 'string', enum: ['low', 'medium', 'high'] },
+    builder_comprehension: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['can_identify_next_action', 'can_locate_relevant_parts', 'can_locate_holes_or_fasteners', 'text_matches_image', 'assembly_stage_is_clear', 'confusion_points'],
+      properties: {
+        can_identify_next_action: { type: 'boolean' },
+        can_locate_relevant_parts: { type: 'boolean' },
+        can_locate_holes_or_fasteners: { type: 'boolean' },
+        text_matches_image: { type: 'boolean' },
+        assembly_stage_is_clear: { type: 'boolean' },
+        confusion_points: { type: 'array', items: { type: 'string' } }
+      }
+    },
     findings: {
       type: 'array',
       items: {
@@ -192,7 +205,7 @@ export function buildVisualReviewInput(planPackage, options = {}) {
   const packageInput = buildPackageReviewInput(planPackage);
   return {
     view_label: options.viewLabel || 'rendered design view',
-    review_focus: options.reviewFocus || 'Check whether the screenshot visually matches the generated woodworking design package and builder-facing instructions.',
+    review_focus: options.reviewFocus || 'Review the screenshot as a first-time builder deciding whether the visible instructions and model make the next build action clear.',
     package: packageInput,
     visual_expectations: visualExpectations(packageInput)
   };
@@ -230,10 +243,14 @@ export function buildVisualReviewMessages(reviewInput, imageDataUrl) {
     {
       role: 'system',
       content: [
-        'You are the visual reviewer for a woodworking generated-design sandbox.',
-        'Compare the screenshot to the generated design package and the stated review focus.',
-        'Judge visual consistency only from visible evidence. If the screenshot is ambiguous, lower confidence rather than inventing detail.',
+        'You are the end-user comprehension reviewer for a woodworking generated-design sandbox.',
+        'Pretend you are a first-time builder trying to understand how to build the item from the visible screenshot.',
+        'Compare the screenshot to the generated design package and the stated review focus, but judge it from the builder perspective first.',
+        'Decide whether the visible text, model, labels, cut-list graphics, and assembly stage make the next action clear without relying on source-code knowledge.',
+        'Judge only from visible evidence. If the screenshot is ambiguous, lower confidence rather than inventing detail.',
         'Look for mismatches such as wrong assembly stage, misleading drill or screw markers, cut-list shapes that do not communicate the part, missing labels, unreadable instructions, or render artifacts.',
+        'Fill builder_comprehension with whether a builder can identify the next action, locate relevant parts, locate holes or fasteners, reconcile text with image, and understand the assembly stage.',
+        'When proposing annotations, use exact step IDs and part IDs from the package. Do not use visible step numbers or list positions as IDs.',
         'Do not request source-code edits directly. Use proposed_annotations for design-level guidance, or missing_capabilities when the sandbox needs a new tool, renderer, validator, or portal feature.',
         'Return JSON only.'
       ].join(' ')
@@ -284,14 +301,15 @@ export function normalizePackageReview(roleId, value) {
   };
 }
 
-export function normalizeVisualReview(value) {
+export function normalizeVisualReview(value, context = {}) {
   const review = value && typeof value === 'object' ? value : {};
   return {
-    view_label: String(review.view_label || '').trim(),
+    view_label: String(context.viewLabel || review.view_label || '').trim(),
     matches_intent: review.matches_intent === true,
     confidence: ['low', 'medium', 'high'].includes(review.confidence) ? review.confidence : 'low',
+    builder_comprehension: normalizeBuilderComprehension(review.builder_comprehension),
     findings: Array.isArray(review.findings) ? review.findings.map(normalizeFinding).filter((item) => item.message) : [],
-    proposed_annotations: normalizeProposedAnnotations(review.proposed_annotations),
+    proposed_annotations: normalizeProposedAnnotations(review.proposed_annotations, context),
     missing_capabilities: Array.isArray(review.missing_capabilities) ? review.missing_capabilities.map(normalizeCapability).filter((item) => item.capability || item.reason) : []
   };
 }
@@ -317,6 +335,18 @@ function normalizeCapability(value) {
     capability: String(value?.capability || '').trim(),
     reason: String(value?.reason || '').trim(),
     ...(Array.isArray(value?.evidence) ? { evidence: value.evidence.map((item) => String(item || '').trim()).filter(Boolean) } : {})
+  };
+}
+
+function normalizeBuilderComprehension(value = {}) {
+  const review = value && typeof value === 'object' ? value : {};
+  return {
+    can_identify_next_action: review.can_identify_next_action === true,
+    can_locate_relevant_parts: review.can_locate_relevant_parts === true,
+    can_locate_holes_or_fasteners: review.can_locate_holes_or_fasteners === true,
+    text_matches_image: review.text_matches_image === true,
+    assembly_stage_is_clear: review.assembly_stage_is_clear === true,
+    confusion_points: cleanStringArray(review.confusion_points)
   };
 }
 
@@ -350,14 +380,20 @@ function visualExpectations(packageInput) {
   };
 }
 
-function normalizeProposedAnnotations(value = {}) {
+function normalizeProposedAnnotations(value = {}, context = {}) {
   const annotations = value && typeof value === 'object' ? value : {};
+  const validStepIds = context.validStepIds ? new Set(context.validStepIds) : null;
+  const validPartIds = context.validPartIds ? new Set(context.validPartIds) : null;
   return {
     step_instructions: Array.isArray(annotations.step_instructions)
-      ? annotations.step_instructions.map(normalizeStepInstruction).filter((item) => item.step_id && item.instructions.length)
+      ? annotations.step_instructions
+        .map(normalizeStepInstruction)
+        .filter((item) => item.step_id && item.instructions.length && (!validStepIds || validStepIds.has(item.step_id)))
       : [],
     part_notes: Array.isArray(annotations.part_notes)
-      ? annotations.part_notes.map(normalizePartNote).filter((item) => item.part_id && item.notes.length)
+      ? annotations.part_notes
+        .map(normalizePartNote)
+        .filter((item) => item.part_id && item.notes.length && (!validPartIds || validPartIds.has(item.part_id)))
       : [],
     design_notes: cleanStringArray(annotations.design_notes)
   };

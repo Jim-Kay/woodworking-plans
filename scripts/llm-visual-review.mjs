@@ -39,7 +39,7 @@ const review = {
   base_url: baseUrl,
   package_dir: packageDir,
   screenshot_path: screenshotPath,
-  ...normalizeVisualReview(raw)
+  ...normalizeVisualReview(raw, visualReviewContext(planPackage, reviewInput))
 };
 
 await writeJson(outPath, review);
@@ -122,9 +122,20 @@ function summaryText(review) {
     `view=${review.view_label}`,
     `matches_intent=${review.matches_intent}`,
     `confidence=${review.confidence}`,
+    `can_identify_next_action=${review.builder_comprehension.can_identify_next_action}`,
+    `text_matches_image=${review.builder_comprehension.text_matches_image}`,
+    `confusion_points=${review.builder_comprehension.confusion_points.length}`,
     `findings=${review.findings.length}`,
     `proposed_step_annotations=${review.proposed_annotations.step_instructions.length}`,
     `missing_capabilities=${review.missing_capabilities.length}`,
     `out=${outPath}`
   ].join('\n');
+}
+
+function visualReviewContext(planPackage, reviewInput) {
+  return {
+    viewLabel: reviewInput.view_label,
+    validStepIds: (planPackage.design?.assembly_steps || []).map((step) => step.id),
+    validPartIds: (planPackage.design?.parts || []).map((part) => part.id)
+  };
 }

@@ -98,7 +98,7 @@ Use separate model tiers rather than expecting one local model to do everything:
 
 - **Fast iteration model**: a 7B/8B or efficient MoE model for cheap generate/validate/revise loops.
 - **Planner model**: a stronger 14B-30B class model for interpreting validation failures and choosing next attempts.
-- **Vision reviewer**: a vision-language model for screenshot checks against the package intent, rendered build steps, labels, and instructions.
+- **Vision reviewer**: a vision-language model that pretends to be a first-time builder and checks screenshots for comprehension, package intent, rendered build steps, labels, and instructions.
 - **Escalation summarizer**: any reliable structured-output model that can turn repeated failures into a concise Codex feature request.
 
 Candidate families to test first:
@@ -190,7 +190,7 @@ $env:LLM_MODEL = 'qwen3:14b'
 npm run sandbox:loop -- examples/tray-bird-feeder.scenario.json generated/runs/llm-demo
 ```
 
-The loop can also run an optional visual review immediately after package export when a screenshot and vision model are configured:
+The loop can also run an optional visual review immediately after package export when a screenshot and vision model are configured. This review is framed as an end-user comprehension pass: can a builder tell what to do next, locate the relevant parts/features, trust that the text matches the image, and understand whether the view is pre-assembly, partial assembly, or finished assembly?
 
 ```powershell
 $env:LLM_BASE_URL = 'http://localhost:11434/v1'
@@ -198,6 +198,7 @@ $env:LLM_MODEL = 'qwen3:14b'
 $env:LLM_VISION_MODEL = 'qwen2.5vl:7b'
 $env:LLM_VISION_SCREENSHOT = '.\path\to\screenshot.png'
 $env:VISION_REVIEW_VIEW = 'Generated tray feeder drill step'
+$env:VISION_REVIEW_FOCUS = 'Review this as a first-time builder. Can the builder understand where to drill before assembly from this screen?'
 npm run sandbox:loop -- examples/tray-bird-feeder.scenario.json generated/runs/llm-demo
 ```
 
@@ -225,11 +226,11 @@ If a vision-capable local model is available, run a screenshot review pass again
 $env:LLM_VISION_BASE_URL = 'http://localhost:11434/v1'
 $env:LLM_VISION_MODEL = 'qwen2.5vl:7b'
 $env:VISION_REVIEW_VIEW = 'Generated tray feeder drill step'
-$env:VISION_REVIEW_FOCUS = 'Check whether the screenshot visually matches the drill-step intent and does not imply drilling after full assembly.'
+$env:VISION_REVIEW_FOCUS = 'Review this as a first-time builder. Can the builder understand where to drill before assembly, and does the image contradict the text?'
 npm run sandbox:vision-review -- generated/runs/llm-demo/package .\path\to\screenshot.png generated/runs/llm-demo/visual-review.json
 ```
 
-The current text-planner baseline on this workstation uses `qwen3:14b` and `qwen3:8b`, which are not vision models. Use a VL model such as `qwen2.5vl` or `qwen3-vl` for screenshots. The visual review output is advisory and structured for the next loop: it can propose `annotate_design` arguments, report visual mismatches, or request a missing capability such as better stage-specific screenshot capture.
+The current text-planner baseline on this workstation uses `qwen3:14b` and `qwen3:8b`, which are not vision models. Use a VL model such as `qwen2.5vl` or `qwen3-vl` for screenshots. The visual review output is advisory and structured for the next loop: it includes builder-comprehension checks, can propose `annotate_design` arguments, can report visual mismatches, or can request a missing capability such as better stage-specific screenshot capture.
 
 ## MCP Server
 
