@@ -56,6 +56,7 @@ function generatedBuildStep(step, index) {
     output.image = 'cut-layout';
     output.vis = { panels: true, rails: true, references: false };
   } else if (normalizedTitle.includes('drill')) {
+    output.image = 'drill-layout';
     output.vis = { panels: true, rails: true, references: true };
   } else {
     output.vis = { panels: true, rails: true, references: false };

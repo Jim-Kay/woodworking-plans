@@ -837,6 +837,7 @@ function buildStepImages(step, options = {}) {
 
 function buildStepImage(step, options = {}) {
   if (step.image === 'cut-layout') return cutLayoutImage(options.width || 760, options.height || 430);
+  if (step.image === 'drill-layout') return generatedDrillLayoutImage(options.width || 760, options.height || 430);
   if (step.image?.type === 'animation-still') {
     const animationType = step.image.animation || step.animation?.type;
     if (animationType) {
@@ -1158,13 +1159,13 @@ function cutLayoutImage(width, height) {
     const y = pad + 14 + index * (rowH + rowGap);
     const boardX = pad + labelW;
     const boardW = Math.max(34, part.length * scale);
-    const boardH = Math.max(10, Math.min(20, part.width * 4.2));
+    const boardH = Math.max(10, Math.min(rowH - 10, part.width * 5));
     const shown = Math.min(part.qty, Math.max(1, Math.floor((rowH - 18) / 4)));
     const color = colors[index % colors.length];
     const stroke = shadeSvgColor(color, -0.28).toString(16).padStart(6, '0');
     const fill = color.toString(16).padStart(6, '0');
     svg.push(`<text x="${pad}" y="${y + 14}" fill="#e5e7eb" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700">${svgTextLines(part.part, 22).map((line, lineIndex) => `<tspan x="${pad}" dy="${lineIndex ? 15 : 0}">${escapeHtml(line)}</tspan>`).join('')}</text>`);
-    svg.push(`<text x="${pad}" y="${y + 44}" fill="#93c5fd" font-family="Inter, Arial, sans-serif" font-size="12">${part.qty} pcs @ ${escapeHtml(formatLength(part.length, plan.unit))}</text>`);
+    svg.push(`<text x="${pad}" y="${y + 44}" fill="#93c5fd" font-family="Inter, Arial, sans-serif" font-size="12">${part.qty} pcs @ ${escapeHtml(formatLength(part.length, plan.unit))} x ${escapeHtml(formatLength(part.width, plan.unit))}</text>`);
     for (let copy = 0; copy < shown; copy += 1) {
       const dy = copy * 4;
       svg.push(`<rect x="${boardX + dy}" y="${y + 7 + dy}" width="${boardW}" height="${boardH}" rx="2" fill="#${fill}" stroke="#${stroke}" stroke-width="1.2" filter="url(#shadow)"/>`);
@@ -1174,6 +1175,71 @@ function cutLayoutImage(width, height) {
       svg.push(`<text x="${boardX + boardW + shown * 4 + 12}" y="${y + 21}" fill="#cbd5e1" font-family="Inter, Arial, sans-serif" font-size="12">stack of ${part.qty}</text>`);
     }
   });
+  svg.push('</svg>');
+  return `data:image/svg+xml;base64,${btoa(svg.join(''))}`;
+}
+
+function generatedDrillLayoutImage(width, height) {
+  if (!isGeneratedPlan()) return null;
+  const pad = 34;
+  const labelW = 190;
+  const drawingX = pad + labelW;
+  const drawingW = width - drawingX - pad;
+  const drawingH = height - pad * 2;
+  const feederW = result.feederW || plan.feederW || 12;
+  const feederD = result.feederD || plan.feederD || 8;
+  const sideH = plan.feederSideH || 1.5;
+  const scale = Math.min(drawingW / Math.max(feederW, 1), drawingH / Math.max(feederD + sideH * 2 + 1.5, 1));
+  const panelW = feederW * scale;
+  const panelH = feederD * scale;
+  const panelX = drawingX + (drawingW - panelW) / 2;
+  const panelY = pad + 34;
+  const railH = Math.max(10, sideH * scale);
+  const railGap = 22;
+  const railYTop = panelY + panelH + railGap;
+  const railYBottom = railYTop + railH + 16;
+  const holeR = Math.max(4, 0.18 * scale);
+  const svg = [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+    '<defs>',
+    '<linearGradient id="floor" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#0c1117"/><stop offset="1" stop-color="#111827"/></linearGradient>',
+    '<filter id="shadow" x="-20%" y="-40%" width="140%" height="180%"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#020617" flood-opacity="0.55"/></filter>',
+    '</defs>',
+    '<rect width="100%" height="100%" fill="url(#floor)"/>'
+  ];
+  for (let x = pad; x < width; x += 32) svg.push(`<line x1="${x}" y1="${pad}" x2="${x}" y2="${height - pad}" stroke="#1f2937" stroke-width="1"/>`);
+  for (let y = pad; y < height; y += 32) svg.push(`<line x1="${pad}" y1="${y}" x2="${width - pad}" y2="${y}" stroke="#1f2937" stroke-width="1"/>`);
+  svg.push(`<text x="${pad}" y="${pad - 6}" fill="#bfdbfe" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700">Pre-assembly drill guide</text>`);
+  svg.push(`<text x="${pad}" y="${pad + 24}" fill="#e5e7eb" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700">Bottom panel</text>`);
+  svg.push(`<text x="${pad}" y="${pad + 44}" fill="#93c5fd" font-family="Inter, Arial, sans-serif" font-size="12">${escapeHtml(formatLength(feederW, plan.unit))} x ${escapeHtml(formatLength(feederD, plan.unit))}</text>`);
+  svg.push(`<text x="${pad}" y="${railYTop + 16}" fill="#e5e7eb" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700">Long side rails</text>`);
+  svg.push(`<text x="${pad}" y="${railYTop + 36}" fill="#93c5fd" font-family="Inter, Arial, sans-serif" font-size="12">Drill hanging holes before assembly</text>`);
+  svg.push(`<rect x="${panelX}" y="${panelY}" width="${panelW}" height="${panelH}" rx="3" fill="#b88a4a" stroke="#6f4322" stroke-width="1.6" filter="url(#shadow)"/>`);
+  svg.push(`<rect x="${panelX + 9}" y="${panelY + 9}" width="${Math.max(0, panelW - 18)}" height="${Math.max(0, panelH - 18)}" rx="2" fill="#c99d5c" opacity=".55"/>`);
+  const drainage = [
+    [0.25, 0.2],
+    [0.75, 0.2],
+    [0.25, 0.8],
+    [0.75, 0.8]
+  ];
+  drainage.forEach(([px, py]) => {
+    const cx = panelX + panelW * px;
+    const cy = panelY + panelH * py;
+    svg.push(`<circle cx="${cx}" cy="${cy}" r="${holeR}" fill="#94a3b8" stroke="#cbd5e1" stroke-width="1.2"/>`);
+  });
+  [
+    { y: railYTop, label: 'Back rail' },
+    { y: railYBottom, label: 'Front rail' }
+  ].forEach((rail) => {
+    svg.push(`<rect x="${panelX}" y="${rail.y}" width="${panelW}" height="${railH}" rx="3" fill="#9a6435" stroke="#6f4322" stroke-width="1.4" filter="url(#shadow)"/>`);
+    svg.push(`<text x="${panelX + panelW + 12}" y="${rail.y + railH * 0.68}" fill="#cbd5e1" font-family="Inter, Arial, sans-serif" font-size="12">${rail.label}</text>`);
+    [0.095, 0.905].forEach((px) => {
+      const cx = panelX + panelW * px;
+      const cy = rail.y + railH / 2;
+      svg.push(`<circle cx="${cx}" cy="${cy}" r="${Math.max(3.5, holeR * 0.72)}" fill="#94a3b8" stroke="#cbd5e1" stroke-width="1.1"/>`);
+    });
+  });
+  svg.push(`<text x="${panelX}" y="${height - 18}" fill="#e5e7eb" font-family="Inter, Arial, sans-serif" font-size="12">Blue marks are drill locations. Drill these while the panel and rails are still separate.</text>`);
   svg.push('</svg>');
   return `data:image/svg+xml;base64,${btoa(svg.join(''))}`;
 }

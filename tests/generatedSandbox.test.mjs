@@ -55,6 +55,7 @@ assert.equal(portalResult.assembly.parts.length, design.parts.length);
 assert.equal(portalResult.buildSteps.length, design.assembly_steps.length);
 assert.equal(portalResult.buildSteps[0].image, 'cut-layout');
 assert.equal(portalResult.buildSteps[0].stage, 1);
+assert.equal(portalResult.buildSteps[1].image, 'drill-layout');
 assert.equal(portalResult.buildSteps[1].vis.references, true);
 assert.equal(portalResult.buildSteps[2].vis.references, false);
 
