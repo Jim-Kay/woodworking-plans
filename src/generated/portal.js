@@ -2,13 +2,32 @@ import { canonicalToPortalResult } from './adapter.js';
 import { generateBoardWithLinearHardwareDesign } from './boardWithLinearHardware.js';
 import { generateCanonicalOpenScad } from './openScad.js';
 import { generateTrayBirdFeederDesign } from './trayBirdFeeder.js';
+import { generateTwoStepStoolDesign } from './twoStepStool.js';
 import { checkPublishability, validateGeneratedDesign } from './validator.js';
 
 export function calculateGeneratedPlan(plan) {
-  if (plan.build !== 'generated-tray-bird-feeder' && plan.build !== 'generated-wall-key-rack') {
+  if (!['generated-tray-bird-feeder', 'generated-wall-key-rack', 'generated-two-step-stool'].includes(plan.build)) {
     return { type: 'generated', ok: false, errors: [`Unsupported generated build: ${plan.build}`], warnings: [], parts: [] };
   }
-  const design = plan.build === 'generated-wall-key-rack' ? generateBoardWithLinearHardwareDesign({
+  const design = plan.build === 'generated-two-step-stool' ? generateTwoStepStoolDesign({
+    design_id: 'portal_two_step_stool',
+    template_id: 'two_step_stool',
+    intent: 'two-step wooden step stool',
+    parameters: {
+      width_in: plan.stoolW,
+      depth_in: plan.stoolD,
+      height_in: plan.stoolH,
+      lower_step_height_in: plan.stoolLowerStepH,
+      lower_step_depth_in: plan.stoolLowerStepD,
+      upper_step_depth_in: plan.stoolUpperStepD,
+      tread_thickness_in: plan.stoolTreadT,
+      leg_width_in: plan.stoolLegW,
+      leg_depth_in: plan.stoolLegD,
+      rail_height_in: plan.stoolRailH,
+      rail_thickness_in: plan.stoolRailT,
+      material: plan.stoolMaterial
+    }
+  }) : plan.build === 'generated-wall-key-rack' ? generateBoardWithLinearHardwareDesign({
     design_id: 'portal_wall_key_rack',
     template_id: 'board_with_linear_hardware',
     intent: 'wall key rack',
@@ -46,7 +65,7 @@ export function calculateGeneratedPlan(plan) {
   return {
     ...result,
     type: 'generated',
-    style: plan.build === 'generated-wall-key-rack' ? 'linear-wall-hardware' : 'tray-bird-feeder',
+    style: generatedStyle(plan.build),
     title: design.title,
     generatedDesign: design,
     validation,
@@ -62,10 +81,20 @@ export function calculateGeneratedPlan(plan) {
     rackH: design.parameters.height_in,
     rackT: design.parameters.board_thickness_in,
     hookCount: design.parameters.hook_count,
+    stoolW: design.parameters.width_in,
+    stoolD: design.parameters.depth_in,
+    stoolH: design.parameters.height_in,
+    lowerStepH: design.parameters.lower_step_height_in,
     physicalPartCount: physicalParts.length,
     referencePartCount: design.parts.length - physicalParts.length,
     boardFeet: design.estimates.board_feet
   };
+}
+
+function generatedStyle(build) {
+  if (build === 'generated-wall-key-rack') return 'linear-wall-hardware';
+  if (build === 'generated-two-step-stool') return 'two-step-stool';
+  return 'tray-bird-feeder';
 }
 
 function modelBounds(parts = []) {

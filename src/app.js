@@ -60,7 +60,19 @@ const fields = {
   feederSideT: $('#feederSideT'),
   feederMaterial: $('#feederMaterial'),
   feederHanging: $('#feederHanging'),
-  feederDrainage: $('#feederDrainage')
+  feederDrainage: $('#feederDrainage'),
+  stoolW: $('#stoolW'),
+  stoolD: $('#stoolD'),
+  stoolH: $('#stoolH'),
+  stoolLowerStepH: $('#stoolLowerStepH'),
+  stoolLowerStepD: $('#stoolLowerStepD'),
+  stoolUpperStepD: $('#stoolUpperStepD'),
+  stoolTreadT: $('#stoolTreadT'),
+  stoolLegW: $('#stoolLegW'),
+  stoolLegD: $('#stoolLegD'),
+  stoolRailH: $('#stoolRailH'),
+  stoolRailT: $('#stoolRailT'),
+  stoolMaterial: $('#stoolMaterial')
 };
 
 const cameraFields = {
@@ -72,7 +84,7 @@ const cameraFields = {
   targetZ: $('#targetZ')
 };
 
-const STRING_PLAN_KEYS = ['unit', 'join', 'build', 'finishColor', 'finishSheen', 'canvasAppearance', 'modelPalette', 'modelOpacity', 'modelScene', 'mountMethod', 'mountClip', 'feederMaterial'];
+const STRING_PLAN_KEYS = ['unit', 'join', 'build', 'finishColor', 'finishSheen', 'canvasAppearance', 'modelPalette', 'modelOpacity', 'modelScene', 'mountMethod', 'mountClip', 'feederMaterial', 'stoolMaterial'];
 const BOOLEAN_PLAN_KEYS = ['showDimensions', 'feederHanging', 'feederDrainage'];
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -122,7 +134,7 @@ function bindInputs() {
         const outerW = toInches(fields.outerW.value, plan.unit);
         const outerH = toInches(fields.outerH.value, plan.unit);
         plan = applyOuterSize(plan, outerW, outerH);
-      } else if (key === 'finishColor' || key === 'finishSheen' || key === 'canvasAppearance' || key === 'mountClip' || key === 'feederMaterial') {
+      } else if (key === 'finishColor' || key === 'finishSheen' || key === 'canvasAppearance' || key === 'mountClip' || key === 'feederMaterial' || key === 'stoolMaterial') {
         plan[key] = el.value;
       } else if (key === 'feederHanging' || key === 'feederDrainage') {
         plan[key] = el.checked;
@@ -312,6 +324,10 @@ function selectPlan(planId) {
 }
 
 function planThumbnail(kind) {
+  if (String(kind || '').startsWith('asset:')) {
+    const src = kind.slice('asset:'.length);
+    return `<img src="${escapeHtml(src)}" alt="" loading="lazy">`;
+  }
   if (kind === 'bird-feeder') {
     return `<svg viewBox="0 0 320 190" aria-hidden="true"><rect width="320" height="190" rx="8" fill="#0c1117"/><g fill="#b7793c"><rect x="72" y="104" width="176" height="26" rx="2"/><rect x="58" y="78" width="20" height="58" rx="2"/><rect x="242" y="78" width="20" height="58" rx="2"/><rect x="78" y="76" width="164" height="16" rx="2"/></g><rect x="88" y="92" width="144" height="20" fill="#d6a15d"/><g fill="#60a5fa" opacity=".75"><circle cx="116" cy="104" r="5"/><circle cx="150" cy="104" r="5"/><circle cx="184" cy="104" r="5"/><circle cx="218" cy="104" r="5"/></g><path d="M102 78C110 42 210 42 218 78" fill="none" stroke="#d1d5db" stroke-width="5"/><path d="M160 39v-18" stroke="#d1d5db" stroke-width="5" stroke-linecap="round"/><path d="M70 137h180" stroke="#6b3f1d" stroke-width="5"/><circle cx="104" cy="83" r="4" fill="#111827"/><circle cx="216" cy="83" r="4" fill="#111827"/></svg>`;
   }
@@ -387,7 +403,7 @@ function isGeneratedPlan() {
 }
 
 function isGeneratedBuild(build) {
-  return build === 'generated-tray-bird-feeder' || build === 'generated-wall-key-rack';
+  return build === 'generated-tray-bird-feeder' || build === 'generated-wall-key-rack' || build === 'generated-two-step-stool';
 }
 
 function isGeneratedTrayPlan() {
@@ -398,8 +414,12 @@ function isGeneratedWallRackPlan() {
   return plan.build === 'generated-wall-key-rack';
 }
 
+function isGeneratedStoolPlan() {
+  return plan.build === 'generated-two-step-stool';
+}
+
 function renderFields() {
-  const numericKeys = ['canvasW', 'canvasH', 'canvasT', 'stretcherW', 'face', 'reveal', 'depth', 'faceLip', 'linerW', 'strainerDepth', 'stock', 'kerf', 'rabbet', 'shelfW', 'shelfH', 'shelfD', 'shelfLevels', 'shelfBays', 'shelfSlats', 'shelfPost', 'shelfRail', 'shelfDeck', 'toteW', 'toteLipWidth', 'toteD', 'toteH', 'toteColumns', 'toteRows', 'toteSideClearance', 'toteVerticalClearance', 'toteRailInset', 'feederW', 'feederD', 'feederSideH', 'feederBottomT', 'feederSideT'];
+  const numericKeys = ['canvasW', 'canvasH', 'canvasT', 'stretcherW', 'face', 'reveal', 'depth', 'faceLip', 'linerW', 'strainerDepth', 'stock', 'kerf', 'rabbet', 'shelfW', 'shelfH', 'shelfD', 'shelfLevels', 'shelfBays', 'shelfSlats', 'shelfPost', 'shelfRail', 'shelfDeck', 'toteW', 'toteLipWidth', 'toteD', 'toteH', 'toteColumns', 'toteRows', 'toteSideClearance', 'toteVerticalClearance', 'toteRailInset', 'feederW', 'feederD', 'feederSideH', 'feederBottomT', 'feederSideT', 'stoolW', 'stoolD', 'stoolH', 'stoolLowerStepH', 'stoolLowerStepD', 'stoolUpperStepD', 'stoolTreadT', 'stoolLegW', 'stoolLegD', 'stoolRailH', 'stoolRailT'];
   numericKeys.forEach((key) => {
     const displayValue = plan.build === 'rolling-shelves' && key === 'shelfDeck' && result?.deck ? result.deck : plan[key];
     const isCount = ['shelfLevels', 'shelfBays', 'shelfSlats', 'toteColumns', 'toteRows'].includes(key);
@@ -412,6 +432,7 @@ function renderFields() {
   if (fields.feederMaterial) fields.feederMaterial.value = plan.feederMaterial;
   if (fields.feederHanging) fields.feederHanging.checked = Boolean(plan.feederHanging);
   if (fields.feederDrainage) fields.feederDrainage.checked = Boolean(plan.feederDrainage);
+  if (fields.stoolMaterial) fields.stoolMaterial.value = plan.stoolMaterial;
   const rolling = plan.build === 'rolling-shelves';
   const toteRack = plan.build === 'tote-rack';
   fields.shelfBays?.closest('label')?.classList.toggle('hidden', rolling || toteRack);
@@ -425,6 +446,7 @@ function renderFields() {
   $$('[data-shelf-controls]').forEach((el) => el.classList.toggle('hidden', !isShelfPlan()));
   $$('[data-tote-controls]').forEach((el) => el.classList.toggle('hidden', !toteRack));
   $$('[data-generated-controls]').forEach((el) => el.classList.toggle('hidden', !isGeneratedTrayPlan()));
+  $$('[data-generated-stool-controls]').forEach((el) => el.classList.toggle('hidden', !isGeneratedStoolPlan()));
   $$('[data-frame-controls]').forEach((el) => el.classList.toggle('hidden', isShelfPlan() || isGeneratedPlan()));
   $$('[data-shelf-controls]').forEach((el) => {
     const title = el.querySelector('.quickSectionTitle span')?.textContent || '';
@@ -444,10 +466,10 @@ function renderFields() {
     label.textContent = normalizeBuild(plan.build) === 'strainer' ? 'Strainer' : 'Liner';
   });
   if (isGeneratedPlan()) {
-    document.querySelector('[data-stage-part="primary"]').textContent = isGeneratedWallRackPlan() ? 'Board' : 'Panel';
-    document.querySelector('[data-stage-part="support"]').textContent = isGeneratedWallRackPlan() ? 'Hooks' : 'Rails';
-    document.querySelector('[data-stage-part="surface"]').textContent = isGeneratedWallRackPlan() ? 'Pilot holes' : 'Drill holes';
-    document.querySelector('[data-stage-part="hardware"]').textContent = isGeneratedWallRackPlan() ? 'Mounting' : 'Fasteners';
+    document.querySelector('[data-stage-part="primary"]').textContent = isGeneratedWallRackPlan() ? 'Board' : isGeneratedStoolPlan() ? 'Treads' : 'Panel';
+    document.querySelector('[data-stage-part="support"]').textContent = isGeneratedWallRackPlan() ? 'Hooks' : isGeneratedStoolPlan() ? 'Legs' : 'Rails';
+    document.querySelector('[data-stage-part="surface"]').textContent = isGeneratedWallRackPlan() ? 'Pilot holes' : isGeneratedStoolPlan() ? 'Rails' : 'Drill holes';
+    document.querySelector('[data-stage-part="hardware"]').textContent = isGeneratedWallRackPlan() ? 'Mounting' : isGeneratedStoolPlan() ? 'Safety' : 'Fasteners';
   } else if (isShelfPlan()) {
     document.querySelector('[data-stage-part="primary"]').textContent = 'Posts';
     document.querySelector('[data-stage-part="support"]').textContent = 'Rails';
@@ -481,7 +503,13 @@ function renderToggles() {
         ['hardware', 'Fasteners']
       ]
     : isGeneratedPlan()
-      ? isGeneratedWallRackPlan()
+      ? isGeneratedStoolPlan()
+        ? [
+            ['treads', 'Treads'],
+            ['legs', 'Legs'],
+            ['rails', 'Rails']
+          ]
+        : isGeneratedWallRackPlan()
         ? [
             ['panels', 'Board'],
             ['references', 'Hooks and holes']
@@ -516,7 +544,16 @@ function renderToggles() {
 
 function renderDimensionSummary() {
   if (isGeneratedPlan()) {
-    const rows = isGeneratedWallRackPlan() ? [
+    const rows = isGeneratedStoolPlan() ? [
+      ['Plan type', 'Two-step stool'],
+      ['Overall size', `${formatLength(result.stoolW, plan.unit)} x ${formatLength(result.stoolD, plan.unit)} x ${formatLength(result.stoolH, plan.unit)}`],
+      ['Lower step height', formatLength(result.lowerStepH, plan.unit)],
+      ['Tread thickness', formatLength(plan.stoolTreadT, plan.unit)],
+      ['Leg stock', `${formatLength(plan.stoolLegW, plan.unit)} x ${formatLength(plan.stoolLegD, plan.unit)}`],
+      ['Physical parts', result.physicalPartCount],
+      ['Estimated board feet', result.ok ? result.boardFeet.toFixed(2) : '-'],
+      ['Publishable', result.publishability?.ok ? 'Yes' : 'Needs work']
+    ] : isGeneratedWallRackPlan() ? [
       ['Plan type', 'Wall key rack'],
       ['Board size', `${formatLength(result.rackW, plan.unit)} x ${formatLength(result.rackH, plan.unit)} x ${formatLength(result.rackT, plan.unit)}`],
       ['Hooks', result.hookCount],
@@ -622,7 +659,7 @@ function renderStatus() {
   const badges = [];
   if (result.ok) {
     badges.push(`<span class="badge ok">Ready</span>`);
-    if (isGeneratedPlan()) badges.push(`<span class="badge">${isGeneratedWallRackPlan() ? 'Wall rack' : 'Tray feeder'}</span>`);
+    if (isGeneratedPlan()) badges.push(`<span class="badge">${isGeneratedStoolPlan() ? 'Two-step stool' : isGeneratedWallRackPlan() ? 'Wall rack' : 'Tray feeder'}</span>`);
     else if (isShelfPlan()) badges.push(`<span class="badge">Shelves: ${result.levels} levels, ${result.bays} bays</span>`);
     else badges.push(`<span class="badge">Outer: ${escapeHtml(formatLength(result.outerW, plan.unit))} x ${escapeHtml(formatLength(result.outerH, plan.unit))}</span>`);
   }
@@ -631,7 +668,13 @@ function renderStatus() {
   status.innerHTML = badges.join('');
   const mountStatus = $('#mountStatus');
   if (isShelfPlan() || isGeneratedPlan()) {
-    mountStatus.textContent = isGeneratedPlan() ? (isGeneratedWallRackPlan() ? 'Blue guide marks show pilot and mounting locations.' : 'Blue guide marks show drill locations, not screws.') : '';
+    mountStatus.textContent = isGeneratedPlan()
+      ? isGeneratedStoolPlan()
+        ? 'Dimensional aid only: verify joinery, fasteners, and weight capacity before use.'
+        : isGeneratedWallRackPlan()
+          ? 'Blue guide marks show pilot and mounting locations.'
+          : 'Blue guide marks show drill locations, not screws.'
+      : '';
     mountStatus.className = 'mountStatus okText';
     return;
   }
@@ -1905,7 +1948,14 @@ function printPlanDetailsHtml(definition) {
 
 function printDimensionSummaryHtml() {
   const rows = isGeneratedPlan()
-    ? isGeneratedWallRackPlan()
+    ? isGeneratedStoolPlan()
+      ? [
+        ['Plan type', 'Two-step stool'],
+        ['Overall size', `${formatLength(result.stoolW, plan.unit)} x ${formatLength(result.stoolD, plan.unit)} x ${formatLength(result.stoolH, plan.unit)}`],
+        ['Lower step height', formatLength(result.lowerStepH, plan.unit)],
+        ['Physical parts', result.physicalPartCount]
+      ]
+      : isGeneratedWallRackPlan()
       ? [
         ['Plan type', 'Wall key rack'],
         ['Board size', `${formatLength(result.rackW, plan.unit)} x ${formatLength(result.rackH, plan.unit)} x ${formatLength(result.rackT, plan.unit)}`],
@@ -1983,7 +2033,7 @@ function printCompletedImageHtml() {
 }
 
 function printBuildStepsHtml(definition) {
-  const steps = definition.buildSteps || [];
+  const steps = isGeneratedPlan() ? result.buildSteps || [] : definition.buildSteps || [];
   if (!steps.length) return '';
   return `
     <section class="steps pageBreak">
@@ -2040,15 +2090,15 @@ function printViewHtml() {
 }
 
 function printCameraSpan() {
-  const width = isGeneratedPlan() ? result?.feederW || 12 : isShelfPlan() ? result?.shelfW || 48 : result?.outerW || 24;
-  const height = isGeneratedPlan() ? result?.feederH || 3 : isShelfPlan() ? result?.shelfH || 72 : result?.outerH || 24;
-  const depth = isGeneratedPlan() ? result?.feederD || 8 : isShelfPlan() ? result?.shelfD || 24 : plan.depth || 2;
+  const width = isGeneratedPlan() ? result?.modelW || result?.feederW || 12 : isShelfPlan() ? result?.shelfW || 48 : result?.outerW || 24;
+  const height = isGeneratedPlan() ? result?.modelH || result?.feederH || 3 : isShelfPlan() ? result?.shelfH || 72 : result?.outerH || 24;
+  const depth = isGeneratedPlan() ? result?.modelD || result?.feederD || 8 : isShelfPlan() ? result?.shelfD || 24 : plan.depth || 2;
   return Math.max(width, height, depth, 24) * 0.13;
 }
 
 function printCameraTarget() {
   return isGeneratedPlan()
-    ? { x: 0, y: (result?.feederH || 3) * 0.05, z: 0 }
+    ? { x: 0, y: (result?.modelH || result?.feederH || 3) * 0.05, z: 0 }
     : isShelfPlan()
     ? { x: 0, y: (result?.shelfH || 72) * 0.05, z: 0 }
     : { x: 0, y: Math.max(0.05, (plan.depth || 1) * 0.05), z: 0 };

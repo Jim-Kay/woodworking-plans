@@ -115,10 +115,15 @@ body {
   border-bottom: var(--bd);
 }
 
-.planThumb svg {
+.planThumb svg,
+.planThumb img {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.planThumb img {
+  object-fit: cover;
 }
 
 .planCardBody {

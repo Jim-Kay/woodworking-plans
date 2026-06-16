@@ -73,7 +73,7 @@ export function checkPublishability(design, validation = validateGeneratedDesign
     errors,
     warnings,
     portal_integration_notes: [
-      'Current portal integration supports generated tray-feeder and board-with-linear-hardware adapter paths.',
+      'Current portal integration supports generated tray-feeder, board-with-linear-hardware, and two-step-stool adapter paths.',
       'Wall-panel pocket-and-hardware packages can be generated and exported, but still need a portal catalog adapter before public browsing.',
       'Two-step stool packages can be generated and exported as dimensional aids, but require human structural review before real-world use.',
       'A generic generated-package loader is still needed for arbitrary generated templates.',

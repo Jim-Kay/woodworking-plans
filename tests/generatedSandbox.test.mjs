@@ -188,6 +188,28 @@ assert.match(stepStoolValidation.warnings.join('\n'), /not load certified/);
 assert.equal(exportPlanPackage(stepStool).publishability.ok, true);
 assert.match(generateCanonicalOpenScad(stepStool), /tread.upper/);
 
+const portalStepStool = calculateGeneratedPlan({
+  build: 'generated-two-step-stool',
+  stoolW: 16,
+  stoolD: 16,
+  stoolH: 16,
+  stoolLowerStepH: 8,
+  stoolLowerStepD: 9,
+  stoolUpperStepD: 8,
+  stoolTreadT: 0.75,
+  stoolLegW: 1.5,
+  stoolLegD: 1.5,
+  stoolRailH: 1.5,
+  stoolRailT: 0.75,
+  stoolMaterial: 'pine'
+});
+assert.equal(portalStepStool.ok, true);
+assert.equal(portalStepStool.style, 'two-step-stool');
+assert.equal(portalStepStool.generatedDesign.template_id, 'two_step_stool');
+assert.equal(portalStepStool.parts.length, 10);
+assert.equal(portalStepStool.physicalPartCount, 10);
+assert.equal(portalStepStool.publishability.ok, true);
+
 const badReferenceHost = structuredClone(design);
 const badReference = badReferenceHost.parts.find((part) => part.id === 'drainage.hole.1');
 badReference.position.x = 100;
@@ -283,9 +305,13 @@ const stoolPhotoBrief = {
     { label: 'front leg height', value_in: 8 },
     { label: 'leg width', value_in: 1.5 },
     { label: 'leg depth', value_in: 1.5 }
+  ],
+  component_searches: [
+    { query: 'wooden step tread', purpose: 'Find a tread component', category_id: 'wooden_steps' }
   ]
 };
 executed = executeSandboxTool({ name: 'inspect_photo_brief', arguments: { brief: stoolPhotoBrief } }, toolState);
+assert.equal(executed.result.brief.component_searches.find((search) => search.query === 'wooden step tread')?.category_id, undefined);
 toolState = executed.state;
 executed = executeSandboxTool({ name: 'photo_brief_to_scenario', arguments: {} }, toolState);
 assert.equal(executed.result.scenario.template_id, 'two_step_stool');

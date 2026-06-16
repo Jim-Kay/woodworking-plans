@@ -73,6 +73,18 @@ export const DEFAULT_PLAN = {
   rackMaterial: 'pine_1x4',
   rackHardware: 'screw_hook',
   rackMountingHoles: true,
+  stoolW: 16,
+  stoolD: 16,
+  stoolH: 16,
+  stoolLowerStepH: 8,
+  stoolLowerStepD: 9,
+  stoolUpperStepD: 8,
+  stoolTreadT: 0.75,
+  stoolLegW: 1.5,
+  stoolLegD: 1.5,
+  stoolRailH: 1.5,
+  stoolRailT: 0.75,
+  stoolMaterial: 'pine',
   vis: { face: true, liner: true, spacers: true, canvas: true, hardware: true },
   stage: 0
 };

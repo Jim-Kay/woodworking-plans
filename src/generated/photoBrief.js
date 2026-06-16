@@ -1,4 +1,5 @@
 export const PHOTO_DESIGN_BRIEF_SCHEMA_VERSION = '0.1';
+export const PHOTO_BRIEF_COMPONENT_CATEGORIES = ['geometry', 'hardware', 'patterns', 'validators', 'build_steps', 'rendering'];
 
 export const PHOTO_DESIGN_BRIEF_SCHEMA = {
   type: 'object',
@@ -105,6 +106,7 @@ export function buildPhotoBriefMessages(photoSet, imageDataUrls = []) {
         'Do not generate a woodworking plan directly.',
         'Identify visible parts, likely roles, hardware, proportions, missing views, and uncertainties.',
         'For every visible buildable part, propose a component_searches query that a text design agent can run against the reusable component catalog.',
+        `When setting component_searches.category_id, use only one of these catalog categories: ${PHOTO_BRIEF_COMPONENT_CATEGORIES.join(', ')}. If none clearly applies, omit category_id.`,
         'If a required feature cannot be represented with likely reusable components, report it as a missing capability.',
         'Use measurements only when supplied or clearly inferable from a supplied reference; otherwise add an uncertainty.',
         'Return JSON only.'
@@ -244,13 +246,18 @@ function normalizeComponentSearches(value, parts = []) {
   const explicit = (Array.isArray(value) ? value : []).map((search) => ({
     query: cleanString(search?.query),
     purpose: cleanString(search?.purpose || search?.query),
-    ...(search?.category_id ? { category_id: cleanString(search.category_id) } : {})
+    ...(validCategoryId(search?.category_id) ? { category_id: cleanString(search.category_id) } : {})
   }));
   const fromParts = (Array.isArray(parts) ? parts : []).map((part) => ({
     query: cleanString(part?.component_query || part?.name),
     purpose: cleanString(part?.role || part?.name)
   }));
   return dedupeSearches([...explicit, ...fromParts].filter((search) => search.query));
+}
+
+function validCategoryId(value) {
+  const categoryId = cleanString(value);
+  return PHOTO_BRIEF_COMPONENT_CATEGORIES.includes(categoryId);
 }
 
 function normalizeCapabilities(value) {

@@ -472,6 +472,8 @@ export class FrameViewer {
     const materialForPart = (part) => {
       const group = part.meta?.group;
       if (group === 'panels') return makeModelMaterial(plan, 0xb8894b, 0.72);
+      if (group === 'treads') return makeModelMaterial(plan, 0xc79255, 0.72);
+      if (group === 'legs') return makeModelMaterial(plan, 0x7a4a2d, 0.72);
       if (group === 'rails') return makeModelMaterial(plan, 0x8f5a2e, 0.68);
       if (group === 'references') return makeModelMaterial(plan, 0x60a5fa, 0.45, { transparent: true, opacity: 0.45, depthWrite: false });
       return makeModelMaterial(plan, 0xb8894b, 0.72);
@@ -482,11 +484,15 @@ export class FrameViewer {
       const group = part.meta?.group;
       if (group === 'references') return 'Drill outdoor holes';
       if (group === 'panels') return 'Cut parts';
+      if (group === 'treads') return 'Cut stool parts';
+      if (group === 'legs') return 'Cut stool parts';
       if (group === 'rails') return 'Cut parts';
-      return 'Assemble tray';
+      return 'Assemble';
     };
     const visKeyForGroup = (group) => {
       if (group === 'panels') return 'panels';
+      if (group === 'treads') return 'treads';
+      if (group === 'legs') return 'legs';
       if (group === 'rails') return 'rails';
       if (group === 'references') return 'references';
       return 'hardware';

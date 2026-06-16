@@ -165,6 +165,38 @@ export const PLAN_CATALOG = [
     },
     tags: ['generated', 'key rack', 'hooks', 'component composition'],
     thumbnail: 'key-rack'
+  },
+  {
+    id: 'generated-two-step-stool',
+    title: 'Generated Two-Step Stool',
+    family: 'Generated Plans',
+    status: 'ready',
+    build: 'generated-two-step-stool',
+    defaults: {
+      build: 'generated-two-step-stool',
+      stoolW: 16,
+      stoolD: 16,
+      stoolH: 16,
+      stoolLowerStepH: 8,
+      stoolLowerStepD: 9,
+      stoolUpperStepD: 8,
+      stoolTreadT: 0.75,
+      stoolLegW: 1.5,
+      stoolLegD: 1.5,
+      stoolRailH: 1.5,
+      stoolRailT: 0.75,
+      stoolMaterial: 'pine'
+    },
+    summary: 'A compact two-step stool generated from reusable tread, leg-post, rail, and load-safety components.',
+    materials: 'Pine or hardwood stock, glue, structural screws or joinery selected by the builder',
+    details: {
+      description: 'A generated two-step stool plan based on the reusable stool template created from multi-image reference testing. It produces a dimensional cut list, staged build views, and explicit load-safety warnings, but it is not a certified standing platform until the material, joinery, and fasteners are reviewed by a qualified person.',
+      materials: ['Pine or hardwood treads', 'Square leg stock', 'Apron and stretcher rail stock', 'Wood glue', 'Structural screws, dowels, or other suitable joinery'],
+      tools: ['Saw', 'Drill/driver', 'Square', 'Clamps', 'Sander'],
+      notes: ['This plan uses the generic two-step-stool template, not a one-off coded product copy.', 'Generated step stools are dimensional aids only and are not load-certified.', 'Confirm joinery, fasteners, anti-slip treatment, and real weight capacity before standing on the build.']
+    },
+    tags: ['generated', 'step stool', 'treads', 'component composition'],
+    thumbnail: 'asset:assets/thumbnails/two-step-stool-variant.png'
   }
 ];
 
@@ -183,6 +215,7 @@ export function buildForPlanId(id) {
 export function planIdForBuild(build) {
   if (build === 'generated-tray-bird-feeder') return 'generated-tray-bird-feeder';
   if (build === 'generated-wall-key-rack') return 'generated-wall-key-rack';
+  if (build === 'generated-two-step-stool') return 'generated-two-step-stool';
   if (build === 'tote-rack') return 'tote-rack-27';
   if (build === 'rolling-shelves') return 'rolling-storage-shelf';
   if (build === 'shelves') return 'basement-shelves';

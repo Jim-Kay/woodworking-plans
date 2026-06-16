@@ -1,0 +1,19 @@
+{
+  "template_id": "two_step_stool",
+  "design_id": "two_step_stool_example",
+  "intent": "two-step wooden step stool",
+  "parameters": {
+    "width_in": 16,
+    "depth_in": 16,
+    "height_in": 16,
+    "lower_step_height_in": 8,
+    "lower_step_depth_in": 9,
+    "upper_step_depth_in": 8,
+    "tread_thickness_in": 0.75,
+    "leg_width_in": 1.5,
+    "leg_depth_in": 1.5,
+    "rail_height_in": 1.5,
+    "rail_thickness_in": 0.75,
+    "material": "pine"
+  }
+}
