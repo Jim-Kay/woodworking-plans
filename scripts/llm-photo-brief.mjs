@@ -10,6 +10,7 @@ import {
 
 const baseUrl = (process.env.LLM_VISION_BASE_URL || process.env.LLM_BASE_URL || 'http://localhost:11434/v1').replace(/\/$/, '');
 const model = process.env.LLM_VISION_MODEL || process.env.LLM_MODEL || '';
+const numCtx = Number(process.env.LLM_VISION_NUM_CTX || process.env.LLM_NUM_CTX || 0);
 const [photoSetPath, outPath = 'generated/photo-design-brief.json'] = process.argv.slice(2);
 
 if (!photoSetPath || !model) {
@@ -37,6 +38,7 @@ async function runPhotoBrief(photoSetValue, imageUrls) {
     body: JSON.stringify({
       model,
       temperature: 0,
+      ...(numCtx ? { options: { num_ctx: numCtx } } : {}),
       messages: buildPhotoBriefMessages(photoSetValue, imageUrls),
       response_format: {
         type: 'json_schema',

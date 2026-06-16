@@ -252,6 +252,27 @@ executed = executeSandboxTool({
 assert.equal(executed.result.ok, false);
 assert.equal(executed.result.compatible_template_ids.includes('wall_panel_with_pocket_and_linear_hardware'), true);
 
+executed = executeSandboxTool({
+  name: 'request_capability',
+  arguments: {
+    capability_name: 'step stool structural template',
+    rationale: 'No current template supports a load-bearing two-step stool.',
+    component_ids: ['geometry.rectangular_panel', 'geometry.linear_rail']
+  }
+}, { scenario: { design_id: 'capability_alias_test' } });
+assert.equal(executed.result.ok, true);
+assert.equal(executed.result.request.capability, 'step stool structural template');
+assert.equal(executed.result.request.reason, 'No current template supports a load-bearing two-step stool.');
+assert.match(executed.result.request.evidence.join('\n'), /geometry\.linear_rail/);
+
+executed = executeSandboxTool({
+  name: 'request_capability',
+  arguments: {
+    capability_name: 'photo to template mapping'
+  }
+}, { scenario: { design_id: 'capability_reason_fallback_test' } });
+assert.match(executed.result.request.reason, /photo to template mapping/);
+
 executed = executeSandboxTool({ name: 'generate_design', arguments: { parameters: { width_in: 13 } } }, toolState);
 assert.equal(executed.result.ok, true);
 assert.equal(executed.state.design.parameters.width_in, 13);

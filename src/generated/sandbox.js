@@ -524,12 +524,13 @@ export function executeSandboxTool(toolCall, state = {}) {
   }
 
   if (name === 'request_capability') {
-    const duplicateCapability = duplicateCapabilityResult(nextState.design, args);
+    const capabilityArgs = normalizeCapabilityArguments(args);
+    const duplicateCapability = duplicateCapabilityResult(nextState.design, capabilityArgs);
     if (duplicateCapability) return { state: nextState, result: duplicateCapability };
     const request = createCapabilityRequest({
-      ...args,
-      design_id: args.design_id || nextState.design?.design_id || nextState.scenario?.design_id || null,
-      scenario: args.scenario || nextState.scenario || null
+      ...capabilityArgs,
+      design_id: capabilityArgs.design_id || nextState.design?.design_id || nextState.scenario?.design_id || null,
+      scenario: capabilityArgs.scenario || nextState.scenario || null
     });
     nextState.capabilityRequest = request;
     return { state: nextState, result: { ok: true, request } };
@@ -542,6 +543,18 @@ export function executeSandboxTool(toolCall, state = {}) {
       error: `Unsupported sandbox tool: ${name || 'unknown'}`,
       available_tools: SANDBOX_TOOLS.map((tool) => tool.name)
     }
+  };
+}
+
+function normalizeCapabilityArguments(args = {}) {
+  const evidence = Array.isArray(args.evidence) ? [...args.evidence] : [];
+  if (Array.isArray(args.component_ids) && args.component_ids.length) evidence.push(`Closest component IDs considered: ${args.component_ids.join(', ')}`);
+  const capability = args.capability || args.capability_name || '';
+  return {
+    ...args,
+    capability,
+    reason: args.reason || args.rationale || (capability ? `Existing sandbox tools cannot complete this design without ${capability}.` : ''),
+    evidence
   };
 }
 

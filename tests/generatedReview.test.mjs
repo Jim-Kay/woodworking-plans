@@ -182,4 +182,17 @@ assert.equal(photoMessages.length, 2);
 assert.match(photoMessages[0].content, /Reconcile all supplied photos/);
 assert.equal(photoMessages[1].content.length, 3);
 
+const wrappedPhotoBrief = normalizePhotoDesignBrief({
+  output_shape: {
+    photo_set_id: 'wrapped_reference',
+    object_type: 'two-step wooden step stool',
+    confidence: 'medium',
+    parts: [
+      { name: 'step board', role: 'platform', seen_in: ['front'], component_query: 'wooden step board', confidence: 'medium' }
+    ]
+  }
+});
+assert.equal(wrappedPhotoBrief.photo_set_id, 'wrapped_reference');
+assert.equal(wrappedPhotoBrief.parts[0].name, 'step board');
+
 console.log('generated review tests passed');

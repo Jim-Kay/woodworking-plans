@@ -127,7 +127,8 @@ export function buildPhotoBriefMessages(photoSet, imageDataUrls = []) {
 }
 
 export function normalizePhotoDesignBrief(value = {}, context = {}) {
-  const brief = value && typeof value === 'object' ? value : {};
+  const raw = value && typeof value === 'object' ? value : {};
+  const brief = raw.output_shape && typeof raw.output_shape === 'object' ? raw.output_shape : raw;
   const photoSet = normalizePhotoSet(context.photoSet || brief);
   return {
     schema_version: PHOTO_DESIGN_BRIEF_SCHEMA_VERSION,
