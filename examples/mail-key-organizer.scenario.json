@@ -1,0 +1,39 @@
+{
+  "design_id": "mail_key_organizer_probe",
+  "template_id": "mail_key_organizer",
+  "intent": "wall-mounted mail and key organizer with a back board, shallow mail pocket, key hooks, and wall mounting holes",
+  "constraints": {
+    "skill_level": "beginner",
+    "mounting": "wall",
+    "max_width_in": 24,
+    "max_height_in": 14,
+    "max_depth_in": 4,
+    "materials": ["pine_1x6", "thin plywood", "screw hooks"],
+    "must_have": [
+      "flat back board",
+      "mail pocket or shallow shelf sized for envelopes",
+      "row of key hooks below the pocket",
+      "wall mounting holes",
+      "staged instructions that do not show fully assembled parts before they are installed"
+    ]
+  },
+  "parameters": {
+    "width_in": 18,
+    "height_in": 10,
+    "board_thickness_in": 0.75,
+    "pocket_depth_in": 2.5,
+    "pocket_height_in": 4,
+    "hook_count": 5,
+    "hook_spacing_in": 3,
+    "min_end_inset_in": 1.5,
+    "mounting_holes": true,
+    "material": "pine_1x6",
+    "hardware_type": "screw_hook"
+  },
+  "success_criteria": [
+    "The local model searches or lists reusable components before generating a design.",
+    "The design combines multiple component families where possible.",
+    "If no reusable mail pocket, shelf lip, or bin component exists, the model requests that missing reusable building block instead of requesting a one-off mail organizer.",
+    "The final response clearly distinguishes existing components used from missing components requested."
+  ]
+}

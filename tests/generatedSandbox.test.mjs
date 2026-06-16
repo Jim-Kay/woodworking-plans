@@ -122,6 +122,45 @@ assert.equal(portalWallRack.style, 'linear-wall-hardware');
 assert.equal(portalWallRack.publishability.ok, true);
 assert.equal(portalWallRack.buildSteps.some((step) => step.image === 'linear-hardware-drill-layout'), true);
 
+const mailKeyOrganizer = generateDesign({
+  template_id: 'wall_panel_with_pocket_and_linear_hardware',
+  design_id: 'mail_key_organizer_test',
+  intent: 'wall-mounted mail and key organizer',
+  parameters: {
+    width_in: 18,
+    height_in: 10,
+    board_thickness_in: 0.75,
+    pocket_depth_in: 2.5,
+    pocket_height_in: 4,
+    hook_count: 5,
+    hook_spacing_in: 3,
+    mounting_holes: true,
+    material: 'pine_1x6',
+    pocket_material: 'thin_plywood',
+    hardware_type: 'screw_hook'
+  }
+});
+assert.equal(mailKeyOrganizer.template_id, 'wall_panel_with_pocket_and_linear_hardware');
+assert.equal(mailKeyOrganizer.components.includes('geometry.shallow_wall_pocket'), true);
+assert.equal(mailKeyOrganizer.parts.some((part) => part.id === 'pocket.front_lip'), true);
+assert.equal(mailKeyOrganizer.parts.filter((part) => part.id.startsWith('hook.pilot.')).length, 5);
+assert.equal(mailKeyOrganizer.parts.find((part) => part.id === 'hook.pilot.1').position.z < mailKeyOrganizer.parts.find((part) => part.id === 'pocket.bottom').position.z, true);
+assert.equal(validateGeneratedDesign(mailKeyOrganizer).ok, true);
+assert.equal(checkPublishability(mailKeyOrganizer, validateGeneratedDesign(mailKeyOrganizer)).ok, true);
+assert.match(generateCanonicalOpenScad(mailKeyOrganizer), /pocket.front_lip/);
+
+const duplicatePocketRequest = executeSandboxTool({
+  name: 'request_capability',
+  arguments: {
+    capability: 'Add reusable mail pocket component',
+    reason: 'Need a mail pocket for this organizer.',
+    evidence: ['mail pocket not found']
+  }
+}, { scenario, design: mailKeyOrganizer });
+assert.equal(duplicatePocketRequest.result.ok, false);
+assert.equal(duplicatePocketRequest.result.existing_component_id, 'geometry.shallow_wall_pocket');
+assert.equal(duplicatePocketRequest.result.recommended_action, 'validate_design');
+
 const badReferenceHost = structuredClone(design);
 const badReference = badReferenceHost.parts.find((part) => part.id === 'drainage.hole.1');
 badReference.position.x = 100;
@@ -147,6 +186,7 @@ assert.equal(tools.some((tool) => tool.name === 'request_capability'), true);
 assert.equal(listComponentCategories().some((category) => category.id === 'hardware'), true);
 assert.equal(listComponents({ category_id: 'hardware' }).some((component) => component.component_id === 'hardware.linear_hook_array'), true);
 assert.equal(searchComponents({ query: 'key hooks pilot holes' }).some((component) => component.component_id === 'hardware.linear_hook_array'), true);
+assert.equal(searchComponents({ query: 'mail pocket' }).some((component) => component.component_id === 'geometry.shallow_wall_pocket'), true);
 assert.equal(searchComponents({ query: 'key hooks pilot holes', category_id: 'hardware' })[0].component_id, 'hardware.linear_hook_array');
 
 let toolState = { scenario };
@@ -173,6 +213,13 @@ assert.equal(executed.result.recommended_action, 'search_components');
 assert.match(executed.result.error, /Unsupported template_id/);
 assert.equal(executed.result.suggested_component_queries.some((query) => /key hooks/.test(query)), true);
 assert.equal(executed.result.compatible_template_ids.includes('board_with_linear_hardware'), true);
+
+executed = executeSandboxTool({
+  name: 'generate_design',
+  arguments: { template_id: 'mail_key_organizer', design_id: 'unsupported_mail_test' }
+}, toolState);
+assert.equal(executed.result.ok, false);
+assert.equal(executed.result.compatible_template_ids.includes('wall_panel_with_pocket_and_linear_hardware'), true);
 
 executed = executeSandboxTool({ name: 'generate_design', arguments: { parameters: { width_in: 13 } } }, toolState);
 assert.equal(executed.result.ok, true);

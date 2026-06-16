@@ -7,6 +7,7 @@ import { generateCanonicalOpenScad } from './openScad.js';
 import { createCapabilityRequest, findTemplateCandidates, listTemplates } from './schema.js';
 import { generateTrayBirdFeederDesign } from './trayBirdFeeder.js';
 import { checkPublishability, validateGeneratedDesign } from './validator.js';
+import { generateWallPanelPocketHardwareDesign } from './wallPanelPocketHardware.js';
 
 export { checkPublishability, createCapabilityRequest, generateCanonicalOpenScad, getComponent, listComponentCategories, listComponents, listTemplates, searchComponents, validateGeneratedDesign };
 
@@ -18,6 +19,10 @@ const DESIGN_PARAMETER_KEYS = [
   'side_thickness_in',
   'height_in',
   'board_thickness_in',
+  'pocket_depth_in',
+  'pocket_height_in',
+  'pocket_lip_height_in',
+  'pocket_stock_thickness_in',
   'hook_count',
   'hook_spacing_in',
   'min_end_inset_in',
@@ -26,6 +31,7 @@ const DESIGN_PARAMETER_KEYS = [
   'pilot_hole_diameter_in',
   'hook_projection_in',
   'hardware_type',
+  'pocket_material',
   'material',
   'hanging',
   'drainage_holes'
@@ -234,6 +240,7 @@ export async function writeJson(path, value) {
 export function generateDesign(scenario) {
   if (scenario.template_id === 'tray_bird_feeder') return generateTrayBirdFeederDesign(scenario);
   if (scenario.template_id === 'board_with_linear_hardware') return generateBoardWithLinearHardwareDesign(scenario);
+  if (scenario.template_id === 'wall_panel_with_pocket_and_linear_hardware') return generateWallPanelPocketHardwareDesign(scenario);
   throw new Error(`Unsupported template_id: ${scenario.template_id}`);
 }
 
@@ -456,6 +463,8 @@ export function executeSandboxTool(toolCall, state = {}) {
   }
 
   if (name === 'request_capability') {
+    const duplicateCapability = duplicateCapabilityResult(nextState.design, args);
+    if (duplicateCapability) return { state: nextState, result: duplicateCapability };
     const request = createCapabilityRequest({
       ...args,
       design_id: args.design_id || nextState.design?.design_id || nextState.scenario?.design_id || null,
@@ -472,6 +481,38 @@ export function executeSandboxTool(toolCall, state = {}) {
       error: `Unsupported sandbox tool: ${name || 'unknown'}`,
       available_tools: SANDBOX_TOOLS.map((tool) => tool.name)
     }
+  };
+}
+
+function duplicateCapabilityResult(design, args = {}) {
+  if (!design) return null;
+  const text = [
+    args.capability,
+    args.reason,
+    ...(Array.isArray(args.evidence) ? args.evidence : [])
+  ].join(' ').toLowerCase();
+  const duplicateMatches = [
+    {
+      component_id: 'geometry.shallow_wall_pocket',
+      terms: ['mail pocket', 'shallow pocket', 'wall pocket', 'shelf lip', 'wall bin', 'pocket']
+    },
+    {
+      component_id: 'hardware.linear_hook_array',
+      terms: ['key hook', 'linear hook', 'hook array', 'repeated hook']
+    },
+    {
+      component_id: 'hardware.wall_mount_hole_pair',
+      terms: ['mounting hole', 'wall mount', 'wall screw']
+    }
+  ];
+  const match = duplicateMatches.find((item) => design.components?.includes(item.component_id) && item.terms.some((term) => text.includes(term)));
+  if (!match) return null;
+  return {
+    ok: false,
+    error: `Capability request duplicates existing component already used by current design: ${match.component_id}.`,
+    recommended_action: design.validation?.ok ? 'check_publishability' : 'validate_design',
+    existing_component_id: match.component_id,
+    current_design_summary: summarizeGeneratedDesign(design)
   };
 }
 

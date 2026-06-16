@@ -55,6 +55,16 @@ export const COMPONENT_CATALOG = [
     example_uses: ['tray feeder sides', 'frame rails', 'wall cleat']
   },
   {
+    component_id: 'geometry.shallow_wall_pocket',
+    category_id: 'geometry',
+    title: 'Shallow Wall Pocket',
+    description: 'A shallow open-front pocket or bin assembled from a bottom shelf, front lip, and side cheeks on a wall backer.',
+    aliases: ['mail pocket', 'envelope pocket', 'wall bin', 'small wall shelf', 'front lip', 'catch tray'],
+    inputs: ['host_part_id', 'width_in', 'depth_in', 'height_in', 'stock_thickness_in', 'lip_height_in', 'material'],
+    outputs: ['physical_parts', 'cut_list_items', 'assembly_joints', 'pocket_clearance_guidance'],
+    example_uses: ['mail organizer pocket', 'entryway catch tray', 'small wall bin', 'spice packet holder']
+  },
+  {
     component_id: 'hardware.wall_mount_hole_pair',
     category_id: 'hardware',
     title: 'Wall-Mount Hole Pair',

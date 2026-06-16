@@ -44,6 +44,42 @@ export const TEMPLATE_DEFINITIONS = [
       hardware_type: { type: 'string', default: 'screw_hook' },
       material: { type: 'string', default: 'pine_1x4' }
     }
+  },
+  {
+    template_id: 'wall_panel_with_pocket_and_linear_hardware',
+    title: 'Wall Panel With Pocket And Linear Hardware',
+    aliases: ['mail_key_organizer', 'mail organizer', 'entry organizer', 'wall pocket with hooks', 'catch tray with hooks'],
+    components: [
+      'geometry.rectangular_panel',
+      'geometry.shallow_wall_pocket',
+      'hardware.linear_hook_array',
+      'hardware.wall_mount_hole_pair',
+      'patterns.centered_linear_spacing',
+      'validators.edge_clearance',
+      'validators.linear_spacing',
+      'validators.host_containment',
+      'build_steps.mark_drill_install',
+      'rendering.stage_aware_reference_view'
+    ],
+    parameters: {
+      width_in: { type: 'number', min: 10, max: 36, default: 18 },
+      height_in: { type: 'number', min: 8, max: 24, default: 10 },
+      board_thickness_in: { type: 'number', min: 0.375, max: 1.5, default: 0.75 },
+      pocket_depth_in: { type: 'number', min: 1.5, max: 5, default: 2.5 },
+      pocket_height_in: { type: 'number', min: 2, max: 8, default: 4 },
+      pocket_lip_height_in: { type: 'number', min: 0.75, max: 3, default: 1.5 },
+      pocket_stock_thickness_in: { type: 'number', min: 0.25, max: 0.75, default: 0.5 },
+      hook_count: { type: 'number', min: 1, max: 10, default: 5 },
+      hook_spacing_in: { type: 'number', min: 1.5, max: 6, default: 3 },
+      min_end_inset_in: { type: 'number', min: 0.75, max: 6, default: 1.5 },
+      mounting_holes: { type: 'boolean', default: true },
+      mount_hole_diameter_in: { type: 'number', min: 0.125, max: 0.5, default: 0.1875 },
+      pilot_hole_diameter_in: { type: 'number', min: 0.0625, max: 0.375, default: 0.125 },
+      hook_projection_in: { type: 'number', min: 0.5, max: 4, default: 1.25 },
+      hardware_type: { type: 'string', default: 'screw_hook' },
+      material: { type: 'string', default: 'pine_1x6' },
+      pocket_material: { type: 'string', default: 'thin_plywood' }
+    }
   }
 ];
 
