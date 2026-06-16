@@ -477,6 +477,8 @@ export class FrameViewer {
       return makeModelMaterial(plan, 0xb8894b, 0.72);
     };
     const stageForPart = (part) => {
+      const step = (result.buildSteps || []).find((item) => (item.partIds || []).includes(part.id));
+      if (step?.title) return step.title;
       const group = part.meta?.group;
       if (group === 'references') return 'Drill outdoor holes';
       if (group === 'panels') return 'Cut parts';
@@ -519,9 +521,9 @@ export class FrameViewer {
     });
 
     if (!this.manualCamera) {
-      const width = Math.max(result.feederW || 12, 1) * SCALE;
-      const depth = Math.max(result.feederD || 8, 1) * SCALE;
-      const height = Math.max(result.feederH || 3, 1) * SCALE;
+      const width = Math.max(result.modelW || result.feederW || 12, 1) * SCALE;
+      const depth = Math.max(result.modelD || result.feederD || 8, 1) * SCALE;
+      const height = Math.max(result.modelH || result.feederH || 3, 1) * SCALE;
       this.fitCamera(width, depth, height);
     }
   }

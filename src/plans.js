@@ -147,6 +147,24 @@ export const PLAN_CATALOG = [
     },
     tags: ['bird feeder', 'outdoor', 'cedar', 'weekend build'],
     thumbnail: 'bird-feeder'
+  },
+  {
+    id: 'generated-wall-key-rack',
+    title: 'Generated Wall Key Rack',
+    family: 'Generated Plans',
+    status: 'ready',
+    build: 'generated-wall-key-rack',
+    defaults: { build: 'generated-wall-key-rack', rackW: 18, rackH: 4, rackT: 0.75, rackHookCount: 5, rackHookSpacing: 3, rackEndInset: 1.5, rackMaterial: 'pine_1x4', rackHardware: 'screw_hook', rackMountingHoles: true },
+    summary: 'A simple wall-mounted key rack composed from reusable panel, hook array, mounting-hole, spacing, and build-step components.',
+    materials: 'Pine 1x4 back board, screw hooks, wall screws or anchors',
+    details: {
+      description: 'A beginner-friendly wall key rack generated from the reusable board-with-linear-hardware composition. One flat back board carries a centered row of hooks plus two wall mounting holes, with layout and drilling steps kept separate so the builder can mark everything before installing hardware.',
+      materials: ['Pine 1x4 or similar flat board', 'Five screw hooks or small pegs', 'Wall screws and anchors appropriate for the wall', 'Finish if desired'],
+      tools: ['Saw', 'Drill/driver', 'Tape measure', 'Square', 'Sander'],
+      notes: ['This plan uses the generic board-with-linear-hardware template, not a one-off key rack generator.', 'Mark hook locations from the centerline before drilling pilot holes.', 'Mount into wall framing where possible, or use anchors rated for the expected load.']
+    },
+    tags: ['generated', 'key rack', 'hooks', 'component composition'],
+    thumbnail: 'key-rack'
   }
 ];
 
@@ -164,6 +182,7 @@ export function buildForPlanId(id) {
 
 export function planIdForBuild(build) {
   if (build === 'generated-tray-bird-feeder') return 'generated-tray-bird-feeder';
+  if (build === 'generated-wall-key-rack') return 'generated-wall-key-rack';
   if (build === 'tote-rack') return 'tote-rack-27';
   if (build === 'rolling-shelves') return 'rolling-storage-shelf';
   if (build === 'shelves') return 'basement-shelves';

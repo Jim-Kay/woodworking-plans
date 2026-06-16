@@ -53,6 +53,7 @@ export function validateGeneratedDesign(design) {
 
   validateReferenceHosts(parts, partsById, errors);
   validateTrayBirdFeederRules(design, errors, warnings);
+  validateBoardWithLinearHardwareRules(design, errors, warnings);
 
   return result(errors, warnings);
 }
@@ -70,11 +71,27 @@ export function checkPublishability(design, validation = validateGeneratedDesign
     errors,
     warnings,
     portal_integration_notes: [
-      'Current portal integration supports the tray bird feeder adapter path.',
+      'Current portal integration supports generated tray-feeder and board-with-linear-hardware adapter paths.',
       'A generic generated-package loader is still needed for arbitrary generated templates.',
       'Template-driven parameter controls are still needed beyond the first hardcoded generated plan.'
     ]
   };
+}
+
+function validateBoardWithLinearHardwareRules(design, errors, warnings) {
+  if (design.template_id !== 'board_with_linear_hardware') return;
+  const p = design.parameters || {};
+  if (!between(p.width_in, 8, 48)) errors.push('width_in must be between 8 and 48 in.');
+  if (!between(p.height_in, 2.5, 10)) errors.push('height_in must be between 2.5 and 10 in.');
+  if (!between(p.board_thickness_in, 0.375, 1.5)) errors.push('board_thickness_in must be between 0.375 and 1.5 in.');
+  if (!between(p.hook_count, 1, 12)) errors.push('hook_count must be between 1 and 12.');
+  if (!between(p.hook_spacing_in, 1.5, 8)) errors.push('hook_spacing_in must be between 1.5 and 8 in.');
+  const span = (Number(p.hook_count) - 1) * Number(p.hook_spacing_in);
+  const requiredWidth = span + Number(p.min_end_inset_in || 0) * 2;
+  if (Number.isFinite(requiredWidth) && requiredWidth > Number(p.width_in)) errors.push('hook_count and hook_spacing_in do not fit within width_in and min_end_inset_in.');
+  if (p.mounting_holes && Number(p.width_in) < Number(p.min_end_inset_in || 0) * 2 + 2) errors.push('mounting holes need more board width or smaller min_end_inset_in.');
+  if (p.hook_count > 6 && Number(p.board_thickness_in) < 0.75) warnings.push('Thin boards with many hooks may need stronger mounting or thicker stock.');
+  if (!p.mounting_holes) warnings.push('Wall-mounted hardware boards usually need mounting holes or another explicit mounting method.');
 }
 
 function validateTrayBirdFeederRules(design, errors, warnings) {

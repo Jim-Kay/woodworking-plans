@@ -1,15 +1,35 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { canonicalToPortalResult } from './adapter.js';
+import { generateBoardWithLinearHardwareDesign } from './boardWithLinearHardware.js';
 import { getComponent, listComponentCategories, listComponents, searchComponents } from './componentCatalog.js';
 import { generateCanonicalOpenScad } from './openScad.js';
-import { createCapabilityRequest, listTemplates } from './schema.js';
+import { createCapabilityRequest, findTemplateCandidates, listTemplates } from './schema.js';
 import { generateTrayBirdFeederDesign } from './trayBirdFeeder.js';
 import { checkPublishability, validateGeneratedDesign } from './validator.js';
 
 export { checkPublishability, createCapabilityRequest, generateCanonicalOpenScad, getComponent, listComponentCategories, listComponents, listTemplates, searchComponents, validateGeneratedDesign };
 
-const DESIGN_PARAMETER_KEYS = ['width_in', 'depth_in', 'side_height_in', 'bottom_thickness_in', 'side_thickness_in', 'material', 'hanging', 'drainage_holes'];
+const DESIGN_PARAMETER_KEYS = [
+  'width_in',
+  'depth_in',
+  'side_height_in',
+  'bottom_thickness_in',
+  'side_thickness_in',
+  'height_in',
+  'board_thickness_in',
+  'hook_count',
+  'hook_spacing_in',
+  'min_end_inset_in',
+  'mounting_holes',
+  'mount_hole_diameter_in',
+  'pilot_hole_diameter_in',
+  'hook_projection_in',
+  'hardware_type',
+  'material',
+  'hanging',
+  'drainage_holes'
+];
 
 export const SANDBOX_TOOLS = [
   {
@@ -213,6 +233,7 @@ export async function writeJson(path, value) {
 
 export function generateDesign(scenario) {
   if (scenario.template_id === 'tray_bird_feeder') return generateTrayBirdFeederDesign(scenario);
+  if (scenario.template_id === 'board_with_linear_hardware') return generateBoardWithLinearHardwareDesign(scenario);
   throw new Error(`Unsupported template_id: ${scenario.template_id}`);
 }
 
@@ -512,6 +533,7 @@ function normalizeToolArguments(args = {}) {
 function unsupportedTemplateResult(scenario = {}) {
   if (listTemplates().some((template) => template.template_id === scenario.template_id)) return null;
   const suggestedQueries = componentSearchQueriesForScenario(scenario);
+  const compatibleTemplateIds = findTemplateCandidates(scenario.template_id);
   return {
     ok: false,
     error: `Unsupported template_id: ${scenario.template_id || 'missing'}`,
@@ -522,6 +544,7 @@ function unsupportedTemplateResult(scenario = {}) {
       'Only then request a missing capability, citing the closest component IDs considered.'
     ],
     suggested_component_queries: suggestedQueries,
+    compatible_template_ids: compatibleTemplateIds,
     capability: `Add reusable composition support for ${scenario.template_id || 'the requested plan type'}.`,
     available_templates: listTemplates().map((template) => template.template_id)
   };

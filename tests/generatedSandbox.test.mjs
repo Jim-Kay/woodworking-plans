@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { canonicalToPortalResult } from '../src/generated/adapter.js';
 import { generateCanonicalOpenScad } from '../src/generated/openScad.js';
+import { calculateGeneratedPlan } from '../src/generated/portal.js';
 import { generateDesign, exportPlanPackage, validateGeneratedDesign, checkPublishability, createCapabilityRequest, executeSandboxTool, listComponentCategories, listComponents, listSandboxTools, searchComponents } from '../src/generated/sandbox.js';
 
 const scenario = {
@@ -81,6 +82,46 @@ assert.equal(invalidValidation.ok, false);
 assert.match(invalidValidation.errors.join('\n'), /width_in/);
 assert.match(invalidValidation.warnings.join('\n'), /drainage/);
 
+const wallRack = generateDesign({
+  template_id: 'board_with_linear_hardware',
+  design_id: 'wall_key_rack_test',
+  intent: 'wall key rack',
+  parameters: {
+    width_in: 18,
+    height_in: 4,
+    board_thickness_in: 0.75,
+    hook_count: 5,
+    hook_spacing_in: 3,
+    mounting_holes: true,
+    material: 'pine_1x4',
+    hardware_type: 'screw_hook'
+  }
+});
+assert.equal(wallRack.template_id, 'board_with_linear_hardware');
+assert.equal(wallRack.title, 'Wall Key Rack');
+assert.equal(wallRack.components.includes('hardware.linear_hook_array'), true);
+assert.equal(wallRack.parts.filter((part) => part.id.startsWith('hook.pilot.')).length, 5);
+assert.equal(wallRack.parts.filter((part) => part.id.startsWith('mount.hole.')).length, 2);
+assert.equal(validateGeneratedDesign(wallRack).ok, true);
+assert.equal(exportPlanPackage(wallRack).publishability.ok, true);
+
+const portalWallRack = calculateGeneratedPlan({
+  build: 'generated-wall-key-rack',
+  rackW: 18,
+  rackH: 4,
+  rackT: 0.75,
+  rackHookCount: 5,
+  rackHookSpacing: 3,
+  rackEndInset: 1.5,
+  rackMountingHoles: true,
+  rackMaterial: 'pine_1x4',
+  rackHardware: 'screw_hook'
+});
+assert.equal(portalWallRack.ok, true);
+assert.equal(portalWallRack.style, 'linear-wall-hardware');
+assert.equal(portalWallRack.publishability.ok, true);
+assert.equal(portalWallRack.buildSteps.some((step) => step.image === 'linear-hardware-drill-layout'), true);
+
 const badReferenceHost = structuredClone(design);
 const badReference = badReferenceHost.parts.find((part) => part.id === 'drainage.hole.1');
 badReference.position.x = 100;
@@ -131,6 +172,7 @@ assert.equal(executed.result.ok, false);
 assert.equal(executed.result.recommended_action, 'search_components');
 assert.match(executed.result.error, /Unsupported template_id/);
 assert.equal(executed.result.suggested_component_queries.some((query) => /key hooks/.test(query)), true);
+assert.equal(executed.result.compatible_template_ids.includes('board_with_linear_hardware'), true);
 
 executed = executeSandboxTool({ name: 'generate_design', arguments: { parameters: { width_in: 13 } } }, toolState);
 assert.equal(executed.result.ok, true);

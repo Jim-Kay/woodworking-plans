@@ -46,6 +46,7 @@ export function canonicalToPortalResult(design, validation = design.validation) 
 
 function generatedBuildStep(step, index) {
   const normalizedTitle = String(step.title || '').toLowerCase();
+  const hasLinearHardware = (step.part_ids || []).some((partId) => String(partId).startsWith('hook.') || String(partId).startsWith('mount.hole.'));
   const output = {
     title: step.title,
     stage: index + 1,
@@ -56,7 +57,10 @@ function generatedBuildStep(step, index) {
     output.image = 'cut-layout';
     output.vis = { panels: true, rails: true, references: false };
   } else if (normalizedTitle.includes('drill')) {
-    output.image = 'drill-layout';
+    output.image = hasLinearHardware ? 'linear-hardware-drill-layout' : 'drill-layout';
+    output.vis = { panels: true, rails: true, references: true };
+  } else if (normalizedTitle.includes('mark') && hasLinearHardware) {
+    output.image = 'linear-hardware-drill-layout';
     output.vis = { panels: true, rails: true, references: true };
   } else {
     output.vis = { panels: true, rails: true, references: false };

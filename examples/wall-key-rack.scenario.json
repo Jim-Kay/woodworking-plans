@@ -1,0 +1,21 @@
+{
+  "template_id": "board_with_linear_hardware",
+  "design_id": "wall_key_rack_demo",
+  "intent": "A beginner-friendly wall-mounted key rack or light coat-hook rail for an entryway. It should be understandable from rendered build steps and publishable through the woodworking plans portal.",
+  "parameters": {
+    "width_in": 18,
+    "height_in": 4,
+    "board_thickness_in": 0.75,
+    "hook_count": 5,
+    "hook_spacing_in": 3,
+    "min_end_inset_in": 1.5,
+    "mounting_holes": true,
+    "material": "pine_1x4",
+    "hardware_type": "screw_hook"
+  },
+  "builder_goals": [
+    "Use one simple back board and repeated hooks or pegs.",
+    "Show where to drill mounting holes and hook pilot holes.",
+    "Keep the project suitable for a first-time builder with common tools."
+  ]
+}

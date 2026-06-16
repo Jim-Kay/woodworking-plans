@@ -64,6 +64,15 @@ export const DEFAULT_PLAN = {
   feederMaterial: 'cedar_fence_picket',
   feederHanging: true,
   feederDrainage: true,
+  rackW: 18,
+  rackH: 4,
+  rackT: 0.75,
+  rackHookCount: 5,
+  rackHookSpacing: 3,
+  rackEndInset: 1.5,
+  rackMaterial: 'pine_1x4',
+  rackHardware: 'screw_hook',
+  rackMountingHoles: true,
   vis: { face: true, liner: true, spacers: true, canvas: true, hardware: true },
   stage: 0
 };
