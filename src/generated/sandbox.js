@@ -7,6 +7,7 @@ import { generateCanonicalOpenScad } from './openScad.js';
 import { normalizePhotoDesignBrief, scenarioFromPhotoDesignBrief, summarizePhotoDesignBrief } from './photoBrief.js';
 import { createCapabilityRequest, findTemplateCandidates, listTemplates } from './schema.js';
 import { generateTrayBirdFeederDesign } from './trayBirdFeeder.js';
+import { generateTwoStepStoolDesign } from './twoStepStool.js';
 import { checkPublishability, validateGeneratedDesign } from './validator.js';
 import { generateWallPanelPocketHardwareDesign } from './wallPanelPocketHardware.js';
 
@@ -15,6 +16,17 @@ export { checkPublishability, createCapabilityRequest, generateCanonicalOpenScad
 const DESIGN_PARAMETER_KEYS = [
   'width_in',
   'depth_in',
+  'lower_step_height_in',
+  'front_leg_height_in',
+  'back_leg_height_in',
+  'lower_step_depth_in',
+  'upper_step_depth_in',
+  'tread_thickness_in',
+  'leg_width_in',
+  'leg_depth_in',
+  'rail_height_in',
+  'rail_thickness_in',
+  'claimed_capacity_lbs',
   'side_height_in',
   'bottom_thickness_in',
   'side_thickness_in',
@@ -278,6 +290,7 @@ export function generateDesign(scenario) {
   if (scenario.template_id === 'tray_bird_feeder') return generateTrayBirdFeederDesign(scenario);
   if (scenario.template_id === 'board_with_linear_hardware') return generateBoardWithLinearHardwareDesign(scenario);
   if (scenario.template_id === 'wall_panel_with_pocket_and_linear_hardware') return generateWallPanelPocketHardwareDesign(scenario);
+  if (scenario.template_id === 'two_step_stool') return generateTwoStepStoolDesign(scenario);
   throw new Error(`Unsupported template_id: ${scenario.template_id}`);
 }
 
@@ -678,6 +691,7 @@ function componentSearchQueriesForScenario(scenario = {}) {
   const queries = [];
   if (/key|hook|peg|coat|mug/i.test(values)) queries.push('key hooks pegs repeated hardware pilot holes');
   if (/wall|mount|screw|hanger/i.test(values)) queries.push('wall mount screw holes edge clearance');
+  if (/stool|step|tread|leg|load|standing/i.test(values)) queries.push('step stool tread leg rail load bearing');
   if (/board|panel|back|height|width|thickness/i.test(values)) queries.push('rectangular board panel centered spacing');
   if (!queries.length) queries.push(values || 'reusable generated design components');
   return queries;

@@ -80,6 +80,35 @@ export const TEMPLATE_DEFINITIONS = [
       material: { type: 'string', default: 'pine_1x6' },
       pocket_material: { type: 'string', default: 'thin_plywood' }
     }
+  },
+  {
+    template_id: 'two_step_stool',
+    title: 'Two-Step Stool',
+    aliases: ['two-step wooden step stool', 'step stool', 'two step stool', 'stool from photo brief', 'rockport step stool'],
+    components: [
+      'geometry.step_tread',
+      'geometry.square_leg_post',
+      'geometry.linear_rail',
+      'validators.load_bearing_caution',
+      'validators.linear_spacing',
+      'build_steps.mark_drill_install',
+      'rendering.stage_aware_reference_view'
+    ],
+    parameters: {
+      width_in: { type: 'number', min: 10, max: 30, default: 16 },
+      depth_in: { type: 'number', min: 10, max: 30, default: 16 },
+      height_in: { type: 'number', min: 8, max: 30, default: 16 },
+      lower_step_height_in: { type: 'number', min: 4, max: 18, default: 8 },
+      lower_step_depth_in: { type: 'number', min: 5, max: 16, default: 9 },
+      upper_step_depth_in: { type: 'number', min: 5, max: 16, default: 8 },
+      tread_thickness_in: { type: 'number', min: 0.5, max: 1.5, default: 0.75 },
+      leg_width_in: { type: 'number', min: 1, max: 3, default: 1.5 },
+      leg_depth_in: { type: 'number', min: 1, max: 3, default: 1.5 },
+      rail_height_in: { type: 'number', min: 1, max: 4, default: 1.5 },
+      rail_thickness_in: { type: 'number', min: 0.5, max: 1.5, default: 0.75 },
+      claimed_capacity_lbs: { type: 'number', min: 0, max: 300, default: 0 },
+      material: { type: 'string', default: 'pine' }
+    }
   }
 ];
 

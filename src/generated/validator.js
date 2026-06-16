@@ -55,6 +55,7 @@ export function validateGeneratedDesign(design) {
   validateTrayBirdFeederRules(design, errors, warnings);
   validateBoardWithLinearHardwareRules(design, errors, warnings);
   validateWallPanelPocketHardwareRules(design, errors, warnings);
+  validateTwoStepStoolRules(design, errors, warnings);
 
   return result(errors, warnings);
 }
@@ -74,10 +75,30 @@ export function checkPublishability(design, validation = validateGeneratedDesign
     portal_integration_notes: [
       'Current portal integration supports generated tray-feeder and board-with-linear-hardware adapter paths.',
       'Wall-panel pocket-and-hardware packages can be generated and exported, but still need a portal catalog adapter before public browsing.',
+      'Two-step stool packages can be generated and exported as dimensional aids, but require human structural review before real-world use.',
       'A generic generated-package loader is still needed for arbitrary generated templates.',
       'Template-driven parameter controls are still needed beyond the first hardcoded generated plan.'
     ]
   };
+}
+
+function validateTwoStepStoolRules(design, errors, warnings) {
+  if (design.template_id !== 'two_step_stool') return;
+  const p = design.parameters || {};
+  if (!between(p.width_in, 10, 30)) errors.push('width_in must be between 10 and 30 in.');
+  if (!between(p.depth_in, 10, 30)) errors.push('depth_in must be between 10 and 30 in.');
+  if (!between(p.height_in, 8, 30)) errors.push('height_in must be between 8 and 30 in.');
+  if (!between(p.lower_step_height_in, 4, 18)) errors.push('lower_step_height_in must be between 4 and 18 in.');
+  if (Number(p.lower_step_height_in) >= Number(p.height_in)) errors.push('lower_step_height_in must be below height_in.');
+  if (!between(p.lower_step_depth_in, 5, 16)) errors.push('lower_step_depth_in must be between 5 and 16 in.');
+  if (!between(p.upper_step_depth_in, 5, 16)) errors.push('upper_step_depth_in must be between 5 and 16 in.');
+  if (!between(p.tread_thickness_in, 0.5, 1.5)) errors.push('tread_thickness_in must be between 0.5 and 1.5 in.');
+  if (!between(p.leg_width_in, 1, 3)) errors.push('leg_width_in must be between 1 and 3 in.');
+  if (!between(p.leg_depth_in, 1, 3)) errors.push('leg_depth_in must be between 1 and 3 in.');
+  if (Number(p.leg_width_in) * 2 >= Number(p.width_in)) errors.push('leg_width_in leaves no clear span between legs.');
+  if (Number(p.leg_depth_in) * 2 >= Number(p.depth_in)) errors.push('leg_depth_in leaves no clear span between front and back legs.');
+  warnings.push('Generated step stools are not load certified; verify species, joinery, fasteners, and real weight capacity before standing on the build.');
+  if (!Number(p.claimed_capacity_lbs)) warnings.push('No claimed_capacity_lbs is certified by the sandbox; treat capacity as unknown.');
 }
 
 function validateWallPanelPocketHardwareRules(design, errors, warnings) {

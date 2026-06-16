@@ -269,6 +269,7 @@ function inferTemplateId(brief) {
     ...brief.parts.map((part) => `${part.name} ${part.role} ${part.component_query}`)
   ].join(' ').toLowerCase();
   if ((text.includes('mail') || text.includes('pocket') || text.includes('bin')) && (text.includes('hook') || text.includes('key'))) return 'wall_panel_with_pocket_and_linear_hardware';
+  if (text.includes('step stool') || (text.includes('stool') && (text.includes('step') || text.includes('tread')))) return 'two_step_stool';
   if (text.includes('hook') || text.includes('peg') || text.includes('rack')) return 'board_with_linear_hardware';
   if (text.includes('bird') || text.includes('feeder') || text.includes('tray')) return 'tray_bird_feeder';
   return 'unknown_from_photo_brief';
@@ -279,6 +280,9 @@ function inferScenarioParameters(brief) {
   assignMeasurement(params, brief, ['overall width', 'width'], 'width_in');
   assignMeasurement(params, brief, ['overall height', 'height'], 'height_in');
   assignMeasurement(params, brief, ['overall depth', 'depth'], 'depth_in');
+  assignMeasurement(params, brief, ['front leg height', 'lower step height', 'step height (front)', 'step height'], 'lower_step_height_in');
+  assignMeasurement(params, brief, ['leg width'], 'leg_width_in');
+  assignMeasurement(params, brief, ['leg depth'], 'leg_depth_in');
   assignMeasurement(params, brief, ['pocket depth', 'mail pocket depth'], 'pocket_depth_in');
   assignMeasurement(params, brief, ['pocket height', 'mail pocket height'], 'pocket_height_in');
   const hookPart = brief.parts.find((part) => /hook|peg/i.test(`${part.name} ${part.role} ${part.component_query}`));

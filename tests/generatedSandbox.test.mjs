@@ -161,6 +161,33 @@ assert.equal(duplicatePocketRequest.result.ok, false);
 assert.equal(duplicatePocketRequest.result.existing_component_id, 'geometry.shallow_wall_pocket');
 assert.equal(duplicatePocketRequest.result.recommended_action, 'validate_design');
 
+const stepStool = generateDesign({
+  template_id: 'two_step_stool',
+  design_id: 'two_step_stool_test',
+  intent: 'two-step wooden step stool',
+  parameters: {
+    width_in: 16,
+    depth_in: 16,
+    height_in: 16,
+    lower_step_height_in: 8,
+    leg_width_in: 1.5,
+    leg_depth_in: 1.5,
+    material: 'pine'
+  }
+});
+assert.equal(stepStool.template_id, 'two_step_stool');
+assert.equal(stepStool.components.includes('geometry.step_tread'), true);
+assert.equal(stepStool.components.includes('geometry.square_leg_post'), true);
+assert.equal(stepStool.parts.filter((part) => part.role === 'tread').length, 2);
+assert.equal(stepStool.parts.filter((part) => part.role === 'leg').length, 4);
+assert.equal(stepStool.parts.find((part) => part.id === 'leg.front.left').size.z, 8);
+assert.equal(stepStool.parts.find((part) => part.id === 'leg.back.left').size.z, 16);
+const stepStoolValidation = validateGeneratedDesign(stepStool);
+assert.equal(stepStoolValidation.ok, true);
+assert.match(stepStoolValidation.warnings.join('\n'), /not load certified/);
+assert.equal(exportPlanPackage(stepStool).publishability.ok, true);
+assert.match(generateCanonicalOpenScad(stepStool), /tread.upper/);
+
 const badReferenceHost = structuredClone(design);
 const badReference = badReferenceHost.parts.find((part) => part.id === 'drainage.hole.1');
 badReference.position.x = 100;
@@ -187,6 +214,9 @@ assert.equal(listComponentCategories().some((category) => category.id === 'hardw
 assert.equal(listComponents({ category_id: 'hardware' }).some((component) => component.component_id === 'hardware.linear_hook_array'), true);
 assert.equal(searchComponents({ query: 'key hooks pilot holes' }).some((component) => component.component_id === 'hardware.linear_hook_array'), true);
 assert.equal(searchComponents({ query: 'mail pocket' }).some((component) => component.component_id === 'geometry.shallow_wall_pocket'), true);
+assert.equal(searchComponents({ query: 'step stool leg tread load bearing' }).some((component) => component.component_id === 'geometry.step_tread'), true);
+assert.equal(searchComponents({ query: 'step stool leg tread load bearing' }).some((component) => component.component_id === 'geometry.square_leg_post'), true);
+assert.equal(searchComponents({ query: 'step stool leg tread load bearing' }).some((component) => component.component_id === 'validators.load_bearing_caution'), true);
 assert.equal(searchComponents({ query: 'key hooks pilot holes', category_id: 'hardware' })[0].component_id, 'hardware.linear_hook_array');
 
 let toolState = { scenario };
@@ -233,6 +263,37 @@ executed = executeSandboxTool({ name: 'photo_brief_to_scenario', arguments: {} }
 assert.equal(executed.result.ok, true);
 assert.equal(executed.result.scenario.template_id, 'wall_panel_with_pocket_and_linear_hardware');
 assert.equal(executed.result.scenario.parameters.width_in, 18);
+toolState = { scenario };
+
+const stoolPhotoBrief = {
+  photo_set_id: 'rockport_step_stool_reference',
+  object_type: 'two-step wooden step stool',
+  confidence: 'high',
+  photos: [{ photo_id: 'front', view: 'front', description: 'Shows two treads, legs, and side rails.' }],
+  parts: [
+    { name: 'Step', role: 'primary', seen_in: ['front'], component_query: 'two-step wooden step stool', confidence: 'high' },
+    { name: 'Front Leg', role: 'structural', seen_in: ['front'], component_query: 'wooden leg for two-step stool front', confidence: 'high' },
+    { name: 'Back Leg', role: 'structural', seen_in: ['front'], component_query: 'wooden leg for two-step stool back', confidence: 'high' },
+    { name: 'Side Rail', role: 'connective', seen_in: ['front'], component_query: 'wooden side rail for two-step stool', confidence: 'high' }
+  ],
+  known_measurements: [
+    { label: 'overall width', value_in: 16 },
+    { label: 'overall depth', value_in: 16 },
+    { label: 'overall height', value_in: 16 },
+    { label: 'front leg height', value_in: 8 },
+    { label: 'leg width', value_in: 1.5 },
+    { label: 'leg depth', value_in: 1.5 }
+  ]
+};
+executed = executeSandboxTool({ name: 'inspect_photo_brief', arguments: { brief: stoolPhotoBrief } }, toolState);
+toolState = executed.state;
+executed = executeSandboxTool({ name: 'photo_brief_to_scenario', arguments: {} }, toolState);
+assert.equal(executed.result.scenario.template_id, 'two_step_stool');
+assert.equal(executed.result.scenario.parameters.lower_step_height_in, 8);
+toolState = executed.state;
+executed = executeSandboxTool({ name: 'generate_design', arguments: {} }, toolState);
+assert.equal(executed.result.ok, true);
+assert.equal(executed.state.design.template_id, 'two_step_stool');
 toolState = { scenario };
 
 executed = executeSandboxTool({

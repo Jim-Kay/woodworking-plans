@@ -65,6 +65,26 @@ export const COMPONENT_CATALOG = [
     example_uses: ['mail organizer pocket', 'entryway catch tray', 'small wall bin', 'spice packet holder']
   },
   {
+    component_id: 'geometry.square_leg_post',
+    category_id: 'geometry',
+    title: 'Square Leg Or Post',
+    description: 'A vertical square or rectangular support post with cut-list output and optional foot/height metadata.',
+    aliases: ['leg', 'post', 'front leg', 'back leg', 'upright', 'support post', 'stool leg'],
+    inputs: ['height_in', 'width_in', 'depth_in', 'material', 'position'],
+    outputs: ['physical_part', 'cut_list_item', 'openscad_box'],
+    example_uses: ['step stool legs', 'bench legs', 'small stand uprights']
+  },
+  {
+    component_id: 'geometry.step_tread',
+    category_id: 'geometry',
+    title: 'Step Tread',
+    description: 'A flat load surface for a stool, step, or small platform with length, depth, thickness, and tread height.',
+    aliases: ['step board', 'tread', 'platform', 'stool step', 'top step', 'lower step'],
+    inputs: ['width_in', 'depth_in', 'thickness_in', 'height_in', 'material'],
+    outputs: ['physical_part', 'cut_list_item', 'walking_surface_metadata'],
+    example_uses: ['two-step stool lower tread', 'step stool top tread', 'small platform']
+  },
+  {
     component_id: 'hardware.wall_mount_hole_pair',
     category_id: 'hardware',
     title: 'Wall-Mount Hole Pair',
@@ -133,6 +153,16 @@ export const COMPONENT_CATALOG = [
     inputs: ['host_part_id', 'child_reference_ids'],
     outputs: ['validation_errors'],
     example_uses: ['drainage holes in panel', 'mounting holes on back board', 'pilot holes on hook rail']
+  },
+  {
+    component_id: 'validators.load_bearing_caution',
+    category_id: 'validators',
+    title: 'Load-Bearing Caution Validator',
+    description: 'Flags generated stools, benches, and standing surfaces as requiring conservative dimensions, strong joinery, and human review.',
+    aliases: ['load bearing', 'weight capacity', 'standing surface', 'structural caution', 'stool safety'],
+    inputs: ['standing_surface_part_ids', 'leg_part_ids', 'rail_part_ids', 'claimed_capacity_lbs'],
+    outputs: ['validation_warnings', 'review_requirements'],
+    example_uses: ['step stool safety review', 'bench load warning', 'standing platform caution']
   },
   {
     component_id: 'build_steps.mark_drill_install',
