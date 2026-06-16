@@ -249,6 +249,43 @@ npm run sandbox:vision-review -- generated/runs/llm-demo/package .\path\to\scree
 
 The current text-planner baseline on this workstation uses `qwen3:14b` and `qwen3:8b`, which are not vision models. Use a VL model such as `qwen2.5vl` or `qwen3-vl` for screenshots. The visual review output is advisory and structured for the next loop: it includes builder-comprehension checks, can propose `annotate_design` arguments, can report visual mismatches, or can request a missing capability such as better stage-specific screenshot capture.
 
+## Multi-Photo Design Briefs
+
+Photo-driven generation should start with a structured design brief, not a finished plan. A vision-capable model can inspect multiple photos of the same object, reconcile the views, and output object type, visible parts, measurements, uncertainties, component-search queries, and missing capabilities.
+
+Example photo set:
+
+```json
+{
+  "photo_set_id": "entry_organizer_reference",
+  "known_measurements": [
+    { "label": "overall width", "value_in": 18 }
+  ],
+  "photos": [
+    { "photo_id": "front", "view": "front", "path": "front.jpg" },
+    { "photo_id": "side", "view": "side", "path": "side.jpg" },
+    { "photo_id": "detail_pocket", "view": "detail", "path": "detail-pocket.jpg" },
+    { "photo_id": "back", "view": "back", "path": "back.jpg" }
+  ]
+}
+```
+
+Run the vision brief pass when a local VL model is available:
+
+```powershell
+$env:LLM_VISION_MODEL='qwen2.5vl:7b'
+npm run sandbox:photo-brief -- examples/photo-sets/mail-key-organizer.photo-set.json generated/runs/photo-brief/mail-key-organizer.brief.json
+```
+
+Then convert or inspect the brief with deterministic tools:
+
+```powershell
+npm run sandbox -- inspect_photo_brief generated/runs/photo-brief/mail-key-organizer.brief.json
+npm run sandbox -- photo_brief_to_scenario generated/runs/photo-brief/mail-key-organizer.brief.json generated/runs/photo-brief/mail-key-organizer.scenario.json
+```
+
+The local text model should use the brief's `component_searches` before generating a design. If the brief identifies a feature that no component can express, the model should request a reusable component or validator rather than asking Codex for a one-off project implementation.
+
 ## MCP Server
 
 The sandbox dispatcher is also exposed as a small stdio MCP server:

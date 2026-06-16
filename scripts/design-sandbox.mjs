@@ -11,9 +11,12 @@ import {
   listComponents,
   listSandboxTools,
   listTemplates,
+  normalizePhotoDesignBrief,
   readJson,
   reviseDesign,
+  scenarioFromPhotoDesignBrief,
   searchComponents,
+  summarizePhotoDesignBrief,
   validateGeneratedDesign,
   writeJson,
   writePlanPackage
@@ -43,6 +46,20 @@ async function dispatch(name, args) {
   }
   if (name === 'get_component') {
     return getComponent(required(args[0], 'component_id')) || { ok: false, error: `Unknown component_id: ${args[0] || 'missing'}` };
+  }
+
+  if (name === 'inspect_photo_brief') {
+    const [briefPath, outPath] = args;
+    const brief = normalizePhotoDesignBrief(await readJson(required(briefPath, 'photo brief path')));
+    if (outPath) await writeJson(outPath, brief);
+    return { ok: true, brief, summary: summarizePhotoDesignBrief(brief) };
+  }
+
+  if (name === 'photo_brief_to_scenario') {
+    const [briefPath, outPath] = args;
+    const scenario = scenarioFromPhotoDesignBrief(await readJson(required(briefPath, 'photo brief path')));
+    if (outPath) await writeJson(outPath, scenario);
+    return scenario;
   }
 
   if (name === 'generate_design') {
@@ -123,6 +140,8 @@ function usage() {
     '  node scripts/design-sandbox.mjs list_components [category_id] [--details]',
     '  node scripts/design-sandbox.mjs search_components query terms...',
     '  node scripts/design-sandbox.mjs get_component component_id',
+    '  node scripts/design-sandbox.mjs inspect_photo_brief photo-brief.json [normalized-brief.json]',
+    '  node scripts/design-sandbox.mjs photo_brief_to_scenario photo-brief.json [scenario.json]',
     '  node scripts/design-sandbox.mjs generate_design scenario.json [design.json]',
     '  node scripts/design-sandbox.mjs validate_design design.json [validation.json]',
     '  node scripts/design-sandbox.mjs revise_design design.json revision.json [design.json]',

@@ -204,6 +204,37 @@ executed = executeSandboxTool({ name: 'get_component', arguments: { component_id
 assert.equal(executed.result.ok, true);
 assert.equal(executed.result.component.aliases.includes('key hooks'), true);
 
+const photoBrief = {
+  photo_set_id: 'mail_key_photo_set',
+  object_type: 'wall mail and key organizer',
+  confidence: 'high',
+  photos: [{ photo_id: 'front', view: 'front', description: 'Shows back board, mail pocket, hooks, and mounting holes.' }],
+  parts: [
+    { name: 'back board', role: 'wall backer', seen_in: ['front'], component_query: 'rectangular back board panel', confidence: 'high' },
+    { name: 'mail pocket', role: 'shallow envelope pocket', seen_in: ['front'], component_query: 'mail pocket shallow wall shelf', confidence: 'high' },
+    { name: 'key hooks', role: 'linear hook row', seen_in: ['front'], component_query: 'key hooks linear hook array', confidence: 'high', notes: ['5 hooks visible'] }
+  ],
+  known_measurements: [{ label: 'overall width', value_in: 18 }],
+  inferred_dimensions: [{ label: 'overall height', estimate_in: 10, confidence: 'medium', basis: 'photo proportion' }],
+  component_searches: [{ query: 'mail pocket shallow wall shelf', purpose: 'Find pocket component', category_id: 'geometry' }]
+};
+
+executed = executeSandboxTool({ name: 'inspect_photo_brief', arguments: { brief: photoBrief } }, toolState);
+assert.equal(executed.result.ok, true);
+assert.equal(executed.result.summary.photo_count, 1);
+toolState = executed.state;
+
+executed = executeSandboxTool({ name: 'search_photo_brief_components', arguments: { limit: 3 } }, toolState);
+assert.equal(executed.result.ok, true);
+assert.equal(executed.result.searches.some((search) => search.components.some((component) => component.component_id === 'geometry.shallow_wall_pocket')), true);
+toolState = executed.state;
+
+executed = executeSandboxTool({ name: 'photo_brief_to_scenario', arguments: {} }, toolState);
+assert.equal(executed.result.ok, true);
+assert.equal(executed.result.scenario.template_id, 'wall_panel_with_pocket_and_linear_hardware');
+assert.equal(executed.result.scenario.parameters.width_in, 18);
+toolState = { scenario };
+
 executed = executeSandboxTool({
   name: 'generate_design',
   arguments: { template_id: 'wall_key_rack', design_id: 'unsupported_test' }

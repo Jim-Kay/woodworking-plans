@@ -4,12 +4,13 @@ import { canonicalToPortalResult } from './adapter.js';
 import { generateBoardWithLinearHardwareDesign } from './boardWithLinearHardware.js';
 import { getComponent, listComponentCategories, listComponents, searchComponents } from './componentCatalog.js';
 import { generateCanonicalOpenScad } from './openScad.js';
+import { normalizePhotoDesignBrief, scenarioFromPhotoDesignBrief, summarizePhotoDesignBrief } from './photoBrief.js';
 import { createCapabilityRequest, findTemplateCandidates, listTemplates } from './schema.js';
 import { generateTrayBirdFeederDesign } from './trayBirdFeeder.js';
 import { checkPublishability, validateGeneratedDesign } from './validator.js';
 import { generateWallPanelPocketHardwareDesign } from './wallPanelPocketHardware.js';
 
-export { checkPublishability, createCapabilityRequest, generateCanonicalOpenScad, getComponent, listComponentCategories, listComponents, listTemplates, searchComponents, validateGeneratedDesign };
+export { checkPublishability, createCapabilityRequest, generateCanonicalOpenScad, getComponent, listComponentCategories, listComponents, listTemplates, normalizePhotoDesignBrief, scenarioFromPhotoDesignBrief, searchComponents, summarizePhotoDesignBrief, validateGeneratedDesign };
 
 const DESIGN_PARAMETER_KEYS = [
   'width_in',
@@ -100,6 +101,42 @@ export const SANDBOX_TOOLS = [
       required: ['component_id'],
       properties: {
         component_id: { type: 'string' }
+      }
+    }
+  },
+  {
+    name: 'inspect_photo_brief',
+    description: 'Normalize and summarize a multi-photo design brief before mapping it to components or a scenario.',
+    input_schema: {
+      type: 'object',
+      additionalProperties: true,
+      properties: {
+        brief: { type: 'object', additionalProperties: true }
+      }
+    }
+  },
+  {
+    name: 'search_photo_brief_components',
+    description: 'Run the component searches proposed by a photo-derived design brief.',
+    input_schema: {
+      type: 'object',
+      additionalProperties: true,
+      properties: {
+        brief: { type: 'object', additionalProperties: true },
+        limit: { type: 'number' }
+      }
+    }
+  },
+  {
+    name: 'photo_brief_to_scenario',
+    description: 'Convert a normalized multi-photo design brief into a candidate generated-design scenario.',
+    input_schema: {
+      type: 'object',
+      additionalProperties: true,
+      properties: {
+        brief: { type: 'object', additionalProperties: true },
+        template_id: { type: 'string' },
+        design_id: { type: 'string' }
       }
     }
   },
@@ -366,6 +403,30 @@ export function executeSandboxTool(toolCall, state = {}) {
       : { state: nextState, result: { ok: false, error: `Unknown component_id: ${args.component_id || 'missing'}`, recommended_action: 'search_components' } };
   }
 
+  if (name === 'inspect_photo_brief') {
+    const brief = normalizePhotoDesignBrief(args.brief || nextState.photoBrief || nextState.scenario?.photo_design_brief || {}, { photoSet: nextState.scenario?.photo_set });
+    nextState.photoBrief = brief;
+    return { state: nextState, result: { ok: true, brief, summary: summarizePhotoDesignBrief(brief), recommended_action: 'search_photo_brief_components' } };
+  }
+
+  if (name === 'search_photo_brief_components') {
+    const brief = normalizePhotoDesignBrief(args.brief || nextState.photoBrief || nextState.scenario?.photo_design_brief || {}, { photoSet: nextState.scenario?.photo_set });
+    nextState.photoBrief = brief;
+    const limit = Number(args.limit) || 5;
+    const searches = brief.component_searches.map((search) => ({
+      ...search,
+      components: searchComponents({ query: search.query, category_id: search.category_id || null, limit })
+    }));
+    return { state: nextState, result: { ok: true, photo_set_id: brief.photo_set_id, searches, recommended_action: 'photo_brief_to_scenario' } };
+  }
+
+  if (name === 'photo_brief_to_scenario') {
+    const brief = normalizePhotoDesignBrief(args.brief || nextState.photoBrief || nextState.scenario?.photo_design_brief || {}, { photoSet: nextState.scenario?.photo_set });
+    nextState.photoBrief = brief;
+    nextState.scenario = scenarioFromPhotoDesignBrief(brief, { template_id: args.template_id, design_id: args.design_id });
+    return { state: nextState, result: { ok: true, scenario: nextState.scenario, summary: summarizePhotoDesignBrief(brief), recommended_action: 'generate_design' } };
+  }
+
   if (name === 'generate_design') {
     const scenario = scenarioFromToolArguments(nextState.scenario, args);
     const unsupportedTemplate = unsupportedTemplateResult(scenario);
@@ -520,6 +581,9 @@ export function scenarioFromToolArguments(scenario = {}, args = {}) {
   return {
     design_id: args.design_id || scenario.design_id,
     template_id: args.template_id || scenario.template_id,
+    intent: args.intent || scenario.intent,
+    source_brief: args.source_brief || scenario.source_brief,
+    photo_design_brief: args.photo_design_brief || scenario.photo_design_brief,
     parameters: { ...(scenario.parameters || {}), ...parameterArguments(args) }
   };
 }

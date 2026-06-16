@@ -11,6 +11,7 @@
     "sandbox:loop": "node scripts/llm-sandbox-loop.mjs",
     "sandbox:review": "node scripts/llm-package-review.mjs",
     "sandbox:vision-review": "node scripts/llm-visual-review.mjs",
+    "sandbox:photo-brief": "node scripts/llm-photo-brief.mjs",
     "llm:check": "node scripts/llm-host-check.mjs",
     "llm:benchmark": "node scripts/llm-sandbox-benchmark.mjs",
     "test": "node tests/frameMath.test.mjs && node tests/generatedSandbox.test.mjs && node tests/generatedReview.test.mjs && node tests/sandboxMcpServer.test.mjs"

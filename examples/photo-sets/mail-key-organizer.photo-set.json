@@ -1,0 +1,13 @@
+{
+  "photo_set_id": "mail_key_organizer_reference",
+  "object_type": "wall mail and key organizer",
+  "known_measurements": [
+    { "label": "overall width", "value_in": 18, "source": "user supplied reference measurement" }
+  ],
+  "photos": [
+    { "photo_id": "front", "view": "front", "path": "front.jpg", "description": "Front view showing back board, mail pocket, hooks, and mounting holes." },
+    { "photo_id": "side", "view": "side", "path": "side.jpg", "description": "Side view showing pocket depth and hook projection." },
+    { "photo_id": "detail_pocket", "view": "detail", "path": "detail-pocket.jpg", "description": "Close view of pocket lip and side cheek construction." },
+    { "photo_id": "back", "view": "back", "path": "back.jpg", "description": "Back view showing mounting method if visible." }
+  ]
+}

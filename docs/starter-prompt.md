@@ -30,6 +30,7 @@ Important context:
 - Reusable design capabilities should be exposed through a hierarchical component catalog with stable IDs, aliases, and search. The local LLM should browse/search/select existing components before requesting a new component so near-duplicates are not created under different names.
 - If a design is valid but needs better builder-facing guidance, the local LLM should use an annotation/revision tool to add instructions or notes to the generated design package. If no suitable tool exists, it should emit a structured capability request for Codex.
 - Screenshot review should be handled by a vision-language local model when available. The vision reviewer should pretend to be a first-time builder, compare rendered app/build-step images against the generated package intent, judge whether the visible screen makes the next build action clear, then return findings, proposed annotations, or missing-capability requests rather than source-code patches.
+- Photo-to-plan work should start with a multi-photo design brief, not direct plan generation. A vision-language model should reconcile front/side/detail/back photos into structured observations, known/inferred dimensions, visible parts, component-search queries, uncertainties, and missing capabilities. The local text model should then search/select reusable components and generate a scenario from the brief.
 - The local LLM should iterate as far as it can with the available tools. If the tools are insufficient, it should produce a structured request for Codex describing the missing designer capability, why it is needed, and the design attempt that exposed the gap.
 - The first generated project should be a simple tray-style bird feeder, not a load-bearing stool. It should prove the canonical schema, sandbox loop, validation, OpenSCAD export, and portal-publish pathway with low structural risk.
 - A simple storage shelf can be the second generated project, used to compare against the existing shelf implementation.
@@ -46,6 +47,7 @@ Suggested first milestone:
    - browse/search/select reusable generated-design components by stable component ID
    - validate a candidate design
    - apply model-authored annotations such as build guidance, drill notes, and part notes without editing source code
+   - normalize a multi-photo design brief and map it into component searches and a candidate scenario
    - review rendered screenshots with a vision model acting as an end-user builder comprehension reviewer
    - export OpenSCAD and a simple plan package
    - report missing tool/capability requests in a Codex-readable format

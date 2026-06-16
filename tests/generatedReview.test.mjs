@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import { exportPlanPackage, generateDesign } from '../src/generated/sandbox.js';
 import {
+  buildPhotoBriefMessages,
+  normalizePhotoDesignBrief,
+  scenarioFromPhotoDesignBrief,
+  summarizePhotoDesignBrief
+} from '../src/generated/photoBrief.js';
+import {
   PACKAGE_REVIEW_ROLES,
   VISUAL_REVIEW_SCHEMA,
   buildPackageReviewInput,
@@ -135,5 +141,45 @@ const filteredVisualReview = normalizeVisualReview({
 });
 assert.equal(filteredVisualReview.proposed_annotations.step_instructions.length, 1);
 assert.equal(filteredVisualReview.proposed_annotations.part_notes.length, 1);
+
+const photoSet = {
+  photo_set_id: 'entry_reference',
+  known_measurements: [{ label: 'overall width', value_in: 18 }],
+  photos: [
+    { photo_id: 'front', view: 'front', path: 'front.jpg' },
+    { photo_id: 'side', view: 'side', path: 'side.jpg' }
+  ]
+};
+const photoBrief = normalizePhotoDesignBrief({
+  photo_set_id: 'entry_reference',
+  object_type: 'wall mail and key organizer',
+  confidence: 'high',
+  parts: [
+    { name: 'back board', role: 'wall backer', seen_in: ['front'], component_query: 'rectangular back board panel', confidence: 'high' },
+    { name: 'mail pocket', role: 'shallow envelope pocket', seen_in: ['front', 'side'], component_query: 'mail pocket shallow wall shelf', confidence: 'high' },
+    { name: 'key hooks', role: 'linear hook row', seen_in: ['front'], component_query: 'key hooks linear hook array', confidence: 'high', notes: ['5 hooks visible'] }
+  ],
+  inferred_dimensions: [
+    { label: 'overall height', estimate_in: 10, confidence: 'medium', basis: 'proportion from width' },
+    { label: 'pocket depth', estimate_in: 2.5, confidence: 'medium', basis: 'side view' }
+  ]
+}, { photoSet });
+assert.equal(photoBrief.schema_version, '0.1');
+assert.equal(photoBrief.photos.length, 2);
+assert.equal(photoBrief.known_measurements[0].value_in, 18);
+assert.equal(photoBrief.component_searches.some((search) => /mail pocket/.test(search.query)), true);
+assert.equal(summarizePhotoDesignBrief(photoBrief).part_count, 3);
+
+const photoScenario = scenarioFromPhotoDesignBrief(photoBrief);
+assert.equal(photoScenario.template_id, 'wall_panel_with_pocket_and_linear_hardware');
+assert.equal(photoScenario.parameters.width_in, 18);
+assert.equal(photoScenario.parameters.height_in, 10);
+assert.equal(photoScenario.parameters.pocket_depth_in, 2.5);
+assert.equal(photoScenario.parameters.hook_count, 5);
+
+const photoMessages = buildPhotoBriefMessages(photoSet, ['data:image/jpeg;base64,front', 'data:image/jpeg;base64,side']);
+assert.equal(photoMessages.length, 2);
+assert.match(photoMessages[0].content, /Reconcile all supplied photos/);
+assert.equal(photoMessages[1].content.length, 3);
 
 console.log('generated review tests passed');

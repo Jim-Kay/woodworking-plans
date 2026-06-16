@@ -1,0 +1,66 @@
+{
+  "photo_set_id": "mail_key_organizer_reference",
+  "object_type": "wall mail and key organizer",
+  "confidence": "high",
+  "photos": [
+    { "photo_id": "front", "view": "front", "description": "Front view shows a rectangular back board, an open mail pocket, a row of key hooks, and two mounting holes." },
+    { "photo_id": "side", "view": "side", "description": "Side view shows a shallow pocket projecting from the back board." },
+    { "photo_id": "detail_pocket", "view": "detail", "description": "Detail view shows a bottom shelf, front lip, and side cheek for the pocket." }
+  ],
+  "observations": [
+    "Object appears wall mounted.",
+    "Back board is taller than the mail pocket so there is room for mounting holes above and hooks below.",
+    "Mail pocket is open at the top and front-facing.",
+    "Hooks are arranged in a straight horizontal row below the pocket."
+  ],
+  "parts": [
+    {
+      "name": "back board",
+      "role": "wall backer",
+      "seen_in": ["front", "side"],
+      "component_query": "rectangular back board panel",
+      "confidence": "high"
+    },
+    {
+      "name": "mail pocket",
+      "role": "shallow envelope pocket",
+      "seen_in": ["front", "side", "detail_pocket"],
+      "component_query": "mail pocket shallow wall shelf front lip side cheeks",
+      "confidence": "high"
+    },
+    {
+      "name": "key hooks",
+      "role": "linear hook row",
+      "seen_in": ["front"],
+      "component_query": "key hooks linear hook array",
+      "confidence": "high",
+      "notes": ["5 hooks visible"]
+    },
+    {
+      "name": "wall mounting holes",
+      "role": "mounting references",
+      "seen_in": ["front"],
+      "component_query": "wall mounting hole pair",
+      "confidence": "medium"
+    }
+  ],
+  "known_measurements": [
+    { "label": "overall width", "value_in": 18, "source": "user supplied reference measurement" }
+  ],
+  "inferred_dimensions": [
+    { "label": "overall height", "estimate_in": 10, "confidence": "medium", "basis": "Front photo proportions relative to supplied width." },
+    { "label": "pocket depth", "estimate_in": 2.5, "confidence": "medium", "basis": "Side photo proportion relative to back board width." },
+    { "label": "pocket height", "estimate_in": 4, "confidence": "medium", "basis": "Pocket occupies roughly lower-middle portion of back board." }
+  ],
+  "component_searches": [
+    { "query": "rectangular back board panel", "purpose": "Find a flat wall backer component.", "category_id": "geometry" },
+    { "query": "mail pocket shallow wall shelf front lip side cheeks", "purpose": "Find a reusable shallow wall pocket component.", "category_id": "geometry" },
+    { "query": "key hooks linear hook array", "purpose": "Find repeated key hook hardware.", "category_id": "hardware" },
+    { "query": "wall mounting hole pair", "purpose": "Find wall mounting references.", "category_id": "hardware" }
+  ],
+  "uncertainties": [
+    "Exact stock thickness is not visible; use conservative defaults unless measured.",
+    "Back mounting method may require a back view or user confirmation."
+  ],
+  "missing_capabilities": []
+}
