@@ -15,8 +15,9 @@
     "sandbox:synthetic-photos": "node scripts/generate-synthetic-photo-set.mjs",
     "llm:check": "node scripts/llm-host-check.mjs",
     "llm:benchmark": "node scripts/llm-sandbox-benchmark.mjs",
-    "test": "node tests/frameMath.test.mjs && node tests/generatedSandbox.test.mjs && node tests/generatedReview.test.mjs && node tests/sandboxMcpServer.test.mjs && node tests/syntheticPhotoSet.test.mjs"
+    "test": "node tests/frameMath.test.mjs && node tests/generatedSandbox.test.mjs && node tests/generatedReview.test.mjs && node tests/sandboxMcpServer.test.mjs && node tests/syntheticPhotoSet.test.mjs && node tests/portalBrowser.test.mjs"
   },
-  "dependencies": {},
-  "devDependencies": {}
+  "devDependencies": {
+    "playwright": "^1.61.0"
+  }
 }

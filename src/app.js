@@ -658,7 +658,7 @@ function renderStatus() {
   const status = $('#statusBar');
   const badges = [];
   if (result.ok) {
-    badges.push(`<span class="badge ok">Ready</span>`);
+    badges.push(result.warnings.length ? '<span class="badge warn">Needs review</span>' : '<span class="badge ok">Ready</span>');
     if (isGeneratedPlan()) badges.push(`<span class="badge">${isGeneratedStoolPlan() ? 'Two-step stool' : isGeneratedWallRackPlan() ? 'Wall rack' : 'Tray feeder'}</span>`);
     else if (isShelfPlan()) badges.push(`<span class="badge">Shelves: ${result.levels} levels, ${result.bays} bays</span>`);
     else badges.push(`<span class="badge">Outer: ${escapeHtml(formatLength(result.outerW, plan.unit))} x ${escapeHtml(formatLength(result.outerH, plan.unit))}</span>`);

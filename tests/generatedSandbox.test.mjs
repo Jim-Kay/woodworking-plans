@@ -179,8 +179,10 @@ assert.equal(stepStool.template_id, 'two_step_stool');
 assert.equal(stepStool.components.includes('geometry.step_tread'), true);
 assert.equal(stepStool.components.includes('geometry.square_leg_post'), true);
 assert.equal(stepStool.parts.filter((part) => part.role === 'tread').length, 2);
-assert.equal(stepStool.parts.filter((part) => part.role === 'leg').length, 4);
+assert.equal(stepStool.parts.filter((part) => part.role === 'leg').length, 6);
+assert.equal(stepStool.parts.filter((part) => part.role === 'rail').length, 7);
 assert.equal(stepStool.parts.find((part) => part.id === 'leg.front.left').size.z, 8);
+assert.equal(stepStool.parts.find((part) => part.id === 'leg.middle.left').size.z, 16);
 assert.equal(stepStool.parts.find((part) => part.id === 'leg.back.left').size.z, 16);
 const stepStoolValidation = validateGeneratedDesign(stepStool);
 assert.equal(stepStoolValidation.ok, true);
@@ -206,9 +208,15 @@ const portalStepStool = calculateGeneratedPlan({
 assert.equal(portalStepStool.ok, true);
 assert.equal(portalStepStool.style, 'two-step-stool');
 assert.equal(portalStepStool.generatedDesign.template_id, 'two_step_stool');
-assert.equal(portalStepStool.parts.length, 10);
-assert.equal(portalStepStool.physicalPartCount, 10);
+assert.equal(portalStepStool.parts.length, 15);
+assert.equal(portalStepStool.physicalPartCount, 15);
 assert.equal(portalStepStool.publishability.ok, true);
+
+const cantileveredStepStool = structuredClone(stepStool);
+cantileveredStepStool.parts = cantileveredStepStool.parts.filter((part) => !['leg.middle.left', 'leg.middle.right', 'rail.middle.upper'].includes(part.id));
+const cantileveredStepStoolValidation = validateGeneratedDesign(cantileveredStepStool);
+assert.equal(cantileveredStepStoolValidation.ok, false);
+assert.match(cantileveredStepStoolValidation.errors.join('\n'), /upper tread must have front-edge support/);
 
 const badReferenceHost = structuredClone(design);
 const badReference = badReferenceHost.parts.find((part) => part.id === 'drainage.hole.1');

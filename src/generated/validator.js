@@ -97,6 +97,17 @@ function validateTwoStepStoolRules(design, errors, warnings) {
   if (!between(p.leg_depth_in, 1, 3)) errors.push('leg_depth_in must be between 1 and 3 in.');
   if (Number(p.leg_width_in) * 2 >= Number(p.width_in)) errors.push('leg_width_in leaves no clear span between legs.');
   if (Number(p.leg_depth_in) * 2 >= Number(p.depth_in)) errors.push('leg_depth_in leaves no clear span between front and back legs.');
+  const partsById = new Map((design.parts || []).map((part) => [part.id, part]));
+  const upperTread = partsById.get('tread.upper');
+  const middleLegs = ['leg.middle.left', 'leg.middle.right'].map((id) => partsById.get(id)).filter(Boolean);
+  const upperFrontRail = partsById.get('rail.middle.upper');
+  if (upperTread) {
+    const upperFrontEdge = Number(upperTread.position?.y) - Number(upperTread.size?.y) / 2;
+    const supportedFrontEdge = middleLegs.length >= 2
+      && middleLegs.every((leg) => Math.abs((Number(leg.position?.y) - Number(leg.size?.y) / 2) - upperFrontEdge) <= Number(p.leg_depth_in || 0) + 0.25)
+      && upperFrontRail;
+    if (!supportedFrontEdge) errors.push('upper tread must have front-edge support legs and an upper front rail; unsupported cantilevered upper steps are not publishable.');
+  }
   warnings.push('Generated step stools are not load certified; verify species, joinery, fasteners, and real weight capacity before standing on the build.');
   if (!Number(p.claimed_capacity_lbs)) warnings.push('No claimed_capacity_lbs is certified by the sandbox; treat capacity as unknown.');
 }
