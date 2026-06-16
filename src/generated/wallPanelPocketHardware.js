@@ -16,6 +16,7 @@ export function generateWallPanelPocketHardwareDesign(scenario = {}) {
   const mountZ = parameters.height_in - 1.25;
   const mountInset = Math.max(parameters.min_end_inset_in, 1.25);
   const pocketWidth = Math.max(1, parameters.width_in - parameters.min_end_inset_in * 2);
+  const pocketInnerWidth = Math.max(1, pocketWidth - parameters.pocket_stock_thickness_in * 2);
   const pocketSideHeight = Math.max(parameters.pocket_height_in, parameters.pocket_lip_height_in);
 
   const parts = [
@@ -23,15 +24,15 @@ export function generateWallPanelPocketHardwareDesign(scenario = {}) {
       component_id: 'geometry.rectangular_panel',
       cut: { length_in: parameters.width_in, width_in: parameters.height_in, thickness_in: parameters.board_thickness_in }
     }),
-    physicalPart('pocket.bottom', 'Pocket bottom shelf', parameters.pocket_material, [pocketWidth, parameters.pocket_depth_in, parameters.pocket_stock_thickness_in], [0, frontY - parameters.pocket_depth_in / 2, pocketBottomZ], 'shelf', {
+    physicalPart('pocket.bottom', 'Pocket bottom shelf', parameters.pocket_material, [pocketInnerWidth, parameters.pocket_depth_in, parameters.pocket_stock_thickness_in], [0, frontY - parameters.pocket_depth_in / 2, pocketBottomZ], 'shelf', {
       component_id: 'geometry.shallow_wall_pocket',
       host_part_id: 'back.board',
-      cut: { length_in: pocketWidth, width_in: parameters.pocket_depth_in, thickness_in: parameters.pocket_stock_thickness_in }
+      cut: { length_in: pocketInnerWidth, width_in: parameters.pocket_depth_in, thickness_in: parameters.pocket_stock_thickness_in }
     }),
-    physicalPart('pocket.front_lip', 'Pocket front lip', parameters.pocket_material, [pocketWidth, parameters.pocket_stock_thickness_in, parameters.pocket_lip_height_in], [0, frontY - parameters.pocket_depth_in + parameters.pocket_stock_thickness_in / 2, pocketLipZ], 'rail', {
+    physicalPart('pocket.front_lip', 'Pocket front lip', parameters.pocket_material, [pocketInnerWidth, parameters.pocket_stock_thickness_in, parameters.pocket_lip_height_in], [0, frontY - parameters.pocket_depth_in + parameters.pocket_stock_thickness_in / 2, pocketLipZ], 'rail', {
       component_id: 'geometry.shallow_wall_pocket',
       host_part_id: 'back.board',
-      cut: { length_in: pocketWidth, width_in: parameters.pocket_lip_height_in, thickness_in: parameters.pocket_stock_thickness_in }
+      cut: { length_in: pocketInnerWidth, width_in: parameters.pocket_lip_height_in, thickness_in: parameters.pocket_stock_thickness_in }
     }),
     physicalPart('pocket.left_side', 'Pocket left side cheek', parameters.pocket_material, [parameters.pocket_stock_thickness_in, parameters.pocket_depth_in, pocketSideHeight], [-pocketWidth / 2 + parameters.pocket_stock_thickness_in / 2, frontY - parameters.pocket_depth_in / 2, pocketBaseZ + pocketSideHeight / 2], 'side', {
       component_id: 'geometry.shallow_wall_pocket',

@@ -37,22 +37,10 @@ export function generateTwoStepStoolDesign(scenario = {}) {
       component_id: 'geometry.linear_rail',
       cut: { length_in: parameters.width_in - parameters.leg_width_in * 2, width_in: parameters.rail_height_in, thickness_in: parameters.rail_thickness_in }
     }),
-    physicalPart('rail.left.lower', 'Left lower side rail', parameters.material, [parameters.rail_thickness_in, middleLegY - frontLegY, parameters.rail_height_in], [-legX, (frontLegY + middleLegY) / 2, railZLower], 'rail', {
-      component_id: 'geometry.linear_rail',
-      cut: { length_in: middleLegY - frontLegY, width_in: parameters.rail_height_in, thickness_in: parameters.rail_thickness_in }
-    }),
-    physicalPart('rail.right.lower', 'Right lower side rail', parameters.material, [parameters.rail_thickness_in, middleLegY - frontLegY, parameters.rail_height_in], [legX, (frontLegY + middleLegY) / 2, railZLower], 'rail', {
-      component_id: 'geometry.linear_rail',
-      cut: { length_in: middleLegY - frontLegY, width_in: parameters.rail_height_in, thickness_in: parameters.rail_thickness_in }
-    }),
-    physicalPart('rail.left.upper', 'Left upper side rail', parameters.material, [parameters.rail_thickness_in, backLegY - middleLegY, parameters.rail_height_in], [-legX, (middleLegY + backLegY) / 2, railZUpper], 'rail', {
-      component_id: 'geometry.linear_rail',
-      cut: { length_in: backLegY - middleLegY, width_in: parameters.rail_height_in, thickness_in: parameters.rail_thickness_in }
-    }),
-    physicalPart('rail.right.upper', 'Right upper side rail', parameters.material, [parameters.rail_thickness_in, backLegY - middleLegY, parameters.rail_height_in], [legX, (middleLegY + backLegY) / 2, railZUpper], 'rail', {
-      component_id: 'geometry.linear_rail',
-      cut: { length_in: backLegY - middleLegY, width_in: parameters.rail_height_in, thickness_in: parameters.rail_thickness_in }
-    })
+    sideRailPart('rail.left.lower', 'Left lower side rail', parameters.material, -legX, frontLegY, middleLegY, railZLower, parameters),
+    sideRailPart('rail.right.lower', 'Right lower side rail', parameters.material, legX, frontLegY, middleLegY, railZLower, parameters),
+    sideRailPart('rail.left.upper', 'Left upper side rail', parameters.material, -legX, middleLegY, backLegY, railZUpper, parameters),
+    sideRailPart('rail.right.upper', 'Right upper side rail', parameters.material, legX, middleLegY, backLegY, railZUpper, parameters)
   ];
 
   const joints = [
@@ -110,13 +98,16 @@ export function generateTwoStepStoolDesign(scenario = {}) {
 }
 
 function normalizeParameters(parameters) {
+  const depth = number(parameters.depth_in, 16);
+  const upperStepDepth = Math.min(number(parameters.upper_step_depth_in, 8), Math.max(5, depth - 5));
+  const lowerStepDepth = Math.min(number(parameters.lower_step_depth_in, 8), Math.max(5, depth - upperStepDepth));
   return {
     width_in: number(parameters.width_in, 16),
-    depth_in: number(parameters.depth_in, 16),
+    depth_in: depth,
     height_in: number(parameters.height_in, 16),
     lower_step_height_in: number(parameters.lower_step_height_in, parameters.front_leg_height_in || 8),
-    lower_step_depth_in: number(parameters.lower_step_depth_in, 9),
-    upper_step_depth_in: number(parameters.upper_step_depth_in, 8),
+    lower_step_depth_in: lowerStepDepth,
+    upper_step_depth_in: upperStepDepth,
     tread_thickness_in: number(parameters.tread_thickness_in, 0.75),
     leg_width_in: number(parameters.leg_width_in, 1.5),
     leg_depth_in: number(parameters.leg_depth_in, 1.5),
@@ -128,24 +119,38 @@ function normalizeParameters(parameters) {
 }
 
 function legParts(parameters, legX, frontLegY, middleLegY, backLegY) {
+  const lowerLegHeight = Math.max(0.5, parameters.lower_step_height_in - parameters.tread_thickness_in);
+  const upperLegHeight = Math.max(0.5, parameters.height_in - parameters.tread_thickness_in);
   return [
-    ['leg.front.left', 'Front left leg', -legX, frontLegY, parameters.lower_step_height_in],
-    ['leg.front.right', 'Front right leg', legX, frontLegY, parameters.lower_step_height_in],
-    ['leg.middle.left', 'Left upper-step front support leg', -legX, middleLegY, parameters.height_in],
-    ['leg.middle.right', 'Right upper-step front support leg', legX, middleLegY, parameters.height_in],
-    ['leg.back.left', 'Back left leg', -legX, backLegY, parameters.height_in],
-    ['leg.back.right', 'Back right leg', legX, backLegY, parameters.height_in]
+    ['leg.front.left', 'Front left leg', -legX, frontLegY, lowerLegHeight],
+    ['leg.front.right', 'Front right leg', legX, frontLegY, lowerLegHeight],
+    ['leg.middle.left', 'Left upper-step front support leg', -legX, middleLegY, upperLegHeight],
+    ['leg.middle.right', 'Right upper-step front support leg', legX, middleLegY, upperLegHeight],
+    ['leg.back.left', 'Back left leg', -legX, backLegY, upperLegHeight],
+    ['leg.back.right', 'Back right leg', legX, backLegY, upperLegHeight]
   ].map(([id, name, x, y, height]) => physicalPart(id, name, parameters.material, [parameters.leg_width_in, parameters.leg_depth_in, height], [x, y, height / 2], 'leg', {
     component_id: 'geometry.square_leg_post',
     cut: { length_in: height, width_in: parameters.leg_width_in, thickness_in: parameters.leg_depth_in }
   }));
 }
 
+function sideRailPart(id, name, material, x, fromY, toY, z, parameters) {
+  const sign = x < 0 ? 1 : -1;
+  const innerX = x + sign * (parameters.leg_width_in / 2 + parameters.rail_thickness_in / 2);
+  const railLength = Math.max(0.5, toY - fromY - parameters.leg_depth_in);
+  const startY = fromY + parameters.leg_depth_in / 2;
+  const endY = toY - parameters.leg_depth_in / 2;
+  return physicalPart(id, name, parameters.material, [parameters.rail_thickness_in, railLength, parameters.rail_height_in], [innerX, (startY + endY) / 2, z], 'rail', {
+    component_id: 'geometry.linear_rail',
+    cut: { length_in: railLength, width_in: parameters.rail_height_in, thickness_in: parameters.rail_thickness_in }
+  });
+}
+
 function buildSteps(parameters) {
   const allPartIds = ['tread.lower', 'tread.upper', 'leg.front.left', 'leg.front.right', 'leg.middle.left', 'leg.middle.right', 'leg.back.left', 'leg.back.right', 'rail.front.lower', 'rail.middle.upper', 'rail.back.upper', 'rail.left.lower', 'rail.right.lower', 'rail.left.upper', 'rail.right.upper'];
   return [
     step('step.cut', 'Cut stool parts', allPartIds, [
-      `Cut two treads, two ${cleanNumber(parameters.lower_step_height_in)} in front legs, four ${cleanNumber(parameters.height_in)} in upper-step support legs, and seven apron or stretcher rails.`,
+      `Cut two treads, two ${cleanNumber(parameters.lower_step_height_in - parameters.tread_thickness_in)} in front legs, four ${cleanNumber(parameters.height_in - parameters.tread_thickness_in)} in upper-step support legs, and seven apron or stretcher rails.`,
       'Keep paired legs exactly the same length so the stool sits flat.'
     ]),
     step('step.layout', 'Mark rail and tread locations', ['leg.front.left', 'leg.front.right', 'leg.middle.left', 'leg.middle.right', 'leg.back.left', 'leg.back.right'], [

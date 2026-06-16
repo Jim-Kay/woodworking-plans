@@ -181,9 +181,9 @@ assert.equal(stepStool.components.includes('geometry.square_leg_post'), true);
 assert.equal(stepStool.parts.filter((part) => part.role === 'tread').length, 2);
 assert.equal(stepStool.parts.filter((part) => part.role === 'leg').length, 6);
 assert.equal(stepStool.parts.filter((part) => part.role === 'rail').length, 7);
-assert.equal(stepStool.parts.find((part) => part.id === 'leg.front.left').size.z, 8);
-assert.equal(stepStool.parts.find((part) => part.id === 'leg.middle.left').size.z, 16);
-assert.equal(stepStool.parts.find((part) => part.id === 'leg.back.left').size.z, 16);
+assert.equal(stepStool.parts.find((part) => part.id === 'leg.front.left').size.z, 7.25);
+assert.equal(stepStool.parts.find((part) => part.id === 'leg.middle.left').size.z, 15.25);
+assert.equal(stepStool.parts.find((part) => part.id === 'leg.back.left').size.z, 15.25);
 const stepStoolValidation = validateGeneratedDesign(stepStool);
 assert.equal(stepStoolValidation.ok, true);
 assert.match(stepStoolValidation.warnings.join('\n'), /not load certified/);
@@ -196,7 +196,7 @@ const portalStepStool = calculateGeneratedPlan({
   stoolD: 16,
   stoolH: 16,
   stoolLowerStepH: 8,
-  stoolLowerStepD: 9,
+  stoolLowerStepD: 8,
   stoolUpperStepD: 8,
   stoolTreadT: 0.75,
   stoolLegW: 1.5,
@@ -217,6 +217,13 @@ cantileveredStepStool.parts = cantileveredStepStool.parts.filter((part) => !['le
 const cantileveredStepStoolValidation = validateGeneratedDesign(cantileveredStepStool);
 assert.equal(cantileveredStepStoolValidation.ok, false);
 assert.match(cantileveredStepStoolValidation.errors.join('\n'), /upper tread must have front-edge support/);
+
+const clippedStepStool = structuredClone(stepStool);
+clippedStepStool.parts.find((part) => part.id === 'leg.front.left').size.z = 8;
+clippedStepStool.parts.find((part) => part.id === 'leg.front.left').position.z = 4;
+const clippedStepStoolValidation = validateGeneratedDesign(clippedStepStool);
+assert.equal(clippedStepStoolValidation.ok, false);
+assert.match(clippedStepStoolValidation.errors.join('\n'), /leg\.front\.left.*overlap/);
 
 const badReferenceHost = structuredClone(design);
 const badReference = badReferenceHost.parts.find((part) => part.id === 'drainage.hole.1');

@@ -99,7 +99,7 @@ export const TEMPLATE_DEFINITIONS = [
       depth_in: { type: 'number', min: 10, max: 30, default: 16 },
       height_in: { type: 'number', min: 8, max: 30, default: 16 },
       lower_step_height_in: { type: 'number', min: 4, max: 18, default: 8 },
-      lower_step_depth_in: { type: 'number', min: 5, max: 16, default: 9 },
+      lower_step_depth_in: { type: 'number', min: 5, max: 16, default: 8 },
       upper_step_depth_in: { type: 'number', min: 5, max: 16, default: 8 },
       tread_thickness_in: { type: 'number', min: 0.5, max: 1.5, default: 0.75 },
       leg_width_in: { type: 'number', min: 1, max: 3, default: 1.5 },

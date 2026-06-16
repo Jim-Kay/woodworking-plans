@@ -52,6 +52,7 @@ export function validateGeneratedDesign(design) {
   }
 
   validateReferenceHosts(parts, partsById, errors);
+  validatePhysicalPartOverlaps(parts, errors);
   validateTrayBirdFeederRules(design, errors, warnings);
   validateBoardWithLinearHardwareRules(design, errors, warnings);
   validateWallPanelPocketHardwareRules(design, errors, warnings);
@@ -179,6 +180,41 @@ function validateReferenceHosts(parts, partsById, errors) {
   }
 }
 
+function validatePhysicalPartOverlaps(parts, errors) {
+  const physicalParts = parts.filter((part) => part?.physical !== false && !isOverlapExemptPart(part));
+  for (let outer = 0; outer < physicalParts.length; outer += 1) {
+    for (let inner = outer + 1; inner < physicalParts.length; inner += 1) {
+      const overlap = boxOverlap(physicalParts[outer], physicalParts[inner]);
+      if (!overlap) continue;
+      errors.push(`Physical parts ${physicalParts[outer].id} and ${physicalParts[inner].id} overlap by ${cleanNumber(overlap.x)} x ${cleanNumber(overlap.y)} x ${cleanNumber(overlap.z)} in; generated wood parts may touch but must not occupy the same volume.`);
+    }
+  }
+}
+
+function isOverlapExemptPart(part) {
+  const text = [
+    part.id,
+    part.role,
+    part.material,
+    part.name,
+    part.meta?.component_id,
+    part.meta?.category_id,
+    part.meta?.exported_as
+  ].filter(Boolean).join(' ').toLowerCase();
+  return /reference|guide|fastener|screw|nail|bolt|washer|hinge|hook|peg|pilot|mounting_hole|drainage|hanging/.test(text);
+}
+
+function boxOverlap(a, b) {
+  const overlap = Object.fromEntries(['x', 'y', 'z'].map((axis) => {
+    const aMin = Number(a.position?.[axis]) - Number(a.size?.[axis]) / 2;
+    const aMax = Number(a.position?.[axis]) + Number(a.size?.[axis]) / 2;
+    const bMin = Number(b.position?.[axis]) - Number(b.size?.[axis]) / 2;
+    const bMax = Number(b.position?.[axis]) + Number(b.size?.[axis]) / 2;
+    return [axis, Math.min(aMax, bMax) - Math.max(aMin, bMin)];
+  }));
+  return overlap.x > 1e-6 && overlap.y > 1e-6 && overlap.z > 1e-6 ? overlap : null;
+}
+
 function boxContains(host, child) {
   return ['x', 'y', 'z'].every((axis) => {
     const hostMin = Number(host.position?.[axis]) - Number(host.size?.[axis]) / 2;
@@ -213,4 +249,8 @@ function positiveNumber(value) {
 function between(value, min, max) {
   const number = Number(value);
   return Number.isFinite(number) && number >= min && number <= max;
+}
+
+function cleanNumber(value) {
+  return Number(Number(value).toFixed(4)).toString();
 }

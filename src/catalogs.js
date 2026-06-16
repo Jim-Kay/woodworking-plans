@@ -77,7 +77,7 @@ export const DEFAULT_PLAN = {
   stoolD: 16,
   stoolH: 16,
   stoolLowerStepH: 8,
-  stoolLowerStepD: 9,
+  stoolLowerStepD: 8,
   stoolUpperStepD: 8,
   stoolTreadT: 0.75,
   stoolLegW: 1.5,
