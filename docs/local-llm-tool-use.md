@@ -160,6 +160,7 @@ npm run sandbox -- export_plan_package generated/runs/demo/design.json generated
 
 - `inspect_scenario`
 - `list_templates`
+- `search_templates`
 - `list_component_categories`
 - `list_components`
 - `search_components`
@@ -199,6 +200,10 @@ The component catalog is the deduplication layer for reusable design capabilitie
 4. If no existing component covers the need, call `request_capability` and include the closest component IDs considered.
 
 This avoids creating duplicate components under slightly different names, such as `key_hook_row`, `linear_hook_array`, and `repeated_wall_pegs`.
+
+Catalog search uses a hybrid retrieval strategy. Exact IDs and aliases score highest, but the search layer also expands common woodworking synonyms, tolerates invalid category hints, and uses fuzzy text similarity over descriptions, inputs, outputs, and example uses. The search result is still only a candidate list: the model should select exact `template_id` or `component_id` values and let deterministic generation, proposal review, validation, and publishability checks decide whether the candidate is actually usable.
+
+Before proposing a new template, the model should call `search_templates` with the scenario `template_id`, project name, and plain-language intent. This helps map names such as `mail_key_organizer` or `entry organizer with hooks` to existing supported templates instead of creating duplicate composition proposals.
 
 Unsupported templates should recover through component discovery before escalation. For example, a `wall_key_rack` scenario should search for `hardware.linear_hook_array`, `hardware.wall_mount_hole_pair`, `geometry.rectangular_panel`, `patterns.centered_linear_spacing`, and related validators before asking Codex for composition support. A good request is "add composition support using these existing components plus any missing glue," not "add a one-off wall key rack generator."
 

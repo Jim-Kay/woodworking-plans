@@ -322,11 +322,11 @@ export function getComponent(componentId) {
 }
 
 export function searchComponents({ query = '', category_id = null, limit = 8 } = {}) {
-  const terms = tokenize(query);
+  const categoryId = normalizeCategoryId(category_id);
+  const queryProfile = buildSearchProfile(query);
   const scored = COMPONENT_CATALOG
-    .filter((component) => !category_id || component.category_id === category_id)
-    .map((component) => ({ component, score: componentScore(component, terms) }))
-    .filter((item) => item.score > 0 || terms.length === 0)
+    .map((component) => ({ component, score: componentScore(component, queryProfile, categoryId) }))
+    .filter((item) => item.score > 0 || queryProfile.terms.length === 0)
     .sort((a, b) => b.score - a.score || a.component.component_id.localeCompare(b.component.component_id))
     .slice(0, Math.max(1, Number(limit) || 8));
   return scored.map(({ component, score }) => ({ ...componentSummary(component, true), score }));
@@ -349,9 +349,31 @@ function componentSummary(component, includeDetails) {
   };
 }
 
-function componentScore(component, terms) {
-  if (!terms.length) return 1;
-  const searchable = [
+function componentScore(component, queryProfile, categoryId) {
+  if (!queryProfile.terms.length) return categoryId && component.category_id !== categoryId ? 0 : 1;
+  const profile = componentSearchProfile(component);
+  let score = 0;
+
+  if (categoryId) score += component.category_id === categoryId ? 4 : -2;
+  if (profile.exactPhrases.has(queryProfile.normalized)) score += 18;
+  if (profile.exactPhrases.has(queryProfile.normalized.replaceAll(' ', '_'))) score += 14;
+
+  for (const term of queryProfile.terms) {
+    if (profile.terms.has(term)) score += 3;
+    else if (profile.text.includes(term)) score += 1.5;
+  }
+
+  for (const term of queryProfile.expandedTerms) {
+    if (profile.terms.has(term)) score += 1.25;
+    else if (profile.text.includes(term)) score += 0.5;
+  }
+
+  score += 6 * jaccard(queryProfile.trigrams, profile.trigrams);
+  return Number(score.toFixed(3));
+}
+
+function componentSearchProfile(component) {
+  const fields = [
     component.component_id,
     component.category_id,
     component.title,
@@ -360,13 +382,92 @@ function componentScore(component, terms) {
     ...(component.inputs || []),
     ...(component.outputs || []),
     ...(component.example_uses || [])
-  ].join(' ').toLowerCase();
-  return terms.reduce((score, term) => score + (searchable.includes(term) ? 1 : 0), 0);
+  ];
+  return buildDocumentProfile(fields);
+}
+
+function buildDocumentProfile(fields) {
+  const normalizedFields = fields.map(normalizeText).filter(Boolean);
+  const text = normalizedFields.join(' ');
+  return {
+    text,
+    terms: new Set(tokenize(text).flatMap(expandTerm)),
+    exactPhrases: new Set(normalizedFields),
+    trigrams: charNgrams(text, 3)
+  };
+}
+
+function buildSearchProfile(query) {
+  const normalized = normalizeText(query);
+  const terms = tokenize(normalized);
+  return {
+    normalized,
+    terms,
+    expandedTerms: [...new Set(terms.flatMap(expandTerm).filter((term) => !terms.includes(term)))],
+    trigrams: charNgrams(normalized, 3)
+  };
+}
+
+function normalizeCategoryId(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+  if (COMPONENT_CATEGORIES.some((category) => category.id === raw)) return raw;
+  const normalized = normalizeText(raw);
+  const category = COMPONENT_CATEGORIES.find((item) => {
+    const haystack = normalizeText(`${item.id} ${item.title} ${item.description}`);
+    return haystack.includes(normalized) || normalized.includes(item.id);
+  });
+  return category?.id || null;
+}
+
+function normalizeText(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[_-]+/g, ' ')
+    .replace(/[^a-z0-9. ]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function expandTerm(term) {
+  const normalized = normalizeText(term);
+  const group = SYNONYM_GROUPS.find((items) => items.includes(normalized));
+  return group || [normalized];
+}
+
+function charNgrams(value, size) {
+  const text = normalizeText(value).replace(/\s+/g, ' ');
+  if (!text) return new Set();
+  if (text.length <= size) return new Set([text]);
+  const grams = new Set();
+  for (let index = 0; index <= text.length - size; index += 1) grams.add(text.slice(index, index + size));
+  return grams;
+}
+
+function jaccard(left, right) {
+  if (!left.size || !right.size) return 0;
+  let intersection = 0;
+  for (const item of left) if (right.has(item)) intersection += 1;
+  return intersection / (left.size + right.size - intersection);
 }
 
 function tokenize(value) {
-  return String(value || '')
-    .toLowerCase()
+  return normalizeText(value)
     .split(/[^a-z0-9_.-]+/)
     .filter(Boolean);
 }
+
+const SYNONYM_GROUPS = [
+  ['pocket', 'cubby', 'bin', 'tray', 'catchall', 'catch', 'envelope', 'mail', 'shelf'],
+  ['hook', 'hooks', 'peg', 'pegs', 'hanger', 'hangers', 'knob', 'knobs'],
+  ['board', 'panel', 'plank', 'backer', 'base', 'stock'],
+  ['rail', 'stretcher', 'cleat', 'strip', 'runner', 'support'],
+  ['hole', 'holes', 'drill', 'pilot', 'bore', 'mount', 'mounting', 'screw'],
+  ['spacing', 'layout', 'array', 'row', 'pattern', 'repeat', 'repeated', 'centered'],
+  ['rabbet', 'notch', 'ledge', 'recess', 'groove'],
+  ['frame', 'picture', 'canvas', 'floating', 'miter', 'strainer'],
+  ['step', 'stool', 'tread', 'platform', 'standing'],
+  ['wheel', 'caster', 'rolling', 'mobile'],
+  ['diagram', 'callout', 'label', 'dimension', 'drawing', 'visual', 'screenshot'],
+  ['animation', 'video', 'motion', 'sequence', 'mini']
+];

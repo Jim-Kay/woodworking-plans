@@ -122,12 +122,26 @@ export function listTemplates() {
   }));
 }
 
-export function findTemplateCandidates(value) {
-  const query = String(value || '').toLowerCase();
-  if (!query) return [];
+export function searchTemplates({ query = '', limit = 6 } = {}) {
+  const profile = buildSearchProfile(query);
   return TEMPLATE_DEFINITIONS
-    .filter((template) => [template.template_id, template.title, ...(template.aliases || [])]
-      .some((item) => String(item || '').toLowerCase() === query || String(item || '').toLowerCase().includes(query) || query.includes(String(item || '').toLowerCase())))
+    .map((template) => ({ template, score: templateScore(template, profile) }))
+    .filter((item) => item.score > 0 || profile.terms.length === 0)
+    .sort((a, b) => b.score - a.score || a.template.template_id.localeCompare(b.template.template_id))
+    .slice(0, Math.max(1, Number(limit) || 6))
+    .map(({ template, score }) => ({
+      template_id: template.template_id,
+      title: template.title,
+      aliases: template.aliases || [],
+      components: template.components || [],
+      parameters: template.parameters,
+      score
+    }));
+}
+
+export function findTemplateCandidates(value) {
+  return searchTemplates({ query: value, limit: TEMPLATE_DEFINITIONS.length })
+    .filter((template) => template.score >= 8)
     .map((template) => template.template_id);
 }
 
@@ -153,3 +167,93 @@ export function createCapabilityRequest({ capability, reason, design_id = null, 
     requested_by: 'local-design-sandbox'
   };
 }
+
+function templateScore(template, profile) {
+  if (!profile.terms.length) return 1;
+  const document = buildDocumentProfile([
+    template.template_id,
+    template.title,
+    ...(template.aliases || []),
+    ...(template.components || []),
+    ...Object.keys(template.parameters || {})
+  ]);
+  let score = 0;
+  if (document.exactPhrases.has(profile.normalized)) score += 20;
+  if (document.exactPhrases.has(profile.normalized.replaceAll(' ', '_'))) score += 16;
+  for (const term of profile.terms) {
+    if (document.terms.has(term)) score += 3;
+    else if (document.text.includes(term)) score += 1.5;
+  }
+  for (const term of profile.expandedTerms) {
+    if (document.terms.has(term)) score += 1;
+    else if (document.text.includes(term)) score += 0.4;
+  }
+  score += 6 * jaccard(profile.trigrams, document.trigrams);
+  return Number(score.toFixed(3));
+}
+
+function buildDocumentProfile(fields) {
+  const normalizedFields = fields.map(normalizeText).filter(Boolean);
+  const text = normalizedFields.join(' ');
+  return {
+    text,
+    terms: new Set(tokenize(text).flatMap(expandTerm)),
+    exactPhrases: new Set(normalizedFields),
+    trigrams: charNgrams(text, 3)
+  };
+}
+
+function buildSearchProfile(query) {
+  const normalized = normalizeText(query);
+  const terms = tokenize(normalized);
+  return {
+    normalized,
+    terms,
+    expandedTerms: [...new Set(terms.flatMap(expandTerm).filter((term) => !terms.includes(term)))],
+    trigrams: charNgrams(normalized, 3)
+  };
+}
+
+function normalizeText(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[_-]+/g, ' ')
+    .replace(/[^a-z0-9. ]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function tokenize(value) {
+  return normalizeText(value).split(/[^a-z0-9.]+/).filter(Boolean);
+}
+
+function expandTerm(term) {
+  const normalized = normalizeText(term);
+  const group = SYNONYM_GROUPS.find((items) => items.includes(normalized));
+  return group || [normalized];
+}
+
+function charNgrams(value, size) {
+  const text = normalizeText(value);
+  if (!text) return new Set();
+  if (text.length <= size) return new Set([text]);
+  const grams = new Set();
+  for (let index = 0; index <= text.length - size; index += 1) grams.add(text.slice(index, index + size));
+  return grams;
+}
+
+function jaccard(left, right) {
+  if (!left.size || !right.size) return 0;
+  let intersection = 0;
+  for (const item of left) if (right.has(item)) intersection += 1;
+  return intersection / (left.size + right.size - intersection);
+}
+
+const SYNONYM_GROUPS = [
+  ['pocket', 'cubby', 'bin', 'tray', 'catchall', 'catch', 'mail', 'envelope', 'shelf'],
+  ['hook', 'hooks', 'peg', 'pegs', 'hanger', 'hangers'],
+  ['board', 'panel', 'plank', 'backer', 'base'],
+  ['frame', 'picture', 'canvas', 'floating', 'miter', 'strainer'],
+  ['step', 'stool', 'tread', 'platform'],
+  ['feeder', 'bird', 'seed', 'tray']
+];

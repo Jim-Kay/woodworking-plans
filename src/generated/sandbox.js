@@ -6,13 +6,13 @@ import { generateBoardWithLinearHardwareDesign } from './boardWithLinearHardware
 import { getComponent, listComponentCategories, listComponents, searchComponents } from './componentCatalog.js';
 import { generateCanonicalOpenScad } from './openScad.js';
 import { normalizePhotoDesignBrief, scenarioFromPhotoDesignBrief, summarizePhotoDesignBrief } from './photoBrief.js';
-import { createCapabilityRequest, findTemplateCandidates, listTemplates } from './schema.js';
+import { createCapabilityRequest, findTemplateCandidates, listTemplates, searchTemplates } from './schema.js';
 import { generateTrayBirdFeederDesign } from './trayBirdFeeder.js';
 import { generateTwoStepStoolDesign } from './twoStepStool.js';
 import { checkPublishability, validateGeneratedDesign } from './validator.js';
 import { generateWallPanelPocketHardwareDesign } from './wallPanelPocketHardware.js';
 
-export { checkPublishability, createCapabilityRequest, generateCanonicalOpenScad, getComponent, listComponentCategories, listComponents, listTemplates, normalizePhotoDesignBrief, reviewBuildSteps, scenarioFromPhotoDesignBrief, searchComponents, summarizePhotoDesignBrief, validateGeneratedDesign };
+export { checkPublishability, createCapabilityRequest, generateCanonicalOpenScad, getComponent, listComponentCategories, listComponents, listTemplates, normalizePhotoDesignBrief, reviewBuildSteps, scenarioFromPhotoDesignBrief, searchComponents, searchTemplates, summarizePhotoDesignBrief, validateGeneratedDesign };
 
 const DESIGN_PARAMETER_KEYS = [
   'width_in',
@@ -68,6 +68,19 @@ export const SANDBOX_TOOLS = [
       type: 'object',
       additionalProperties: false,
       properties: {}
+    }
+  },
+  {
+    name: 'search_templates',
+    description: 'Search supported deterministic design templates by intent, alias, component family, or parameter names before proposing a new template.',
+    input_schema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['query'],
+      properties: {
+        query: { type: 'string' },
+        limit: { type: 'number' }
+      }
     }
   },
   {
@@ -406,6 +419,17 @@ export function executeSandboxTool(toolCall, state = {}) {
 
   if (name === 'list_templates') {
     return { state: nextState, result: { ok: true, templates: listTemplates() } };
+  }
+
+  if (name === 'search_templates') {
+    return {
+      state: nextState,
+      result: {
+        ok: true,
+        query: String(args.query || ''),
+        templates: searchTemplates({ query: args.query, limit: args.limit })
+      }
+    };
   }
 
   if (name === 'list_component_categories') {

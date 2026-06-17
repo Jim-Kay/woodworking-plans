@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { canonicalToPortalResult } from '../src/generated/adapter.js';
 import { generateCanonicalOpenScad } from '../src/generated/openScad.js';
 import { calculateGeneratedPlan } from '../src/generated/portal.js';
-import { generateDesign, exportPlanPackage, validateGeneratedDesign, checkPublishability, createCapabilityRequest, executeSandboxTool, listComponentCategories, listComponents, listSandboxTools, reviewBuildSteps, searchComponents } from '../src/generated/sandbox.js';
+import { generateDesign, exportPlanPackage, validateGeneratedDesign, checkPublishability, createCapabilityRequest, executeSandboxTool, listComponentCategories, listComponents, listSandboxTools, reviewBuildSteps, searchComponents, searchTemplates } from '../src/generated/sandbox.js';
 
 const scenario = {
   template_id: 'tray_bird_feeder',
@@ -258,6 +258,7 @@ assert.match(capabilityRequest.reason, /wind pressure/);
 
 const tools = listSandboxTools();
 assert.equal(tools.some((tool) => tool.name === 'generate_design'), true);
+assert.equal(tools.some((tool) => tool.name === 'search_templates'), true);
 assert.equal(tools.some((tool) => tool.name === 'search_components'), true);
 assert.equal(tools.some((tool) => tool.name === 'review_build_steps'), true);
 assert.equal(tools.some((tool) => tool.name === 'propose_component_composition'), true);
@@ -267,6 +268,8 @@ assert.equal(listComponentCategories().some((category) => category.id === 'hardw
 assert.equal(listComponents({ category_id: 'hardware' }).some((component) => component.component_id === 'hardware.linear_hook_array'), true);
 assert.equal(searchComponents({ query: 'key hooks pilot holes' }).some((component) => component.component_id === 'hardware.linear_hook_array'), true);
 assert.equal(searchComponents({ query: 'mail pocket' }).some((component) => component.component_id === 'geometry.shallow_wall_pocket'), true);
+assert.equal(searchComponents({ query: 'entryway mail cubby catchall' })[0].component_id, 'geometry.shallow_wall_pocket');
+assert.equal(searchComponents({ query: 'mail pocket or shallow shelf', category_id: 'storage_components' }).some((component) => component.component_id === 'geometry.shallow_wall_pocket'), true);
 assert.equal(searchComponents({ query: 'step stool leg tread load bearing' }).some((component) => component.component_id === 'geometry.step_tread'), true);
 assert.equal(searchComponents({ query: 'step stool leg tread load bearing' }).some((component) => component.component_id === 'geometry.square_leg_post'), true);
 assert.equal(searchComponents({ query: 'step stool leg tread load bearing' }).some((component) => component.component_id === 'validators.load_bearing_caution'), true);
@@ -274,6 +277,8 @@ assert.equal(searchComponents({ query: 'key hooks pilot holes', category_id: 'ha
 assert.equal(searchComponents({ query: '27 gallon tote rack runner rails caster wheels workbench' }).some((component) => component.component_id === 'geometry.tote_runner_pair'), true);
 assert.equal(searchComponents({ query: '27 gallon tote rack runner rails caster wheels workbench' }).some((component) => component.component_id === 'hardware.caster_plate_set'), true);
 assert.equal(searchComponents({ query: 'PDF style dimensioned build step fastener callout' }).some((component) => component.component_id === 'build_steps.dimensioned_stage_sequence'), true);
+assert.equal(searchTemplates({ query: 'entryway mail cubby hooks' })[0].template_id, 'wall_panel_with_pocket_and_linear_hardware');
+assert.equal(searchTemplates({ query: 'rockport step ladder stool' })[0].template_id, 'two_step_stool');
 
 let toolState = { scenario };
 let executed = executeSandboxTool({ name: 'inspect_scenario', arguments: {} }, toolState);
@@ -285,6 +290,10 @@ toolState = executed.state;
 executed = executeSandboxTool({ name: 'search_components', arguments: { query: 'wall mount screw holes', limit: 3 } }, toolState);
 assert.equal(executed.result.ok, true);
 assert.equal(executed.result.components.some((component) => component.component_id === 'hardware.wall_mount_hole_pair'), true);
+
+executed = executeSandboxTool({ name: 'search_templates', arguments: { query: 'mail and key organizer', limit: 3 } }, toolState);
+assert.equal(executed.result.ok, true);
+assert.equal(executed.result.templates[0].template_id, 'wall_panel_with_pocket_and_linear_hardware');
 
 executed = executeSandboxTool({ name: 'get_component', arguments: { component_id: 'hardware.linear_hook_array' } }, toolState);
 assert.equal(executed.result.ok, true);

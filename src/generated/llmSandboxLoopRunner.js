@@ -142,6 +142,7 @@ async function chooseNextAction(state, options) {
         'You operate a deterministic woodworking design sandbox.',
         'Choose exactly one next tool action from the available tools.',
         'Do not invent source-code edits. If tools are insufficient, call request_capability.',
+        'Before proposing a new template, call search_templates with the project intent or template_id and use any exact or high-scoring supported template first.',
         'Before requesting a new reusable component, use list_component_categories, search_components, or get_component to check whether an existing component already covers the need.',
         'When requesting a component capability, cite the closest existing component IDs you considered so Codex can avoid duplicate components.',
         'If a tool result says recommended_action is search_components, you must search components before calling request_capability.',
@@ -155,7 +156,7 @@ async function chooseNextAction(state, options) {
         'If review_build_steps reports missing visual, diagram, or renderer capabilities that annotations cannot solve, call request_capability with those details.',
         'Use annotate_design when the design is valid but build instructions, drill guidance, labels, or part notes need improvement.',
         'If check_publishability returns ok=true, portal_integration_notes are advisory follow-ups, not blockers. The next action should be export_plan_package.',
-        'Prefer this sequence unless feedback says otherwise: inspect_scenario, search_components when composing an unsupported plan, propose_component_composition if the components are enough to describe the missing template, generate_design, validate_design, review_build_steps, annotate_design if needed, check_publishability, export_plan_package.',
+        'Prefer this sequence unless feedback says otherwise: inspect_scenario, search_templates, search_components when composing an unsupported plan, propose_component_composition if the components are enough to describe the missing template, generate_design, validate_design, review_build_steps, annotate_design if needed, check_publishability, export_plan_package.',
         'Return JSON only.'
       ].join(' ')
     },
