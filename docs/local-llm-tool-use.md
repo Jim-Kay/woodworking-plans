@@ -167,11 +167,13 @@ npm run sandbox -- export_plan_package generated/runs/demo/design.json generated
 - `generate_design`
 - `summarize_design`
 - `validate_design`
+- `review_build_steps`
 - `revise_design`
 - `annotate_design`
 - `export_openscad`
 - `check_publishability`
 - `export_plan_package`
+- `propose_component_composition`
 - `request_capability`
 
 The intended model sequence is usually:
@@ -182,9 +184,10 @@ The intended model sequence is usually:
 4. Generate a design from the selected template.
 5. Validate the generated design.
 6. Revise if validation fails.
-7. Use `annotate_design` when the design is structurally valid but needs better build guidance, drill instructions, labels, or part notes.
-8. Check publishability.
-9. Export a plan package, or request a missing capability from Codex.
+7. Run `review_build_steps` to check whether the build instructions and rendered step visuals are understandable to a first-time builder.
+8. Use `annotate_design` when the design is structurally valid but needs better build guidance, drill instructions, labels, or part notes.
+9. Check publishability.
+10. Export a plan package, or propose/request a missing capability from Codex.
 
 Codex should generally improve prompts, tool schemas, validators, adapters, and portal support. The local model should make design-level choices through sandbox tools: dimensions, parameter revisions, build guidance, labels, notes, and missing-capability requests. If the model cannot express a desired improvement through the current tools, that is a signal for Codex to add a narrower tool rather than directly hardcoding the design improvement.
 
@@ -199,6 +202,16 @@ This avoids creating duplicate components under slightly different names, such a
 
 Unsupported templates should recover through component discovery before escalation. For example, a `wall_key_rack` scenario should search for `hardware.linear_hook_array`, `hardware.wall_mount_hole_pair`, `geometry.rectangular_panel`, `patterns.centered_linear_spacing`, and related validators before asking Codex for composition support. A good request is "add composition support using these existing components plus any missing glue," not "add a one-off wall key rack generator."
 
+For unsupported project families that can be described with known building blocks, the local model should use `propose_component_composition` before `request_capability`. The proposal is a review artifact, not executable source code. It should include exact `component_ids`, template parameters, deterministic generation steps, validation rules, build-step intent, renderer requirements, and open questions. The sandbox checks that referenced components exist and that the proposal is complete enough to review, then writes `composition-proposal.json` for Codex. Codex can then approve, revise, or reject the proposal and add deterministic generator/validator/renderer code with tests.
+
+This lets the local model spend cheap tokens on design exploration while preserving quality gates:
+
+1. Qwen searches and inspects existing components.
+2. Qwen drafts a composition proposal using exact component IDs.
+3. Deterministic sandbox checks reject unknown components or thin proposals.
+4. Codex reviews the proposal and implements only the reusable pieces that survive review.
+5. Tests, validators, rendered screenshots, and publishability checks decide whether the implementation graduates to the catalog.
+
 The first local-model loop runner uses the same tool surface:
 
 ```powershell
@@ -208,6 +221,18 @@ npm run sandbox:loop -- examples/tray-bird-feeder.scenario.json generated/runs/l
 ```
 
 The loop can also run an optional visual review immediately after package export when a screenshot and vision model are configured. This review is framed as an end-user comprehension pass: can a builder tell what to do next, locate the relevant parts/features, trust that the text matches the image, and understand whether the view is pre-assembly, partial assembly, or finished assembly?
+
+Before export, the text loop should also call `review_build_steps`. This deterministic tool checks the package against an instruction-quality rubric based on good shop plans: pre-assembly drill-layout views, stage-specific diagrams, mini-video animation intent, dimensions in the diagram, highlighted current parts, host-part callouts for holes, and close-ups for fasteners or caster plates. If the tool recommends annotations, the local model should call `annotate_design` and review again. If the tool reports missing stage-specific, animation, or callout rendering capability, the local model should call `request_capability` and cite the affected step IDs.
+
+To watch the local model while it runs, start the local watcher app:
+
+```powershell
+$env:LLM_BASE_URL = 'http://localhost:11434/v1'
+$env:LLM_MODEL = 'qwen3:14b'
+npm run sandbox:watch
+```
+
+Then open `http://localhost:8787`. The page streams visible model output, selected actions, deterministic tool calls, tool results, and artifacts over Server-Sent Events. Treat it as an observability view into the local loop, not a promise of hidden model reasoning. If the local model emits visible reasoning text or a rationale field, the watcher can display it; otherwise the reliable stream is token output plus tool activity.
 
 ```powershell
 $env:LLM_BASE_URL = 'http://localhost:11434/v1'

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { canonicalToPortalResult } from '../src/generated/adapter.js';
 import { generateCanonicalOpenScad } from '../src/generated/openScad.js';
 import { calculateGeneratedPlan } from '../src/generated/portal.js';
-import { generateDesign, exportPlanPackage, validateGeneratedDesign, checkPublishability, createCapabilityRequest, executeSandboxTool, listComponentCategories, listComponents, listSandboxTools, searchComponents } from '../src/generated/sandbox.js';
+import { generateDesign, exportPlanPackage, validateGeneratedDesign, checkPublishability, createCapabilityRequest, executeSandboxTool, listComponentCategories, listComponents, listSandboxTools, reviewBuildSteps, searchComponents } from '../src/generated/sandbox.js';
 
 const scenario = {
   template_id: 'tray_bird_feeder',
@@ -29,6 +29,15 @@ assert.equal(design.cut_list.length, 5);
 const validation = validateGeneratedDesign(design);
 assert.equal(validation.ok, true);
 assert.deepEqual(validation.errors, []);
+
+const feederBuildStepReview = reviewBuildSteps(design);
+assert.equal(feederBuildStepReview.ok, true);
+assert.equal(feederBuildStepReview.quality_gate_passed, false);
+assert.equal(feederBuildStepReview.findings.some((finding) => finding.category === 'fastener_guidance' && finding.step_id === 'step.assemble'), true);
+assert.equal(feederBuildStepReview.recommended_annotations.step_instructions.some((annotation) => annotation.step_id === 'step.cut'), true);
+assert.equal(feederBuildStepReview.recommended_tool_call.name, 'annotate_design');
+assert.equal(feederBuildStepReview.missing_capabilities.some((item) => item.capability === 'pre-assembly drill-layout view'), false);
+assert.equal(feederBuildStepReview.missing_capabilities.some((item) => item.capability === 'generated build-step mini-video animation'), false);
 
 const partIds = new Set(design.parts.map((part) => part.id));
 design.assembly_steps.forEach((step) => {
@@ -62,7 +71,12 @@ assert.equal(portalResult.buildSteps.length, design.assembly_steps.length);
 assert.equal(portalResult.buildSteps[0].image, 'cut-layout');
 assert.equal(portalResult.buildSteps[0].stage, 1);
 assert.equal(portalResult.buildSteps[1].image, 'drill-layout');
+assert.equal(portalResult.buildSteps[1].diagram.preAssembly, true);
+assert.equal(portalResult.buildSteps[1].animation.type, 'generated-step-2');
 assert.equal(portalResult.buildSteps[1].vis.references, true);
+assert.equal(portalResult.buildSteps[2].image, 'stage-specific-diagram');
+assert.equal(portalResult.buildSteps[2].diagram.stageSpecific, true);
+assert.equal(portalResult.buildSteps[2].animation.type, 'generated-step-3');
 assert.equal(portalResult.buildSteps[2].vis.references, false);
 
 const planPackage = exportPlanPackage(design);
@@ -245,6 +259,8 @@ assert.match(capabilityRequest.reason, /wind pressure/);
 const tools = listSandboxTools();
 assert.equal(tools.some((tool) => tool.name === 'generate_design'), true);
 assert.equal(tools.some((tool) => tool.name === 'search_components'), true);
+assert.equal(tools.some((tool) => tool.name === 'review_build_steps'), true);
+assert.equal(tools.some((tool) => tool.name === 'propose_component_composition'), true);
 assert.equal(tools.some((tool) => tool.name === 'request_capability'), true);
 
 assert.equal(listComponentCategories().some((category) => category.id === 'hardware'), true);
@@ -255,6 +271,9 @@ assert.equal(searchComponents({ query: 'step stool leg tread load bearing' }).so
 assert.equal(searchComponents({ query: 'step stool leg tread load bearing' }).some((component) => component.component_id === 'geometry.square_leg_post'), true);
 assert.equal(searchComponents({ query: 'step stool leg tread load bearing' }).some((component) => component.component_id === 'validators.load_bearing_caution'), true);
 assert.equal(searchComponents({ query: 'key hooks pilot holes', category_id: 'hardware' })[0].component_id, 'hardware.linear_hook_array');
+assert.equal(searchComponents({ query: '27 gallon tote rack runner rails caster wheels workbench' }).some((component) => component.component_id === 'geometry.tote_runner_pair'), true);
+assert.equal(searchComponents({ query: '27 gallon tote rack runner rails caster wheels workbench' }).some((component) => component.component_id === 'hardware.caster_plate_set'), true);
+assert.equal(searchComponents({ query: 'PDF style dimensioned build step fastener callout' }).some((component) => component.component_id === 'build_steps.dimensioned_stage_sequence'), true);
 
 let toolState = { scenario };
 let executed = executeSandboxTool({ name: 'inspect_scenario', arguments: {} }, toolState);
@@ -355,6 +374,14 @@ assert.equal(executed.result.ok, false);
 assert.equal(executed.result.compatible_template_ids.includes('wall_panel_with_pocket_and_linear_hardware'), true);
 
 executed = executeSandboxTool({
+  name: 'generate_design',
+  arguments: { template_id: 'mobile_tote_rack_workbench', design_id: 'unsupported_tote_rack_test' }
+}, toolState);
+assert.equal(executed.result.ok, false);
+assert.equal(executed.result.suggested_component_queries.some((query) => /tote rack runner/.test(query)), true);
+assert.equal(executed.result.suggested_component_queries.some((query) => /caster wheels/.test(query)), true);
+
+executed = executeSandboxTool({
   name: 'request_capability',
   arguments: {
     capability_name: 'step stool structural template',
@@ -370,10 +397,155 @@ assert.match(executed.result.request.evidence.join('\n'), /geometry\.linear_rail
 executed = executeSandboxTool({
   name: 'request_capability',
   arguments: {
+    capability: 'mobile tote rack template',
+    considered_components: ['geometry.rectangular_frame_bay', 'hardware.caster_plate_set']
+  }
+}, { scenario: { design_id: 'considered_components_test' } });
+assert.match(executed.result.request.evidence.join('\n'), /geometry\.rectangular_frame_bay/);
+assert.match(executed.result.request.evidence.join('\n'), /hardware\.caster_plate_set/);
+
+executed = executeSandboxTool({
+  name: 'request_capability',
+  arguments: {
     capability_name: 'photo to template mapping'
   }
 }, { scenario: { design_id: 'capability_reason_fallback_test' } });
 assert.match(executed.result.request.reason, /photo to template mapping/);
+
+executed = executeSandboxTool({
+  name: 'request_capability',
+  arguments: {
+    capability_type: 'template_support',
+    template_id: 'floating_frame_strainer_on_rabbet',
+    existing_component_ids: ['geometry.rabbeted_frame_face_set', 'geometry.strainer_rail_set']
+  }
+}, { scenario: { design_id: 'capability_template_alias_test' } });
+assert.equal(executed.result.request.capability, 'Add template_support for floating_frame_strainer_on_rabbet');
+assert.match(executed.result.request.reason, /floating_frame_strainer_on_rabbet/);
+assert.match(executed.result.request.evidence.join('\n'), /geometry\.rabbeted_frame_face_set/);
+
+executed = executeSandboxTool({
+  name: 'propose_component_composition',
+  arguments: {
+    template_id: 'floating_frame_strainer_on_rabbet',
+    title: 'Floating Frame Strainer On Rabbet',
+    component_ids: ['geometry.rabbeted_frame_face_set', 'geometry.strainer_rail_set', 'validators.rabbet_strainer_fit', 'build_steps.mill_rabbet_then_assemble_frame', 'rendering.rabbet_milling_operation_view'],
+    parameters: {
+      canvas_width_in: { type: 'number', default: 16 },
+      canvas_height_in: { type: 'number', default: 20 },
+      reveal_in: { type: 'number', default: 0.25 },
+      rabbet_depth_in: { type: 'number', default: 0.125 }
+    },
+    design_algorithm: [
+      'Compute inner opening from canvas dimensions plus reveal.',
+      'Generate four rabbeted mitered face members around the opening.',
+      'Generate four strainer rails seated on the rabbet ledge.',
+      'Place canvas reference and mounting hardware after dry fit.'
+    ],
+    validation_strategy: [
+      'Check rabbet depth and strainer depth leave a usable support ledge.',
+      'Check canvas reveal is positive and consistent on all sides.',
+      'Check all physical parts are represented in the cut list.'
+    ],
+    build_steps: [
+      { id: 'step.mill_rabbet', title: 'Mill rabbeted frame stock', component_ids: ['geometry.rabbeted_frame_face_set'], instructions: ['Mill the rabbet before final miters.'] },
+      { id: 'step.seat_strainer', title: 'Seat strainer rails', component_ids: ['geometry.strainer_rail_set'], instructions: ['Dry fit the strainer rails on the rabbet ledge.'] }
+    ],
+    renderer_requirements: ['Show rabbet milling operation before assembly.', 'Show strainer rails seating on the rabbet ledge.'],
+    open_questions: ['Confirm safest default rabbet depth for common frame stock.']
+  }
+}, { scenario: { design_id: 'composition_proposal_test' } });
+assert.equal(executed.result.ok, true);
+assert.equal(executed.result.approval_status, 'codex_review_required');
+assert.equal(executed.state.compositionProposal.template_id, 'floating_frame_strainer_on_rabbet');
+assert.match(executed.result.capability_request_arguments.evidence.join('\n'), /composition_proposal_id/);
+const validCompositionProposal = executed.state.compositionProposal;
+const proposalState = executed.state;
+
+executed = executeSandboxTool({
+  name: 'request_capability',
+  arguments: {
+    capability: 'Implement frame composition',
+    reason: 'Need deterministic implementation.'
+  }
+}, proposalState);
+assert.match(executed.result.request.evidence.join('\n'), /composition_proposal_id=floating_frame_strainer_on_rabbet_proposal/);
+
+executed = executeSandboxTool({
+  name: 'propose_component_composition',
+  arguments: {
+    template_id: 'bad_template',
+    title: 'Bad Template',
+    component_ids: ['geometry.does_not_exist'],
+    parameters: {},
+    design_algorithm: ['Do one vague thing.'],
+    validation_strategy: [],
+    build_steps: []
+  }
+}, { scenario: { design_id: 'bad_composition_proposal_test' } });
+assert.equal(executed.result.ok, false);
+assert.match(executed.result.review.errors.join('\n'), /component_ids must name exact existing/);
+assert.equal(executed.state.compositionProposal, undefined);
+assert.equal(executed.result.known_component_ids.includes('geometry.rabbeted_frame_face_set'), true);
+assert.equal(validCompositionProposal.template_id, 'floating_frame_strainer_on_rabbet');
+
+executed = executeSandboxTool({
+  name: 'propose_component_composition',
+  arguments: {
+    template_id: 'missing_parameter_template',
+    title: 'Missing Parameter Template',
+    component_ids: ['geometry.rabbeted_frame_face_set', 'geometry.strainer_rail_set'],
+    parameters: { canvas_width: { default: 16 } },
+    design_algorithm: ['Calculate opening.', 'Generate frame members.', 'Generate support rails.'],
+    validation_strategy: ['Check reveal.', 'Check cut list.'],
+    build_steps: ['Mill the rabbet.', 'Seat the strainer rails.'],
+    renderer_requirements: ['Show rabbet milling operation.'],
+    open_questions: ['Confirm default material.']
+  }
+}, { scenario: { design_id: 'missing_parameter_proposal_test', parameters: { canvas_width_in: 16 } } });
+assert.equal(executed.result.ok, false);
+assert.match(executed.result.review.errors.join('\n'), /preserve scenario parameter keys/);
+
+executed = executeSandboxTool({
+  name: 'propose_component_composition',
+  arguments: {
+    template_id: 'bad_renderer_template',
+    title: 'Bad Renderer Template',
+    component_ids: ['geometry.rabbeted_frame_face_set', 'geometry.strainer_rail_set'],
+    parameters: { width_in: { default: 16 } },
+    design_algorithm: ['Calculate opening.', 'Generate parts.', 'Generate steps.'],
+    validation_strategy: ['Check fit.', 'Check cut list.'],
+    build_steps: [
+      { id: 'step.empty', title: 'Empty Step', instructions: [] },
+      { id: 'step.ok', title: 'OK Step', instructions: ['Do the work.'] }
+    ],
+    renderer_requirements: ['rendering.not_a_real_component']
+  }
+}, { scenario: { design_id: 'bad_renderer_proposal_test' } });
+assert.equal(executed.result.ok, false);
+assert.match(executed.result.review.warnings.join('\n'), /Renderer requirements mention missing component IDs/);
+assert.match(executed.result.review.errors.join('\n'), /Build steps need builder-facing instructions/);
+
+executed = executeSandboxTool({
+  name: 'propose_component_composition',
+  arguments: {
+    template_id: 'string_step_template',
+    title: 'String Step Template',
+    component_ids: ['geometry.rabbeted_frame_face_set', 'geometry.strainer_rail_set'],
+    parameters: { width_in: 16 },
+    design_algorithm: ['Calculate opening.', 'Generate frame members.', 'Generate support rails.'],
+    validation_strategy: ['Check reveal.', 'Check cut list.'],
+    build_steps: [
+      { step: 'Mill rabbets', instructions: 'Cut a consistent rabbet before assembly.' },
+      'Dry fit the strainer rails on the rabbet ledge.'
+    ],
+    renderer_requirements: ['Show rabbet milling operation.'],
+    open_questions: ['Confirm default material.']
+  }
+}, { scenario: { design_id: 'string_step_proposal_test' } });
+assert.equal(executed.result.ok, true);
+assert.equal(executed.state.compositionProposal.build_steps[0].instructions[0], 'Cut a consistent rabbet before assembly.');
+assert.equal(executed.state.compositionProposal.build_steps[1].instructions[0], 'Dry fit the strainer rails on the rabbet ledge.');
 
 executed = executeSandboxTool({ name: 'generate_design', arguments: { parameters: { width_in: 13 } } }, toolState);
 assert.equal(executed.result.ok, true);
@@ -383,6 +555,30 @@ toolState = executed.state;
 executed = executeSandboxTool({ name: 'validate_design', arguments: {} }, toolState);
 assert.equal(executed.result.ok, true);
 toolState = executed.state;
+
+executed = executeSandboxTool({ name: 'review_build_steps', arguments: {} }, toolState);
+assert.equal(executed.result.ok, true);
+assert.equal(executed.result.status, 'needs_revision');
+assert.equal(executed.result.recommended_annotations.step_instructions.some((annotation) => annotation.step_id === 'step.cut'), true);
+assert.match(executed.result.recommended_annotations.step_instructions.find((annotation) => annotation.step_id === 'step.cut').instructions.join('\n'), /Bottom panel: 13 in long/);
+toolState = executed.state;
+
+executed = executeSandboxTool({
+  name: 'annotate_design',
+  arguments: {
+    annotations: [{ step_id: 'step.cut', content: 'This old shape should fail.' }]
+  }
+}, toolState);
+assert.equal(executed.result.ok, false);
+assert.match(executed.result.error, /requires step_instructions/);
+
+executed = executeSandboxTool({
+  name: 'annotate_design',
+  arguments: {
+    step_instructions: [{ step_id: 'step.cut', instructions: 'This string should fail.' }]
+  }
+}, toolState);
+assert.equal(executed.result.ok, false);
 
 executed = executeSandboxTool({
   name: 'annotate_design',

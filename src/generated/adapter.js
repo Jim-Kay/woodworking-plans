@@ -55,13 +55,41 @@ function generatedBuildStep(step, index) {
   };
   if (normalizedTitle.includes('cut')) {
     output.image = 'cut-layout';
+    output.diagram = { type: 'cut-layout', stageSpecific: true, dimensioned: true };
     output.vis = { panels: true, rails: true, references: false };
   } else if (normalizedTitle.includes('drill')) {
     output.image = hasLinearHardware ? 'linear-hardware-drill-layout' : 'drill-layout';
+    output.animation = { type: `generated-step-${index + 1}` };
+    output.diagram = {
+      type: hasLinearHardware ? 'linear-hardware-drill-layout' : 'preassembly-drill-layout',
+      preAssembly: true,
+      stageSpecific: true,
+      dimensioned: true,
+      labels: true,
+      referencePartIds: step.part_ids || []
+    };
     output.vis = { panels: true, rails: true, references: true };
   } else if (normalizedTitle.includes('mark') && hasLinearHardware) {
     output.image = 'linear-hardware-drill-layout';
+    output.animation = { type: `generated-step-${index + 1}` };
+    output.diagram = {
+      type: 'linear-hardware-drill-layout',
+      preAssembly: true,
+      stageSpecific: true,
+      dimensioned: true,
+      labels: true,
+      referencePartIds: step.part_ids || []
+    };
     output.vis = { panels: true, rails: true, references: true };
+  } else if (!normalizedTitle.includes('finish') && !normalizedTitle.includes('sand')) {
+    output.image = 'stage-specific-diagram';
+    output.animation = { type: `generated-step-${index + 1}` };
+    output.diagram = {
+      type: 'stage-specific-diagram',
+      stageSpecific: true,
+      highlightedPartIds: step.part_ids || []
+    };
+    output.vis = { panels: true, rails: true, treads: true, legs: true, references: false };
   } else {
     output.vis = { panels: true, rails: true, references: false };
   }

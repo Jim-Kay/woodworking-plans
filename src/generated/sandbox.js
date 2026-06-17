@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { canonicalToPortalResult } from './adapter.js';
+import { reviewBuildSteps } from './buildStepQuality.js';
 import { generateBoardWithLinearHardwareDesign } from './boardWithLinearHardware.js';
 import { getComponent, listComponentCategories, listComponents, searchComponents } from './componentCatalog.js';
 import { generateCanonicalOpenScad } from './openScad.js';
@@ -11,7 +12,7 @@ import { generateTwoStepStoolDesign } from './twoStepStool.js';
 import { checkPublishability, validateGeneratedDesign } from './validator.js';
 import { generateWallPanelPocketHardwareDesign } from './wallPanelPocketHardware.js';
 
-export { checkPublishability, createCapabilityRequest, generateCanonicalOpenScad, getComponent, listComponentCategories, listComponents, listTemplates, normalizePhotoDesignBrief, scenarioFromPhotoDesignBrief, searchComponents, summarizePhotoDesignBrief, validateGeneratedDesign };
+export { checkPublishability, createCapabilityRequest, generateCanonicalOpenScad, getComponent, listComponentCategories, listComponents, listTemplates, normalizePhotoDesignBrief, reviewBuildSteps, scenarioFromPhotoDesignBrief, searchComponents, summarizePhotoDesignBrief, validateGeneratedDesign };
 
 const DESIGN_PARAMETER_KEYS = [
   'width_in',
@@ -184,6 +185,15 @@ export const SANDBOX_TOOLS = [
     }
   },
   {
+    name: 'review_build_steps',
+    description: 'Review whether assembly steps and portal step visuals are builder-grade before publication, using a PDF-style instruction rubric.',
+    input_schema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {}
+    }
+  },
+  {
     name: 'revise_design',
     description: 'Regenerate the current design with revised parameters after validation feedback.',
     input_schema: {
@@ -255,6 +265,26 @@ export const SANDBOX_TOOLS = [
       type: 'object',
       additionalProperties: false,
       properties: {}
+    }
+  },
+  {
+    name: 'propose_component_composition',
+    description: 'Draft a Codex-reviewable template or component-composition proposal from exact existing component IDs before requesting implementation support.',
+    input_schema: {
+      type: 'object',
+      additionalProperties: true,
+      required: ['template_id', 'title', 'component_ids', 'parameters', 'design_algorithm', 'validation_strategy', 'build_steps'],
+      properties: {
+        template_id: { type: 'string' },
+        title: { type: 'string' },
+        component_ids: { type: 'array', items: { type: 'string' } },
+        parameters: { type: 'object', additionalProperties: true },
+        design_algorithm: { type: 'array', items: { type: 'string' } },
+        validation_strategy: { type: 'array', items: { type: 'string' } },
+        build_steps: { type: 'array', items: { type: 'object', additionalProperties: true } },
+        renderer_requirements: { type: 'array', items: { type: 'string' } },
+        open_questions: { type: 'array', items: { type: 'string' } }
+      }
     }
   },
   {
@@ -368,6 +398,7 @@ export function executeSandboxTool(toolCall, state = {}) {
         component_categories: listComponentCategories(),
         current_design: summarizeGeneratedDesign(nextState.design),
         current_validation: nextState.validation || null,
+        current_build_step_review: nextState.buildStepReview || null,
         current_publishability: nextState.finalPackage?.publishability || null
       }
     };
@@ -447,6 +478,7 @@ export function executeSandboxTool(toolCall, state = {}) {
     nextState.design = generateDesign(scenario);
     nextState.validation = null;
     nextState.finalPackage = null;
+    nextState.buildStepReview = null;
     return {
       state: nextState,
       result: {
@@ -468,6 +500,12 @@ export function executeSandboxTool(toolCall, state = {}) {
     return { state: nextState, result: nextState.validation };
   }
 
+  if (name === 'review_build_steps') {
+    if (!nextState.design) return { state: nextState, result: { ok: false, error: 'No design exists yet.' } };
+    nextState.buildStepReview = reviewBuildSteps(nextState.design);
+    return { state: nextState, result: nextState.buildStepReview };
+  }
+
   if (name === 'revise_design') {
     if (!nextState.design) return { state: nextState, result: { ok: false, error: 'No design exists yet.' } };
     const unsupportedTemplate = unsupportedTemplateResult(nextState.design);
@@ -475,6 +513,7 @@ export function executeSandboxTool(toolCall, state = {}) {
     nextState.design = reviseDesign(nextState.design, { parameters: parameterArguments(args) });
     nextState.validation = null;
     nextState.finalPackage = null;
+    nextState.buildStepReview = null;
     return {
       state: nextState,
       result: {
@@ -487,9 +526,21 @@ export function executeSandboxTool(toolCall, state = {}) {
 
   if (name === 'annotate_design') {
     if (!nextState.design) return { state: nextState, result: { ok: false, error: 'No design exists yet.' } };
+    if (!hasAnnotationPayload(args)) {
+      return {
+        state: nextState,
+        result: {
+          ok: false,
+          error: 'annotate_design requires step_instructions, part_notes, or design_notes. Use exact step_id and part_id values from the current design.',
+          expected_shape: SANDBOX_TOOLS.find((tool) => tool.name === 'annotate_design')?.input_schema,
+          recommended_action: 'annotate_design'
+        }
+      };
+    }
     nextState.design = annotateDesign(nextState.design, args);
     nextState.validation = null;
     nextState.finalPackage = null;
+    nextState.buildStepReview = null;
     return {
       state: nextState,
       result: {
@@ -536,8 +587,35 @@ export function executeSandboxTool(toolCall, state = {}) {
     };
   }
 
+  if (name === 'propose_component_composition') {
+    const proposal = normalizeComponentCompositionProposal(args, nextState.scenario);
+    const review = reviewComponentCompositionProposal(proposal, nextState.scenario);
+    if (review.errors.length === 0) nextState.compositionProposal = proposal;
+    nextState.compositionProposalAttempt = proposal;
+    return {
+      state: nextState,
+      result: {
+        ok: review.errors.length === 0,
+        proposal,
+        review,
+        approval_status: 'codex_review_required',
+        recommended_action: review.errors.length ? 'propose_component_composition' : 'request_capability',
+        known_component_ids: review.errors.length ? listComponents().map((component) => component.component_id) : null,
+        capability_request_arguments: review.errors.length ? null : {
+          capability: `Implement component composition template ${proposal.template_id}`,
+          reason: `Qwen proposed a reusable composition using ${proposal.component_ids.join(', ')}. Codex should review the proposal, add deterministic generator/validator/renderer support, and reject or revise unsafe assumptions.`,
+          evidence: [
+            `composition_proposal_id=${proposal.proposal_id}`,
+            `component_ids=${proposal.component_ids.join(', ')}`,
+            `approval_status=${proposal.approval_status}`
+          ]
+        }
+      }
+    };
+  }
+
   if (name === 'request_capability') {
-    const capabilityArgs = normalizeCapabilityArguments(args);
+    const capabilityArgs = enrichCapabilityArgumentsWithProposal(normalizeCapabilityArguments(args), nextState.compositionProposal);
     const duplicateCapability = duplicateCapabilityResult(nextState.design, capabilityArgs);
     if (duplicateCapability) return { state: nextState, result: duplicateCapability };
     const request = createCapabilityRequest({
@@ -559,16 +637,144 @@ export function executeSandboxTool(toolCall, state = {}) {
   };
 }
 
+function normalizeComponentCompositionProposal(args = {}, scenario = {}) {
+  const templateId = String(args.template_id || scenario?.template_id || '').trim();
+  const rawComponentIds = uniqueStrings(args.component_ids || args.components || args.existing_component_ids);
+  const existingComponentIds = rawComponentIds.filter((id) => getComponent(id));
+  const missingComponentIds = rawComponentIds.filter((id) => !getComponent(id));
+  return {
+    type: 'component_composition_proposal',
+    schema_version: '0.1',
+    proposal_id: String(args.proposal_id || `${templateId || 'composition'}_proposal`).trim(),
+    template_id: templateId,
+    title: String(args.title || args.name || templateId || 'Untitled composition').trim(),
+    intent: String(args.intent || scenario?.intent || '').trim(),
+    source_design_id: args.design_id || scenario?.design_id || null,
+    component_ids: existingComponentIds,
+    requested_missing_component_ids: uniqueStrings([...(args.requested_missing_component_ids || []), ...missingComponentIds]),
+    parameters: normalizeProposalParameters(args.parameters || scenario?.parameters || {}),
+    design_algorithm: cleanStringArray(args.design_algorithm || args.algorithm || args.generation_steps),
+    validation_strategy: cleanStringArray(args.validation_strategy || args.validators || args.validation),
+    build_steps: normalizeProposalBuildSteps(args.build_steps || args.assembly_steps),
+    renderer_requirements: cleanStringArray(args.renderer_requirements || args.rendering || args.visual_requirements),
+    open_questions: cleanStringArray(args.open_questions || args.risks || args.unknowns),
+    approval_status: 'codex_review_required'
+  };
+}
+
+function reviewComponentCompositionProposal(proposal, scenario = {}) {
+  const errors = [];
+  const warnings = [];
+  const existing = proposal.component_ids.map((id) => ({ id, component: getComponent(id) }));
+  const unknownRendererComponentIds = proposal.renderer_requirements
+    .filter((item) => /^[a-z_]+\.[a-z0-9_.-]+$/i.test(item))
+    .filter((item) => !getComponent(item));
+  if (!proposal.template_id) errors.push('template_id is required.');
+  if (!proposal.title) errors.push('title is required.');
+  if (!proposal.component_ids.length) errors.push('component_ids must name exact existing component IDs.');
+  if (!Object.keys(proposal.parameters || {}).length) errors.push('parameters must describe the proposed template inputs.');
+  if (proposal.design_algorithm.length < 3) errors.push('design_algorithm should include at least three deterministic generation steps.');
+  if (proposal.validation_strategy.length < 2) errors.push('validation_strategy should include at least two deterministic checks.');
+  if (proposal.build_steps.length < 2) errors.push('build_steps should describe at least two builder-facing stages.');
+  const emptyInstructionSteps = proposal.build_steps.filter((step) => !step.instructions.length).map((step) => step.id);
+  if (emptyInstructionSteps.length) errors.push(`Build steps need builder-facing instructions: ${emptyInstructionSteps.join(', ')}`);
+  if (!proposal.renderer_requirements.length) warnings.push('renderer_requirements is empty; Codex will need to infer visual support.');
+  if (!proposal.open_questions.length) warnings.push('open_questions is empty; proposals should surface uncertainties for Codex review.');
+  if (proposal.requested_missing_component_ids.length) warnings.push(`Requested missing component IDs need Codex review before implementation: ${proposal.requested_missing_component_ids.join(', ')}`);
+  if (unknownRendererComponentIds.length) warnings.push(`Renderer requirements mention missing component IDs: ${unknownRendererComponentIds.join(', ')}`);
+  const scenarioParameters = scenario?.parameters || {};
+  const missingScenarioParameters = Object.keys(scenarioParameters)
+    .filter((key) => proposal.parameters?.[key] === undefined);
+  if (missingScenarioParameters.length) errors.push(`Proposal parameters must preserve scenario parameter keys: ${missingScenarioParameters.join(', ')}`);
+  const driftedParameters = Object.entries(scenarioParameters)
+    .filter(([key, value]) => proposal.parameters?.[key]?.default !== undefined && proposal.parameters[key].default !== value)
+    .map(([key]) => key);
+  if (driftedParameters.length) warnings.push(`Parameter defaults differ from scenario values: ${driftedParameters.join(', ')}`);
+  return {
+    ok: errors.length === 0,
+    errors,
+    warnings,
+    component_summaries: existing
+      .filter((item) => item.component)
+      .map((item) => ({
+        component_id: item.component.component_id,
+        category_id: item.component.category_id,
+        outputs: item.component.outputs || []
+      })),
+    required_codex_review: [
+      'Confirm formula correctness and generated part geometry.',
+      'Add deterministic tests for schema, cut list, validation, and portal adapter output.',
+      'Review woodworking safety, load assumptions, and build-step clarity before publishing.'
+    ]
+  };
+}
+
+function normalizeProposalParameters(parameters = {}) {
+  return Object.fromEntries(Object.entries(parameters || {}).map(([key, value]) => [
+    key,
+    typeof value === 'object' && value !== null ? value : { default: value }
+  ]));
+}
+
+function normalizeProposalBuildSteps(steps = []) {
+  if (!Array.isArray(steps)) return [];
+  return steps
+    .map((step, index) => {
+      if (typeof step === 'string') {
+        return {
+          id: `step.${index + 1}`,
+          title: `Step ${index + 1}`,
+          component_ids: [],
+          instructions: cleanStringArray(step),
+          visual_requirements: []
+        };
+      }
+      return {
+        id: String(step.id || `step.${index + 1}`).trim(),
+        title: String(step.title || step.name || step.step || `Step ${index + 1}`).trim(),
+        component_ids: uniqueStrings(step.component_ids || step.components),
+        instructions: cleanStringArray(step.instructions || step.notes || step.description || step.guidance),
+        visual_requirements: cleanStringArray(step.visual_requirements || step.rendering)
+      };
+    })
+    .filter((step) => step.title || step.instructions.length);
+}
+
+function uniqueStrings(values = []) {
+  if (!Array.isArray(values)) return [];
+  return [...new Set(values.map((value) => String(value || '').trim()).filter(Boolean))];
+}
+
+function enrichCapabilityArgumentsWithProposal(args = {}, proposal = null) {
+  if (!proposal) return args;
+  const evidence = Array.isArray(args.evidence) ? [...args.evidence] : [];
+  evidence.push(`composition_proposal_id=${proposal.proposal_id}`);
+  evidence.push(`composition_component_ids=${proposal.component_ids.join(', ')}`);
+  return {
+    ...args,
+    evidence: [...new Set(evidence)]
+  };
+}
+
 function normalizeCapabilityArguments(args = {}) {
   const evidence = Array.isArray(args.evidence) ? [...args.evidence] : [];
   if (Array.isArray(args.component_ids) && args.component_ids.length) evidence.push(`Closest component IDs considered: ${args.component_ids.join(', ')}`);
-  const capability = args.capability || args.capability_name || '';
+  if (Array.isArray(args.considered_components) && args.considered_components.length) evidence.push(`Closest component IDs considered: ${args.considered_components.join(', ')}`);
+  if (Array.isArray(args.existing_component_ids) && args.existing_component_ids.length) evidence.push(`Closest component IDs considered: ${args.existing_component_ids.join(', ')}`);
+  const capability = args.capability || args.capability_name || capabilityFromAliasArguments(args);
   return {
     ...args,
     capability,
     reason: args.reason || args.rationale || (capability ? `Existing sandbox tools cannot complete this design without ${capability}.` : ''),
     evidence
   };
+}
+
+function capabilityFromAliasArguments(args = {}) {
+  if (args.template_id && args.capability_type) return `Add ${args.capability_type} for ${args.template_id}`;
+  if (args.template_id) return `Add reusable composition support for ${args.template_id}`;
+  if (args.capability_type) return `Add ${args.capability_type}`;
+  return '';
 }
 
 function duplicateCapabilityResult(design, args = {}) {
@@ -649,9 +855,15 @@ function annotationCount(design) {
 }
 
 function cleanStringArray(value) {
-  return (Array.isArray(value) ? value : [])
+  return (Array.isArray(value) ? value : typeof value === 'string' ? [value] : [])
     .map((item) => String(item || '').trim())
     .filter(Boolean);
+}
+
+function hasAnnotationPayload(args = {}) {
+  return (Array.isArray(args.step_instructions) && args.step_instructions.some((item) => item?.step_id && Array.isArray(item.instructions) && item.instructions.length))
+    || (Array.isArray(args.part_notes) && args.part_notes.some((item) => item?.part_id && Array.isArray(item.notes) && item.notes.length))
+    || (Array.isArray(args.design_notes) && args.design_notes.length);
 }
 
 function normalizeToolArguments(args = {}) {
@@ -692,6 +904,10 @@ function componentSearchQueriesForScenario(scenario = {}) {
   if (/key|hook|peg|coat|mug/i.test(values)) queries.push('key hooks pegs repeated hardware pilot holes');
   if (/wall|mount|screw|hanger/i.test(values)) queries.push('wall mount screw holes edge clearance');
   if (/stool|step|tread|leg|load|standing/i.test(values)) queries.push('step stool tread leg rail load bearing');
+  if (/tote|bin|storage|rack|runner|garage|workbench|shelf/i.test(values)) queries.push('storage tote rack runner rails rectangular frame bay');
+  if (/floating|picture|canvas|frame|rabbet|strainer|miter|reveal/i.test(values)) queries.push('floating frame rabbet strainer rails miter canvas reveal');
+  if (/caster|wheel|mobile|rolling/i.test(values)) queries.push('caster wheels plate mounting holes rolling base');
+  if (/instruction|diagram|pdf|build step|callout|highlight|dimension|fastener/i.test(values)) queries.push('dimensioned stage sequence highlighted parts fastener callout diagrams');
   if (/board|panel|back|height|width|thickness/i.test(values)) queries.push('rectangular board panel centered spacing');
   if (!queries.length) queries.push(values || 'reusable generated design components');
   return queries;

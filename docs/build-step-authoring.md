@@ -12,9 +12,13 @@ Good build steps:
 - Show the measurements that control fit, alignment, and safety.
 - Show only the parts relevant to the current operation.
 - Include fasteners when they determine assembly order or collision risk.
+- Highlight the parts added or worked on in the current step.
+- Use callouts, close-ups, or inset views for screw paths, caster plates, diagonal fasteners, or hidden joints.
 - Use the same generated geometry as the 3D builder whenever possible.
 - Match the generated cut list and customizable inputs.
 - Avoid decorative views that look good but do not answer a construction question.
+
+The attached 27-gallon tote-rack PDF is the current quality target: dimensions are drawn directly on the step diagram, the current parts are color-highlighted, screw locations get detail views, and complex steps use an inset when one camera angle is not enough. Generated plans do not need to copy that layout, but they should answer the same builder questions before a plan is considered ready.
 
 ## Where Build Steps Live
 
@@ -44,6 +48,10 @@ Rendering and media selection are handled in `src/app.js`:
 - `startBuildStepAnimation()` runs live Three.js animations in canvases and full-screen dialogs.
 
 The underlying 3D scene is rendered by `src/viewer3d.js`. Prefer adding stage-aware or animation-aware model behavior there instead of inventing a parallel drawing system.
+
+The local sandbox also exposes `review_build_steps` from `src/generated/buildStepQuality.js`. A local model should run this after `validate_design` and before `check_publishability`. If the review recommends annotations, the model should call `annotate_design` and review again. If the review reports missing diagram, callout, or stage-specific rendering capabilities, the model should emit a structured `request_capability` for Codex instead of pretending the plan is finished.
+
+Generated plans can use the generic mini-video path by providing stable `assembly_steps[].part_ids` in the real operation order. The portal adapter turns drill, mark, and assembly steps into `generated-step-N` mini-videos and adds an overall generated build sequence above the numbered steps. This makes the assembly order visible enough for a person or local vision reviewer to notice when parts appear too early, float without host context, or move through an impossible sequence.
 
 ## Step Content
 
@@ -85,6 +93,8 @@ Best practices:
 - Prefer square-on views for layout steps.
 - Use multiple images for one step when the sequence matters.
 - Show partial assemblies rather than the whole finished model when the user needs to understand one joint.
+- Add labels and dimensions for the controlling measurement, not every possible measurement.
+- Add close-up or inset views when fasteners are angled, hidden, near opposing fasteners, or close to an edge.
 
 The tote rack front-frame step is a good pattern: it uses multiple custom phase images to show the first bottom rail, post placement, top rail fastening, and second bottom rail sequence more clearly than one final image could.
 

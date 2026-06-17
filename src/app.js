@@ -259,7 +259,7 @@ function bindInputs() {
 function renderPlanCatalog() {
   $('#planGrid').innerHTML = PLAN_CATALOG.map((item) => `
     <article class="planCard ${item.status !== 'ready' ? 'disabled' : ''}" data-plan-id="${escapeHtml(item.id)}" data-status="${escapeHtml(item.status)}">
-      <div class="planThumb">${planThumbnail(item.thumbnail)}</div>
+      <div class="planThumb" data-plan-thumb="${escapeHtml(item.id)}">${planThumbnail(item.thumbnail)}</div>
       <div class="planCardBody">
         <div class="planCardMeta">
           <span>${escapeHtml(item.family)}</span>
@@ -274,6 +274,76 @@ function renderPlanCatalog() {
     </article>
   `).join('');
   $('#btnResumePlan').classList.toggle('hidden', !savedState);
+  requestAnimationFrame(populateCapturedPlanThumbnails);
+}
+
+function populateCapturedPlanThumbnails() {
+  PLAN_CATALOG
+    .filter((item) => item.status === 'ready' && item.media?.thumbnail?.type === 'capture')
+    .forEach((item) => {
+      const target = document.querySelector(`[data-plan-thumb="${CSS.escape(item.id)}"]`);
+      if (!target || target.dataset.captureReady === 'true') return;
+      const image = capturePlanThumbnail(item);
+      if (!image) return;
+      target.dataset.captureReady = 'true';
+      target.innerHTML = `<img src="${image}" alt="" loading="lazy">`;
+    });
+}
+
+function capturePlanThumbnail(item) {
+  const planForItem = planForCatalogItem(item);
+  const resultForItem = calculatePlanFor(planForItem, item.id);
+  if (!resultForItem?.ok) return null;
+  const host = document.createElement('div');
+  host.style.cssText = 'position:fixed;left:-10000px;top:-10000px;width:320px;height:190px;pointer-events:none;';
+  const canvas = document.createElement('canvas');
+  host.appendChild(canvas);
+  document.body.appendChild(host);
+  const thumbViewer = new FrameViewer(canvas);
+  try {
+    thumbViewer.update(planForItem, resultForItem);
+    const span = catalogThumbnailSpan(planForItem, resultForItem, item.id);
+    return thumbViewer.captureImage({
+      width: 640,
+      height: 360,
+      stage: 999,
+      grid: true,
+      camera: { x: span * 0.9, y: span * 0.54, z: span * 1.08 },
+      target: { x: 0, y: span * 0.14, z: 0 }
+    });
+  } finally {
+    thumbViewer.dispose();
+    host.remove();
+  }
+}
+
+function planForCatalogItem(item) {
+  const next = clonePlan(DEFAULT_PLAN);
+  Object.assign(next, item.defaults || {});
+  next.build = buildForPlanId(item.id);
+  return applyPlanRulesForBuild(next, item.id);
+}
+
+function calculatePlanFor(planToCalculate, planId) {
+  if (isGeneratedBuild(planToCalculate.build)) return calculateGeneratedPlan(planToCalculate);
+  if (isShelfBuild(planToCalculate.build, planId)) return calculateShelfPlan(planToCalculate);
+  return calculatePlan(planToCalculate);
+}
+
+function applyPlanRulesForBuild(nextPlan, planId = currentPlanId) {
+  return isGeneratedBuild(nextPlan.build) || isShelfBuild(nextPlan.build, planId) || ['shelves', 'tote-rack'].includes(nextPlan.build)
+    ? nextPlan
+    : applyMountingRules(nextPlan);
+}
+
+function catalogThumbnailSpan(planToCapture, resultToCapture, planId) {
+  if (isGeneratedBuild(planToCapture.build)) {
+    return Math.max(resultToCapture.modelW || resultToCapture.feederW || resultToCapture.rackW || 12, resultToCapture.modelH || resultToCapture.feederH || resultToCapture.rackH || 4, resultToCapture.modelD || resultToCapture.feederD || 8, 12) * 0.12;
+  }
+  if (isShelfBuild(planToCapture.build, planId)) {
+    return Math.max(resultToCapture.shelfW || 60, resultToCapture.shelfH || 60, resultToCapture.shelfD || 30) * 0.1;
+  }
+  return Math.max(resultToCapture.outerW || 24, resultToCapture.outerH || 18, planToCapture.depth || 2) * 0.1;
 }
 
 function showCatalog() {
@@ -391,11 +461,15 @@ function calculateCurrentPlan() {
 }
 
 function applyPlanRules(nextPlan) {
-  return isGeneratedBuild(nextPlan.build) || isShelfPlan() || ['shelves', 'tote-rack'].includes(nextPlan.build) ? nextPlan : applyMountingRules(nextPlan);
+  return applyPlanRulesForBuild(nextPlan);
 }
 
 function isShelfPlan() {
-  return currentPlanId === 'basement-shelves' || currentPlanId === 'rolling-storage-shelf' || currentPlanId === 'tote-rack-27' || plan.build === 'shelves' || plan.build === 'rolling-shelves' || plan.build === 'tote-rack';
+  return isShelfBuild(plan.build, currentPlanId);
+}
+
+function isShelfBuild(build, planId = currentPlanId) {
+  return planId === 'basement-shelves' || planId === 'rolling-storage-shelf' || planId === 'tote-rack-27' || build === 'shelves' || build === 'rolling-shelves' || build === 'tote-rack';
 }
 
 function isGeneratedPlan() {
@@ -843,11 +917,45 @@ function renderBuildSteps(force = false) {
       <b>${escapeHtml(definition.title)}</b>
       <span>Use the cut list first, then follow these staged assembly views in order.</span>
     </div>
+    ${overallBuildAnimationHtml(definition)}
     <ol class="buildStepsList">
       ${steps.map((step, index) => buildStepHtml(step, index)).join('')}
     </ol>
   `;
   initBuildStepAnimations(target);
+}
+
+function overallBuildAnimationHtml(definition) {
+  const animation = overallBuildAnimation(definition);
+  if (!animation) return '';
+  return `
+    <section class="buildOverviewAnimation" aria-label="Overall build animation">
+      <div class="buildOverviewText">
+        <b>Overall build sequence</b>
+        <span>${escapeHtml(animation.description)}</span>
+      </div>
+      <div class="buildStepScene buildStepVideoScene">
+        <button class="buildStepFullscreen" type="button" data-build-animation-fullscreen="${escapeHtml(animation.type)}" data-build-animation-title="Overall build sequence">Full screen</button>
+        <canvas class="buildStepAnimationCanvas" data-build-animation="${escapeHtml(animation.type)}" aria-label="Overall animated assembly sequence"></canvas>
+      </div>
+    </section>
+  `;
+}
+
+function overallBuildAnimation(definition) {
+  if (isGeneratedPlan() && result?.buildSteps?.some((step) => step.animation?.type)) {
+    return {
+      type: 'generated-overall',
+      description: 'Generated from the same staged part order used by the step-by-step plan.'
+    };
+  }
+  if (definition?.media?.overallAnimation?.type === 'frame-stage-sequence') {
+    return {
+      type: 'frame-overall',
+      description: 'Generated from the existing frame stages without changing the plan geometry.'
+    };
+  }
+  return null;
 }
 
 function buildStepHtml(step, index) {
@@ -907,6 +1015,7 @@ function buildStepImage(step, options = {}) {
   if (step.image === 'cut-layout') return cutLayoutImage(options.width || 760, options.height || 430);
   if (step.image === 'drill-layout') return generatedDrillLayoutImage(options.width || 760, options.height || 430);
   if (step.image === 'linear-hardware-drill-layout') return generatedLinearHardwareLayoutImage(options.width || 760, options.height || 430);
+  if (step.image === 'stage-specific-diagram') return generatedStageSpecificDiagramImage(step, options);
   if (step.image?.type === 'animation-still') {
     const animationType = step.image.animation || step.animation?.type;
     if (animationType) {
@@ -940,7 +1049,48 @@ function buildStepImage(step, options = {}) {
   });
 }
 
+function generatedStageSpecificDiagramImage(step, options = {}) {
+  if (!isGeneratedPlan()) return null;
+  const span = generatedCameraSpan();
+  return viewer.captureImage({
+    stage: step.stage ?? 999,
+    vis: {
+      ...(step.vis || buildStepVisibility()),
+      references: Boolean(step.vis?.references)
+    },
+    highlightPartIds: step.diagram?.highlightedPartIds || step.partIds || [],
+    width: options.width || 760,
+    height: options.height || 430,
+    grid: options.grid !== false,
+    camera: options.camera || { x: span * 0.95, y: span * 0.72, z: span * 1.18 },
+    target: options.target || generatedCameraTarget(span)
+  });
+}
+
+function generatedCameraSpan() {
+  const width = result?.modelW || result?.feederW || result?.rackW || result?.stoolW || 12;
+  const height = result?.modelH || result?.feederH || result?.rackH || result?.stoolH || 4;
+  const depth = result?.modelD || result?.feederD || result?.stoolD || 8;
+  return Math.max(width, height, depth, 12) * 0.12;
+}
+
+function generatedCameraTarget(span = generatedCameraSpan()) {
+  return {
+    x: 0,
+    y: Math.max(result?.modelH || result?.feederH || result?.rackH || result?.stoolH || 0, 0) * 0.045,
+    z: 0
+  };
+}
+
 function buildStepAnimation(step, options = {}) {
+  if (isGeneratedPlan() && /^generated-step-\d+$/.test(step.animation?.type || '')) return { type: step.animation.type };
+  const definition = getPlanDefinition(currentPlanId);
+  if (normalizeBuild(plan.build) === 'strainer' && /rabbet|mill/.test(String(step.title || '').toLowerCase())) {
+    return { type: 'frame-rabbet-cut' };
+  }
+  if (definition?.media?.stepAnimation?.type === 'frame-stage-sequence' && Number.isFinite(step.stage) && step.stage > 0) {
+    return { type: frameStepAnimationType(step) };
+  }
   if ([
     'front-frame',
     'runner-rails',
@@ -1017,23 +1167,33 @@ function restorePageOverflowForBuildAnimation() {
 
 function startBuildStepAnimation(canvas, type, settings = {}) {
   const miniViewer = new FrameViewer(canvas);
-  const entry = { viewer: miniViewer, canvas, type, cancelled: false, frame: null, startedAt: null, forceVisible: Boolean(settings.forceVisible) };
+  const entry = { viewer: miniViewer, canvas, type, cancelled: false, frame: null, startedAt: null, forceVisible: Boolean(settings.forceVisible), inView: Boolean(settings.forceVisible), observer: null };
+  if (!entry.forceVisible && 'IntersectionObserver' in window) {
+    entry.observer = new IntersectionObserver((items) => {
+      const item = items[0];
+      entry.inView = Boolean(item?.isIntersecting && item.intersectionRatio >= 0.98);
+      if (!entry.inView) entry.startedAt = null;
+    }, { threshold: [0, 0.98, 1] });
+    entry.observer.observe(canvas);
+  } else if (!entry.forceVisible) {
+    entry.inView = true;
+  }
   const tick = (now) => {
     if (entry.cancelled) return;
-    if (entry.forceVisible || canvas.offsetParent) {
+    if (entry.forceVisible || (canvas.offsetParent && entry.inView)) {
       if (entry.startedAt === null) entry.startedAt = now;
       const progress = ((now - entry.startedAt) % 8000) / 8000;
       const options = buildAnimationOptions(type);
+      const span = buildAnimationCameraSpan();
       const animationPlan = {
         ...plan,
         stage: options.stage,
         vis: buildStepVisibility(),
         showDimensions: options.showDimensions,
         dimensionContext: options.dimensionContext,
-        buildAnimation: { type, progress }
+        buildAnimation: options.animation ? options.animation(progress) : { type, progress }
       };
       miniViewer.update(animationPlan, result);
-      const span = Math.max(result?.shelfW || 60, result?.shelfH || 60, result?.shelfD || 30) * 0.1;
       const camera = options.camera(span);
       const target = options.target(span);
       miniViewer.setCameraPosition(camera, target);
@@ -1049,11 +1209,82 @@ function startBuildStepAnimation(canvas, type, settings = {}) {
 function stopBuildStepAnimation(entry) {
   entry.cancelled = true;
   if (entry.frame) cancelAnimationFrame(entry.frame);
+  entry.observer?.disconnect?.();
   entry.viewer?.dispose?.();
 }
 
 function buildAnimationOptions(type) {
   const defaultTarget = (span) => ({ x: 0, y: span * 0.42, z: 0 });
+  const frameTarget = (span) => ({ x: 0, y: span * 0.16, z: 0 });
+  if (type === 'frame-rabbet-cut') {
+    return {
+      stage: 1,
+      dimensionContext: null,
+      showDimensions: false,
+      camera: (span) => ({ x: span * 0.86, y: span * 0.48, z: span * 0.82 }),
+      target: (span) => ({ x: 0, y: span * 0.09, z: 0 }),
+      animation: (progress) => ({ type: 'frame-rabbet-cut', progress })
+    };
+  }
+  if (type === 'frame-overall') {
+    return {
+      stage: 999,
+      dimensionContext: null,
+      showDimensions: false,
+      camera: (span) => ({ x: span * 0.92, y: span * 0.58, z: span * 1.12 }),
+      target: frameTarget,
+      animation: (progress) => ({ type: 'frame-stage-sequence', progress })
+    };
+  }
+  const frameStepMatch = String(type || '').match(/^frame-stage-(\d+)$/);
+  if (frameStepMatch) {
+    const stage = Number(frameStepMatch[1]);
+    return {
+      stage,
+      dimensionContext: null,
+      showDimensions: false,
+      camera: (span) => ({ x: span * 0.92, y: span * 0.58, z: span * 1.12 }),
+      target: frameTarget,
+      animation: (progress) => ({ type: 'frame-stage-sequence', progress, stageLabel: getStageLabels(plan.build)[stage] })
+    };
+  }
+  const frameRangeMatch = String(type || '').match(/^frame-range-(\d+)-(\d+)$/);
+  if (frameRangeMatch) {
+    const start = Number(frameRangeMatch[1]);
+    const end = Number(frameRangeMatch[2]);
+    const labels = getStageLabels(plan.build);
+    return {
+      stage: end,
+      dimensionContext: null,
+      showDimensions: false,
+      camera: (span) => ({ x: span * 0.92, y: span * 0.58, z: span * 1.12 }),
+      target: frameTarget,
+      animation: (progress) => ({ type: 'frame-stage-sequence', progress, startLabel: labels[start], endLabel: labels[end] })
+    };
+  }
+  const generatedTarget = () => generatedCameraTarget();
+  if (type === 'generated-overall') {
+    return {
+      stage: 999,
+      dimensionContext: null,
+      showDimensions: false,
+      camera: (span) => ({ x: span * 0.95, y: span * 0.72, z: span * 1.18 }),
+      target: generatedTarget,
+      animation: (progress) => ({ type: 'generated-overall', progress })
+    };
+  }
+  const generatedStepMatch = String(type || '').match(/^generated-step-(\d+)$/);
+  if (generatedStepMatch) {
+    const stage = Number(generatedStepMatch[1]);
+    return {
+      stage: 999,
+      dimensionContext: null,
+      showDimensions: false,
+      camera: (span) => ({ x: span * 0.95, y: span * 0.72, z: span * 1.18 }),
+      target: generatedTarget,
+      animation: (progress) => ({ type: 'generated-step', progress, stepIndex: stage - 1 })
+    };
+  }
   const options = {
     'front-frame': { stage: 1, dimensionContext: 'post', showDimensions: true, camera: (span) => ({ x: span * 0.75, y: span * 0.58, z: span * 1.15 }), target: defaultTarget },
     'runner-rails': { stage: 2, dimensionContext: 'runner', showDimensions: true, camera: (span) => ({ x: span * 0.95, y: span * 0.65, z: span * 1.15 }), target: defaultTarget },
@@ -1073,6 +1304,35 @@ function buildAnimationOptions(type) {
     'shelf-final-fasteners': { stage: 999, dimensionContext: null, showDimensions: false, camera: (span) => ({ x: span * 1.0, y: span * 0.72, z: span * 1.25 }), target: defaultTarget }
   };
   return options[type] || options['runner-rails'];
+}
+
+function buildAnimationCameraSpan() {
+  if (isGeneratedPlan()) return generatedCameraSpan();
+  if (isShelfPlan()) return Math.max(result?.shelfW || 60, result?.shelfH || 60, result?.shelfD || 30) * 0.1;
+  return Math.max(result?.outerW || 24, result?.outerH || 18, plan.depth || 2) * 0.1;
+}
+
+function frameStepAnimationType(step) {
+  const title = String(step.title || '').toLowerCase();
+  const text = `${step.title || ''} ${(step.instructions || []).join(' ')}`.toLowerCase();
+  const labels = getStageLabels(plan.build);
+  const indexOf = (label) => labels.indexOf(label);
+  const range = (start, end) => `frame-range-${start}-${end}`;
+  const stage = (label, fallback = step.stage) => {
+    const index = indexOf(label);
+    return index >= 0 ? index : fallback;
+  };
+  if (/mounting|hardware|z-clips|screws/.test(title)) return `frame-stage-${stage('Mounting')}`;
+  if (/outer frame face|frame body|face pieces|dry fit the frame/.test(title)) return range(stage('Face: Bottom'), stage('Face: Right'));
+  if (/support liner|liner assembly/.test(title)) return range(stage('Liner: Bottom'), stage('Liner: Right'));
+  if (/strainer rail|seat the strainer|support ledge/.test(title)) return range(stage('Strainer: Bottom'), stage('Strainer: Right'));
+  if (/reveal|canvas|artwork/.test(title)) return range(stage('Spacers'), stage('Canvas'));
+  if (/mounting|hardware|z-clips|screws/.test(text)) return `frame-stage-${stage('Mounting')}`;
+  if (/outer frame face|frame body|face pieces|dry fit the frame/.test(text)) return range(stage('Face: Bottom'), stage('Face: Right'));
+  if (/support liner|liner assembly/.test(text)) return range(stage('Liner: Bottom'), stage('Liner: Right'));
+  if (/strainer rail|seat the strainer|support ledge/.test(text)) return range(stage('Strainer: Bottom'), stage('Strainer: Right'));
+  if (/reveal|canvas|artwork/.test(text)) return range(stage('Spacers'), stage('Canvas'));
+  return `frame-stage-${step.stage}`;
 }
 
 function formatBuildInstruction(text) {
@@ -1251,26 +1511,34 @@ function cutLayoutImage(width, height) {
 function generatedDrillLayoutImage(width, height) {
   if (!isGeneratedPlan()) return null;
   const pad = 34;
-  const labelW = 190;
+  const labelW = 204;
+  const footerH = 44;
   const drawingX = pad + labelW;
   const drawingW = width - drawingX - pad;
-  const drawingH = height - pad * 2;
+  const drawingH = height - pad * 2 - footerH;
   const feederW = result.feederW || plan.feederW || 12;
   const feederD = result.feederD || plan.feederD || 8;
   const sideH = plan.feederSideH || 1.5;
   const sideT = plan.feederSideT || 0.75;
+  const panelY = pad + 34;
+  const railGap = 42;
+  const railStackGap = 16;
   const drainageXInset = feederW * 0.25;
   const drainageYInset = feederD * 0.2;
   const hangingInset = Math.max(1, sideT * 1.5);
-  const scale = Math.min(drawingW / Math.max(feederW, 1), drawingH / Math.max(feederD + sideH * 2 + 1.5, 1));
+  const maxDrawingBottom = height - footerH - 10;
+  const availableStackH = Math.max(120, maxDrawingBottom - panelY - railGap - railStackGap);
+  const scale = Math.min(
+    drawingW / Math.max(feederW, 1),
+    drawingH / Math.max(feederD + sideH * 2 + 1.5, 1),
+    availableStackH / Math.max(feederD + sideH * 2, 1)
+  );
   const panelW = feederW * scale;
   const panelH = feederD * scale;
   const panelX = drawingX + (drawingW - panelW) / 2;
-  const panelY = pad + 34;
   const railH = Math.max(10, sideH * scale);
-  const railGap = 22;
   const railYTop = panelY + panelH + railGap;
-  const railYBottom = railYTop + railH + 16;
+  const railYBottom = railYTop + railH + railStackGap;
   const holeR = Math.max(4, 0.18 * scale);
   const svg = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
@@ -1312,7 +1580,7 @@ function generatedDrillLayoutImage(width, height) {
     { y: railYBottom, label: 'Front rail' }
   ].forEach((rail) => {
     svg.push(`<rect x="${panelX}" y="${rail.y}" width="${panelW}" height="${railH}" rx="3" fill="#9a6435" stroke="#6f4322" stroke-width="1.4" filter="url(#shadow)"/>`);
-    svg.push(`<text x="${panelX + panelW + 12}" y="${rail.y + railH * 0.68}" fill="#cbd5e1" font-family="Inter, Arial, sans-serif" font-size="12">${rail.label}</text>`);
+    svg.push(`<text x="${panelX + panelW - 10}" y="${rail.y + railH * 0.68}" fill="#f8fafc" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="700" text-anchor="end">${rail.label}</text>`);
     [0.095, 0.905].forEach((px) => {
       const cx = panelX + panelW * px;
       const cy = rail.y + railH / 2;
@@ -1321,7 +1589,8 @@ function generatedDrillLayoutImage(width, height) {
     svg.push(`<line x1="${panelX}" y1="${rail.y - 8}" x2="${panelX + hangingInset * scale}" y2="${rail.y - 8}" stroke="#93c5fd" stroke-width="1.2"/>`);
     svg.push(`<text x="${panelX + hangingInset * scale / 2}" y="${rail.y - 12}" fill="#bfdbfe" font-family="Inter, Arial, sans-serif" font-size="11" text-anchor="middle">${escapeHtml(formatLength(hangingInset, plan.unit))}</text>`);
   });
-  svg.push(`<text x="${panelX}" y="${height - 18}" fill="#e5e7eb" font-family="Inter, Arial, sans-serif" font-size="12">Blue marks are drill locations. Use scrap underneath and drill while pieces are still separate.</text>`);
+  svg.push(`<text x="${pad}" y="${height - 28}" fill="#e5e7eb" font-family="Inter, Arial, sans-serif" font-size="12">Blue marks are drill locations. Use scrap underneath so holes exit cleanly.</text>`);
+  svg.push(`<text x="${pad}" y="${height - 12}" fill="#e5e7eb" font-family="Inter, Arial, sans-serif" font-size="12">Drill these holes while the bottom panel and rails are still separate.</text>`);
   svg.push('</svg>');
   return `data:image/svg+xml;base64,${btoa(svg.join(''))}`;
 }
@@ -1409,7 +1678,7 @@ function shadeSvgColor(hex, amount) {
 
 function buildStepVisibility() {
   return isGeneratedPlan()
-    ? { panels: true, rails: true, references: true }
+    ? { panels: true, rails: true, treads: true, legs: true, references: true, hardware: true }
     : isShelfPlan()
     ? { posts: true, rails: true, slats: true, hardware: true }
     : { face: true, liner: true, spacers: true, canvas: true, hardware: true };

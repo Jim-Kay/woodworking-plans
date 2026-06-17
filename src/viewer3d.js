@@ -247,6 +247,7 @@ export class FrameViewer {
         showDimensions: options.showDimensions ?? this.plan.showDimensions,
         dimensionContext: options.dimensionContext || null,
         buildAnimation: options.buildAnimation || null,
+        highlightPartIds: options.highlightPartIds || this.plan.highlightPartIds || [],
         vis: options.vis ? { ...this.plan.vis, ...options.vis } : this.plan.vis
       };
       this.manualCamera = true;
@@ -377,6 +378,20 @@ export class FrameViewer {
     const canvasT = plan.canvasT * SCALE;
     const canvasBottomY = supportDepth;
 
+    if (plan.buildAnimation?.type === 'frame-rabbet-cut') {
+      this.buildRabbetCutAnimation({
+        mat,
+        boardLength: outerW,
+        face,
+        faceDepth,
+        rabbet,
+        rabbetWidth: Math.max(rabbet, supportBottom),
+        progress: Number(plan.buildAnimation.progress) || 0
+      });
+      if (!this.manualCamera) this.fitCamera(outerW, face * 3, faceDepth * 4);
+      return;
+    }
+
     if (result.assembly?.type === 'floating-frame') {
       this.buildFrameFromAssembly({
         mat,
@@ -465,21 +480,28 @@ export class FrameViewer {
     const assembly = result.assembly;
     if (!assembly?.parts?.length) return;
     this.setGridFloor(assemblyFloorY(assembly) * SCALE);
+    const highlightIds = new Set(Array.isArray(plan.highlightPartIds) ? plan.highlightPartIds : []);
+    const hasHighlights = highlightIds.size > 0;
     const labels = ['Plan', ...(result.buildSteps || []).map((step) => step.title)];
     const maxStage = Math.min(plan.stage ?? labels.length - 1, labels.length - 1);
     const visibleThrough = (label) => maxStage === 0 || labels.indexOf(label) <= maxStage || maxStage >= labels.length - 1;
     const shouldShow = (key) => plan.vis?.[key] !== false;
     const materialForPart = (part) => {
+      const highlighted = highlightIds.has(part.id);
+      if (highlighted && part.material === 'guide') return makeModelMaterial(plan, 0xfacc15, 0.45, { transparent: true, opacity: 0.82, depthWrite: false, emissive: 0x6b4f00, emissiveIntensity: 0.18 });
+      if (highlighted) return makeModelMaterial(plan, 0xfacc15, 0.52, { emissive: 0x5f4200, emissiveIntensity: 0.12 });
+      const subdued = hasHighlights && part.material !== 'guide';
       const group = part.meta?.group;
-      if (group === 'panels') return makeModelMaterial(plan, 0xb8894b, 0.72);
-      if (group === 'treads') return makeModelMaterial(plan, 0xc79255, 0.72);
-      if (group === 'legs') return makeModelMaterial(plan, 0x7a4a2d, 0.72);
-      if (group === 'rails') return makeModelMaterial(plan, 0x8f5a2e, 0.68);
+      const extra = subdued ? { transparent: true, opacity: 0.38, depthWrite: false } : {};
+      if (group === 'panels') return makeModelMaterial(plan, 0xb8894b, 0.72, extra);
+      if (group === 'treads') return makeModelMaterial(plan, 0xc79255, 0.72, extra);
+      if (group === 'legs') return makeModelMaterial(plan, 0x7a4a2d, 0.72, extra);
+      if (group === 'rails') return makeModelMaterial(plan, 0x8f5a2e, 0.68, extra);
       if (group === 'references') return makeModelMaterial(plan, 0x60a5fa, 0.45, { transparent: true, opacity: 0.45, depthWrite: false });
-      return makeModelMaterial(plan, 0xb8894b, 0.72);
+      return makeModelMaterial(plan, 0xb8894b, 0.72, extra);
     };
     const stageForPart = (part) => {
-      const step = (result.buildSteps || []).find((item) => (item.partIds || []).includes(part.id));
+      const step = generatedBuildStepForPart(result, part);
       if (step?.title) return step.title;
       const group = part.meta?.group;
       if (group === 'references') return 'Drill outdoor holes';
@@ -499,6 +521,9 @@ export class FrameViewer {
     };
 
     assembly.parts.forEach((part) => {
+      const animatedPart = animatedGeneratedPart(plan.buildAnimation, result, part);
+      if (!animatedPart) return;
+      part = animatedPart;
       const group = part.meta?.group;
       if (!shouldShow(visKeyForGroup(group)) || !visibleThrough(stageForPart(part))) return;
       const size = part.size;
@@ -560,6 +585,9 @@ export class FrameViewer {
     };
 
     assembly.parts.forEach((part) => {
+      const animatedPart = animatedFrameAssemblyPart(plan, part);
+      if (!animatedPart) return;
+      part = animatedPart;
       const group = part.meta?.group;
       if (group === 'canvas' || group === 'stretcher') return;
       if (!groupVisible(group)) return;
@@ -595,8 +623,11 @@ export class FrameViewer {
       });
     });
 
-    if (opts.shouldShow('canvas') && opts.visibleThrough('Canvas')) {
-      addCanvasAssembly(this.root, {
+    const canvasOffset = frameAnimationOffsetForLabel(plan, 'Canvas', { y: 14 });
+    if (opts.shouldShow('canvas') && opts.visibleThrough('Canvas') && canvasOffset) {
+      const canvasGroup = new THREE.Group();
+      canvasGroup.position.set(canvasOffset.x || 0, canvasOffset.y || 0, canvasOffset.z || 0);
+      addCanvasAssembly(canvasGroup, {
         canvasW: opts.canvasW,
         canvasH: opts.canvasH,
         canvasT: opts.canvasT,
@@ -609,11 +640,121 @@ export class FrameViewer {
         materialStretcher: opts.mat.stretcher,
         showStretchers: opts.visibleThrough('Stretchers')
       });
+      this.root.add(canvasGroup);
     }
 
-    if (plan.mountMethod === 'clips' && opts.shouldShow('hardware') && opts.visibleThrough('Mounting')) {
-      addHardware(this.root, plan, result, opts.mat);
+    const mountingOffset = frameAnimationOffsetForLabel(plan, 'Mounting', { y: -8 });
+    if (plan.mountMethod === 'clips' && opts.shouldShow('hardware') && opts.visibleThrough('Mounting') && mountingOffset) {
+      const hardwareGroup = new THREE.Group();
+      hardwareGroup.position.set(mountingOffset.x || 0, mountingOffset.y || 0, mountingOffset.z || 0);
+      addHardware(hardwareGroup, plan, result, opts.mat);
+      this.root.add(hardwareGroup);
     }
+  }
+
+  buildRabbetCutAnimation(opts) {
+    const progress = Number(opts.progress) || 0;
+    const easedProgress = easeInOutCubic(clamp01((progress - 0.08) / 0.76));
+    const boardLength = Math.max(1.2, Math.min(opts.boardLength, 4.2));
+    const boardWidth = Math.max(opts.face * 1.55, opts.rabbetWidth * 2.4, 0.32);
+    const boardDepth = Math.max(opts.faceDepth, opts.rabbet * 5, 0.18);
+    const rabbetWidth = Math.min(boardWidth * 0.38, Math.max(opts.rabbetWidth, 0.09));
+    const rabbetDepth = Math.min(boardDepth * 0.55, Math.max(opts.rabbet * 1.5, 0.035));
+    const edgeZ = -boardWidth / 2 + rabbetWidth / 2;
+    const cutLeft = -boardLength / 2;
+    const cutX = cutLeft + boardLength * easedProgress;
+    const cutterTravel = boardLength * 0.16;
+    const cutterX = cutLeft - cutterTravel + (boardLength + cutterTravel * 2) * easedProgress;
+    const topY = boardDepth;
+    const routedMat = makeModelMaterial(this.plan, 0x8b5a2b, 0.78);
+    const wasteMat = makeModelMaterial(this.plan, 0xf59e0b, 0.56, { transparent: true, opacity: 0.66, depthWrite: false });
+    const cutterMat = new THREE.MeshStandardMaterial({ color: 0x60a5fa, roughness: 0.24, metalness: 0.78, emissive: 0x0f2f55, emissiveIntensity: 0.18 });
+    const pathMat = new THREE.LineBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.75 });
+
+    const removedLength = Math.max(0.001, cutX - cutLeft);
+    if (removedLength > 0.005) {
+      addRail(this.root, {
+        name: 'Rabbeted board lower stock',
+        x: cutLeft + removedLength / 2,
+        y: (boardDepth - rabbetDepth) / 2,
+        z: 0,
+        w: removedLength,
+        d: boardDepth - rabbetDepth,
+        h: boardWidth,
+        material: opts.mat.frame,
+        visible: true
+      });
+      addRail(this.root, {
+        name: 'Rabbeted board back shoulder',
+        x: cutLeft + removedLength / 2,
+        y: boardDepth - rabbetDepth / 2,
+        z: -boardWidth / 2 + rabbetWidth + (boardWidth - rabbetWidth) / 2,
+        w: removedLength,
+        d: rabbetDepth,
+        h: boardWidth - rabbetWidth,
+        material: opts.mat.frame,
+        visible: true
+      });
+      addRail(this.root, {
+        name: 'Milled rabbet recess',
+        x: cutLeft + removedLength / 2,
+        y: boardDepth - rabbetDepth + 0.006,
+        z: edgeZ,
+        w: removedLength,
+        d: 0.012,
+        h: rabbetWidth,
+        material: routedMat,
+        visible: true
+      });
+    }
+
+    const remainingLength = Math.max(0.001, boardLength - removedLength);
+    if (remainingLength > 0.005) {
+      addRail(this.root, {
+        name: 'Uncut rectangular face board',
+        x: cutX + remainingLength / 2,
+        y: boardDepth / 2,
+        z: 0,
+        w: remainingLength,
+        d: boardDepth,
+        h: boardWidth,
+        material: opts.mat.frame,
+        visible: true
+      });
+      addRail(this.root, {
+        name: 'Highlighted rabbet waste inside board',
+        x: cutX + remainingLength / 2,
+        y: boardDepth - rabbetDepth / 2 + 0.012,
+        z: edgeZ,
+        w: remainingLength,
+        d: Math.max(0.01, rabbetDepth - 0.012),
+        h: rabbetWidth,
+        material: wasteMat,
+        visible: true
+      });
+    }
+
+    addCutterHead(this.root, {
+      x: cutterX,
+      y: topY + rabbetDepth + 0.14,
+      z: edgeZ,
+      radius: Math.max(0.07, rabbetWidth * 0.52),
+      width: Math.max(0.045, rabbetWidth * 0.42),
+      material: cutterMat
+    });
+
+    addRabbetCutPath(this.root, {
+      startX: cutLeft,
+      endX: boardLength / 2,
+      y: topY + rabbetDepth + 0.028,
+      z: edgeZ,
+      material: pathMat
+    });
+
+    const label = makeDimensionLabel('Mill rabbet before assembly', 0xfbbf24);
+    label.position.set(-boardLength * 0.16, topY + 0.28, boardWidth * 0.72);
+    label.scale.set(1.95, 0.47, 1);
+    this.root.add(label);
   }
 
   buildShelves() {
@@ -860,6 +1001,236 @@ function animatedAssemblyPart(plan, result, part) {
       }
     }
   };
+}
+
+function generatedBuildStepForPart(result, part) {
+  const steps = result?.buildSteps || [];
+  const physical = part?.meta?.physical !== false && part?.material !== 'guide';
+  const directMatch = (step) => (step.partIds || []).includes(part.id);
+  const step = steps.find((item) => directMatch(item) && generatedStepCanIntroducePart(item, physical));
+  if (step) return step;
+  return steps.find(directMatch);
+}
+
+function generatedStepCanIntroducePart(step, physical) {
+  const title = String(step?.title || '').toLowerCase();
+  if (!physical) return true;
+  if (step?.diagram?.preAssembly) return false;
+  if (step?.image === 'cut-layout' || title.includes('cut') || title.includes('drill') || title.includes('mark')) return false;
+  return true;
+}
+
+function generatedBuildStepIndexForPart(result, part) {
+  const step = generatedBuildStepForPart(result, part);
+  return step ? (result?.buildSteps || []).indexOf(step) : -1;
+}
+
+function animatedGeneratedPart(animation, result, part) {
+  if (!animation?.type || result?.type !== 'generated') return part;
+  const stepIndex = generatedBuildStepIndexForPart(result, part);
+  if (stepIndex < 0) return part;
+  const progress = Number(animation.progress) || 0;
+  if (animation.type === 'generated-step') return animatedGeneratedStepPart(animation, result, part, stepIndex, progress);
+  if (animation.type === 'generated-overall') return animatedGeneratedOverallPart(result, part, stepIndex, progress);
+  return part;
+}
+
+function animatedFrameAssemblyPart(plan, part) {
+  const animation = plan?.buildAnimation;
+  if (!animation?.type || animation.type !== 'frame-stage-sequence') return part;
+  const labels = frameAnimatedStageLabels(plan);
+  const targetLabel = frameStageLabelForPart(part, plan);
+  const targetIndex = labels.indexOf(targetLabel);
+  if (targetIndex < 0) return part;
+  const progress = Number(animation.progress) || 0;
+  const bounds = frameAnimationBounds(plan, labels);
+
+  if (targetIndex < bounds.start) return part;
+  if (targetIndex > bounds.end) return null;
+
+  const segment = progress * ((bounds.end - bounds.start + 1) + 0.25);
+  const activeIndex = bounds.start + Math.floor(segment);
+  if (targetIndex < activeIndex) return part;
+  if (targetIndex > activeIndex) return null;
+  return animatedPartFromPhase(part, clamp01(segment - targetIndex), 0.04, 0.78, frameEntryOffset(part));
+}
+
+function frameAnimationHasReached(plan, label) {
+  const animation = plan?.buildAnimation;
+  if (!animation || animation.type !== 'frame-stage-sequence') return true;
+  const labels = frameAnimatedStageLabels(plan);
+  const targetIndex = labels.indexOf(label);
+  if (targetIndex < 0) return true;
+  const bounds = frameAnimationBounds(plan, labels);
+  if (targetIndex < bounds.start) return true;
+  if (targetIndex > bounds.end) return false;
+  const activeIndex = bounds.start + Math.floor((Number(animation.progress) || 0) * ((bounds.end - bounds.start + 1) + 0.25));
+  return activeIndex >= targetIndex;
+}
+
+function frameAnimationOffsetForLabel(plan, label, offset) {
+  const animation = plan?.buildAnimation;
+  if (!animation || animation.type !== 'frame-stage-sequence') return { x: 0, y: 0, z: 0 };
+  const labels = frameAnimatedStageLabels(plan);
+  const targetIndex = labels.indexOf(label);
+  if (targetIndex < 0) return { x: 0, y: 0, z: 0 };
+  const bounds = frameAnimationBounds(plan, labels);
+  if (targetIndex < bounds.start) return { x: 0, y: 0, z: 0 };
+  if (targetIndex > bounds.end) return null;
+  const segment = (Number(animation.progress) || 0) * ((bounds.end - bounds.start + 1) + 0.25);
+  const activeIndex = bounds.start + Math.floor(segment);
+  if (targetIndex < activeIndex) return { x: 0, y: 0, z: 0 };
+  if (targetIndex > activeIndex) return null;
+  const localProgress = clamp01(segment - (targetIndex - bounds.start));
+  const t = easeOutCubic(clamp01((localProgress - 0.04) / (0.78 - 0.04)));
+  return {
+    x: (offset.x || 0) * (1 - t),
+    y: (offset.y || 0) * (1 - t),
+    z: (offset.z || 0) * (1 - t)
+  };
+}
+
+function frameAnimationBounds(plan, labels) {
+  const animation = plan?.buildAnimation || {};
+  const start = labels.indexOf(animation.startLabel || animation.stageLabel || labels[0]);
+  const end = labels.indexOf(animation.endLabel || animation.stageLabel || labels[labels.length - 1]);
+  return {
+    start: start >= 0 ? start : 0,
+    end: end >= 0 ? Math.max(start >= 0 ? start : 0, end) : labels.length - 1
+  };
+}
+
+function frameAnimatedStageLabels(plan) {
+  const buildKind = normalizeBuild(plan?.build);
+  const support = buildKind === 'strainer'
+    ? ['Rabbet Ledge', 'Strainer: Bottom', 'Strainer: Top', 'Strainer: Left', 'Strainer: Right']
+    : ['Liner: Bottom', 'Liner: Top', 'Liner: Left', 'Liner: Right'];
+  return [
+    ...support,
+    'Face: Bottom',
+    'Face: Top',
+    'Face: Left',
+    'Face: Right',
+    'Spacers',
+    'Canvas',
+    'Mounting'
+  ];
+}
+
+function frameStageLabelForPart(part, plan) {
+  const group = part?.meta?.group;
+  const side = titleCase(part?.meta?.side || '');
+  const buildKind = normalizeBuild(plan?.build);
+  if (group === 'guide') return 'Rabbet Ledge';
+  if (group === 'support') return `${buildKind === 'strainer' ? 'Strainer' : 'Liner'}: ${side}`;
+  if (group === 'face') return `Face: ${side}`;
+  if (group === 'spacer') return 'Spacers';
+  if (group === 'canvas' || group === 'stretcher') return 'Canvas';
+  if (group === 'fastener') return 'Mounting';
+  return null;
+}
+
+function frameEntryOffset(part) {
+  const group = part?.meta?.group;
+  const side = part?.meta?.side;
+  if (group === 'fastener') return { y: -5 };
+  if (group === 'canvas' || group === 'stretcher') return { y: 12 };
+  if (group === 'spacer') return { y: 4 };
+  if (side === 'top') return { z: 6 };
+  if (side === 'bottom') return { z: -6 };
+  if (side === 'left') return { x: -6 };
+  if (side === 'right') return { x: 6 };
+  return { y: 5 };
+}
+
+function titleCase(value) {
+  const text = String(value || '');
+  return text ? `${text.charAt(0).toUpperCase()}${text.slice(1)}` : '';
+}
+
+function animatedGeneratedStepPart(animation, result, part, stepIndex, progress) {
+  const currentIndex = Math.max(0, Number(animation.stepIndex) || 0);
+  const currentStep = (result?.buildSteps || [])[currentIndex];
+  const directContext = (currentStep?.partIds || []).includes(part.id);
+  const hostContext = generatedPreassemblyHostContext(currentStep, result, part);
+  if (stepIndex < currentIndex) return part;
+  if (stepIndex > currentIndex && currentStep?.diagram?.preAssembly && (directContext || hostContext)) return part;
+  if (stepIndex > currentIndex) return null;
+  const peerCount = Math.max(1, generatedStepPartCount(result, currentIndex));
+  const peerOrder = generatedStepPartOrder(result, part, currentIndex);
+  const stagger = Math.min(0.055, 0.32 / peerCount) * Math.max(0, peerOrder);
+  return animatedPartFromPhase(part, progress, 0.08 + stagger, 0.38 + stagger, generatedEntryOffset(part));
+}
+
+function animatedGeneratedOverallPart(result, part, stepIndex, progress) {
+  const steps = result?.buildSteps || [];
+  const animatedSteps = steps
+    .map((step, index) => ({ step, index }))
+    .filter((entry) => (stepPartIds(entry.step, result).length > 0) && !/^cut/.test(String(entry.step.title || '').toLowerCase()));
+  const order = animatedSteps.findIndex((entry) => entry.index === stepIndex);
+  const activeStepIndex = Math.floor(progress * (animatedSteps.length + 0.35));
+  const activeStep = animatedSteps[activeStepIndex]?.step;
+  if (order < 0) {
+    if (activeStep?.diagram?.preAssembly && ((activeStep.partIds || []).includes(part.id) || generatedPreassemblyHostContext(activeStep, result, part))) return part;
+    if (generatedPriorPreassemblyHostContext(result, animatedSteps, activeStepIndex, part)) return part;
+    return part;
+  }
+  if (generatedReferencePart(part) && order < activeStepIndex) return null;
+  if (order < activeStepIndex) return part;
+  if (order >= activeStepIndex && generatedPriorPreassemblyHostContext(result, animatedSteps, activeStepIndex, part)) return part;
+  if (order > activeStepIndex && activeStep?.diagram?.preAssembly && ((activeStep.partIds || []).includes(part.id) || generatedPreassemblyHostContext(activeStep, result, part))) return part;
+  if (order > activeStepIndex) return null;
+  const localProgress = clamp01((progress * (animatedSteps.length + 0.35)) - order);
+  const peerCount = Math.max(1, generatedStepPartCount(result, stepIndex));
+  const peerOrder = generatedStepPartOrder(result, part, stepIndex);
+  const stagger = Math.min(0.08, 0.42 / peerCount) * Math.max(0, peerOrder);
+  return animatedPartFromPhase(part, localProgress, 0.02 + stagger, 0.52 + stagger, generatedEntryOffset(part));
+}
+
+function generatedStepPartCount(result, stepIndex) {
+  return stepPartIds((result?.buildSteps || [])[stepIndex], result).length;
+}
+
+function generatedStepPartOrder(result, part, stepIndex) {
+  return Math.max(0, stepPartIds((result?.buildSteps || [])[stepIndex], result).indexOf(part.id));
+}
+
+function stepPartIds(step, result) {
+  const ids = new Set(step?.partIds || []);
+  return (result?.assembly?.parts || [])
+    .filter((part) => ids.has(part.id) && generatedBuildStepIndexForPart(result, part) === (result?.buildSteps || []).indexOf(step))
+    .map((part) => part.id);
+}
+
+function generatedPreassemblyHostContext(step, result, part) {
+  if (!step?.diagram?.preAssembly || part?.meta?.physical === false) return false;
+  const ids = new Set(step.partIds || []);
+  return (result?.assembly?.parts || []).some((candidate) => (
+    ids.has(candidate.id) &&
+    candidate?.meta?.host_part_id === part.id
+  ));
+}
+
+function generatedPriorPreassemblyHostContext(result, animatedSteps, activeStepIndex, part) {
+  if (part?.meta?.physical === false || generatedReferencePart(part)) return false;
+  const steps = animatedSteps.slice(0, Math.max(0, activeStepIndex));
+  return steps.some((entry) => generatedPreassemblyHostContext(entry.step, result, part));
+}
+
+function generatedReferencePart(part) {
+  return part?.material === 'guide' || part?.meta?.group === 'references' || part?.meta?.physical === false;
+}
+
+function generatedEntryOffset(part) {
+  const position = part?.position || {};
+  const size = part?.size || {};
+  const horizontalAxis = Math.abs(position.x || 0) >= Math.abs(position.y || 0) ? 'x' : 'y';
+  const horizontalSign = Number(position[horizontalAxis]) >= 0 ? 1 : -1;
+  const rise = Math.max(4, (size.z || size.y || 1) * 1.5);
+  if (part?.material === 'guide' || part?.meta?.group === 'references') return { z: rise * 1.5 };
+  if ((size.z || 0) > Math.max(size.x || 0, size.y || 0)) return { z: rise * 2 };
+  if ((size.y || 0) > (size.x || 0)) return { [horizontalAxis]: horizontalSign * 8 };
+  return { z: position.y <= 0 ? -8 : 8, x: horizontalSign * 4 };
 }
 
 function animatedRollingShelfPart(animation, result, part) {
@@ -1311,6 +1682,11 @@ function clamp01(value) {
 function easeOutCubic(value) {
   const t = clamp01(value);
   return 1 - Math.pow(1 - t, 3);
+}
+
+function easeInOutCubic(value) {
+  const t = clamp01(value);
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
 function addHardware(group, plan, result, mat) {
@@ -1887,6 +2263,33 @@ function addZClipAlongZ(group, linerInnerX, stretcherInnerX, z, seatY, seg, t, w
   addMetalBox(group, { x: linerInnerX + dir * t / 2, y: seatY - seg / 2, z, w: t, d: seg, h: width, material });
   addMetalBox(group, { x: (linerInnerX + stretcherInnerX) / 2, y: seatY - t / 2, z, w: Math.abs(stretcherInnerX - linerInnerX), d: t, h: width, material });
   addMetalBox(group, { x: stretcherInnerX - dir * t / 2, y: seatY + seg / 2, z, w: t, d: seg, h: width, material });
+}
+
+function addCutterHead(group, opts) {
+  const headGeo = new THREE.CylinderGeometry(opts.radius, opts.radius, opts.width, 32);
+  const head = new THREE.Mesh(headGeo, opts.material);
+  head.position.set(opts.x, opts.y, opts.z);
+  head.castShadow = true;
+  head.receiveShadow = true;
+  const edge = new THREE.LineSegments(new THREE.EdgesGeometry(headGeo, 1), new THREE.LineBasicMaterial({ color: 0xeff6ff, transparent: true, opacity: 0.45 }));
+  head.add(edge);
+  group.add(head);
+
+  const shankGeo = new THREE.CylinderGeometry(opts.radius * 0.28, opts.radius * 0.28, opts.width * 3.2, 18);
+  const shank = new THREE.Mesh(shankGeo, opts.material);
+  shank.position.set(opts.x, opts.y + opts.width * 1.85, opts.z);
+  shank.castShadow = true;
+  group.add(shank);
+}
+
+function addRabbetCutPath(group, opts) {
+  const points = [
+    new THREE.Vector3(opts.startX, opts.y, opts.z),
+    new THREE.Vector3(opts.endX, opts.y, opts.z)
+  ];
+  const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), opts.material);
+  line.renderOrder = 35;
+  group.add(line);
 }
 
 function addMetalBox(group, opts) {

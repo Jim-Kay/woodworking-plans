@@ -790,6 +790,30 @@ label {
   font-size: 13px;
 }
 
+.buildOverviewAnimation {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 14px;
+  border: var(--bd);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, #151a24, #0f131a);
+}
+
+.buildOverviewText {
+  display: grid;
+  gap: 4px;
+}
+
+.buildOverviewText b {
+  color: var(--text);
+}
+
+.buildOverviewText span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .buildStepsList {
   display: grid;
   gap: 14px;

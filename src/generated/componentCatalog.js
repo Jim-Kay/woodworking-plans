@@ -55,6 +55,26 @@ export const COMPONENT_CATALOG = [
     example_uses: ['tray feeder sides', 'frame rails', 'wall cleat']
   },
   {
+    component_id: 'geometry.rabbeted_frame_face_set',
+    category_id: 'geometry',
+    title: 'Rabbeted Floating Frame Face Set',
+    description: 'Four mitered picture-frame face members with an inside-back rabbet milled before assembly to form a support ledge around the artwork opening.',
+    aliases: ['floating frame face', 'rabbeted frame', 'picture frame rabbet', 'mitered frame rails', 'rabbet ledge'],
+    inputs: ['canvas_width_in', 'canvas_height_in', 'reveal_in', 'face_width_in', 'frame_depth_in', 'rabbet_depth_in', 'joinery'],
+    outputs: ['physical_parts', 'cut_list_items', 'rabbet_milling_guidance', 'opening_and_reveal_metadata'],
+    example_uses: ['floating canvas frame', 'strainer on rabbet frame', 'picture frame with recessed support ledge']
+  },
+  {
+    component_id: 'geometry.strainer_rail_set',
+    category_id: 'geometry',
+    title: 'Strainer Rail Set Seated On Rabbet',
+    description: 'Four thin support rails sized to sit on a rabbet ledge behind a floating frame face while preserving canvas reveal and support depth.',
+    aliases: ['strainer rails', 'support rails', 'canvas support ledge', 'rabbet support rails', 'thin liner rails'],
+    inputs: ['inner_opening_width_in', 'inner_opening_height_in', 'strainer_width_in', 'strainer_depth_in', 'rabbet_ledge_y_in', 'joinery'],
+    outputs: ['physical_parts', 'cut_list_items', 'support_surface_metadata', 'canvas_clearance_guidance'],
+    example_uses: ['floating frame strainer', 'canvas support rails on rabbet', 'thin support frame inside picture frame']
+  },
+  {
     component_id: 'geometry.shallow_wall_pocket',
     category_id: 'geometry',
     title: 'Shallow Wall Pocket',
@@ -73,6 +93,26 @@ export const COMPONENT_CATALOG = [
     inputs: ['height_in', 'width_in', 'depth_in', 'material', 'position'],
     outputs: ['physical_part', 'cut_list_item', 'openscad_box'],
     example_uses: ['step stool legs', 'bench legs', 'small stand uprights']
+  },
+  {
+    component_id: 'geometry.rectangular_frame_bay',
+    category_id: 'geometry',
+    title: 'Rectangular Frame Bay',
+    description: 'A rectangular structural bay made from rails and upright posts, with clear opening dimensions and repeated bay spacing.',
+    aliases: ['2x4 frame', 'storage frame', 'rack bay', 'support frame', 'upright frame', 'shelf frame'],
+    inputs: ['overall_length_in', 'overall_height_in', 'rail_size', 'post_count', 'bay_spacing_in', 'material'],
+    outputs: ['physical_parts', 'cut_list_items', 'assembly_joints', 'bay_clearance_metadata'],
+    example_uses: ['tote storage rack side frame', 'workbench base frame', 'rolling storage rack']
+  },
+  {
+    component_id: 'geometry.tote_runner_pair',
+    category_id: 'geometry',
+    title: 'Tote Runner Pair',
+    description: 'A pair of parallel runner rails that support a tote lip or bin flange with configurable clear width, pitch, and inset.',
+    aliases: ['tote runners', 'bin rails', 'storage tote supports', 'sliding tote rails', 'runner supports'],
+    inputs: ['tote_lip_width_in', 'clearance_in', 'runner_length_in', 'runner_spacing_in', 'runner_height_in', 'material'],
+    outputs: ['physical_parts', 'cut_list_items', 'tote_fit_guidance', 'runner_clearance_metadata'],
+    example_uses: ['27 gallon tote rack', 'plastic bin storage shelf', 'garage tote organizer']
   },
   {
     component_id: 'geometry.step_tread',
@@ -113,6 +153,16 @@ export const COMPONENT_CATALOG = [
     inputs: ['host_part_id', 'columns', 'rows', 'hole_diameter_in', 'edge_clearance_in'],
     outputs: ['reference_parts', 'drill_guidance', 'host_containment_check'],
     example_uses: ['tray bird feeder bottom', 'outdoor planter tray']
+  },
+  {
+    component_id: 'hardware.caster_plate_set',
+    category_id: 'hardware',
+    title: 'Caster Plate Set',
+    description: 'A set of plate-mounted caster wheels with bolt or screw-hole references, edge insets, and base-reinforcement guidance.',
+    aliases: ['caster wheels', 'swivel casters', 'rolling base', 'wheel plates', 'mobile rack wheels'],
+    inputs: ['caster_count', 'plate_width_in', 'plate_depth_in', 'edge_inset_in', 'fastener_diameter_in', 'load_rating_lbs'],
+    outputs: ['hardware_parts_or_references', 'mounting_hole_references', 'base_reinforcement_guidance'],
+    example_uses: ['mobile tote rack', 'rolling workbench', 'shop cart base']
   },
   {
     component_id: 'patterns.centered_linear_spacing',
@@ -165,6 +215,26 @@ export const COMPONENT_CATALOG = [
     example_uses: ['step stool safety review', 'bench load warning', 'standing platform caution']
   },
   {
+    component_id: 'validators.rabbet_strainer_fit',
+    category_id: 'validators',
+    title: 'Rabbet And Strainer Fit Validator',
+    description: 'Checks rabbet depth, strainer thickness, canvas thickness, reveal, and support ledge dimensions for a floating frame using seated strainer rails.',
+    aliases: ['rabbet fit', 'strainer fit', 'canvas reveal check', 'frame ledge clearance', 'support rail clearance'],
+    inputs: ['rabbeted_face_part_ids', 'strainer_part_ids', 'canvas_dimensions', 'reveal_in', 'support_depth_in'],
+    outputs: ['validation_errors', 'validation_warnings', 'fit_guidance'],
+    example_uses: ['floating frame strainer on rabbet', 'picture frame support ledge check', 'canvas clearance validation']
+  },
+  {
+    component_id: 'validators.physical_part_overlap',
+    category_id: 'validators',
+    title: 'Physical Part Overlap Validator',
+    description: 'Checks physical board and panel bounding boxes for unintended volume overlap while exempting holes, fasteners, references, and guides.',
+    aliases: ['collision check', 'overlap check', 'clipping check', 'part intersection', 'component collision'],
+    inputs: ['physical_part_ids', 'exempt_reference_ids'],
+    outputs: ['validation_errors'],
+    example_uses: ['step stool leg and tread clipping', 'tray rail overlap', 'storage rack runner interference']
+  },
+  {
     component_id: 'build_steps.mark_drill_install',
     category_id: 'build_steps',
     title: 'Mark, Drill, Install Sequence',
@@ -175,14 +245,64 @@ export const COMPONENT_CATALOG = [
     example_uses: ['key rack hooks', 'wall mounting holes', 'peg rail']
   },
   {
+    component_id: 'build_steps.dimensioned_stage_sequence',
+    category_id: 'build_steps',
+    title: 'Dimensioned Stage Sequence',
+    description: 'A build-step pattern that pairs each operation with dimensions, highlighted newly added parts, fastener notes, and verification checks.',
+    aliases: ['instruction grade steps', 'dimensioned diagrams', 'highlight current parts', 'step-by-step construction drawings'],
+    inputs: ['assembly_step_ids', 'critical_dimensions', 'fastener_reference_ids', 'verification_checks'],
+    outputs: ['assembly_steps', 'diagram_requirements', 'review_rubric'],
+    example_uses: ['tote rack PDF-style instructions', 'frame assembly sequence', 'caster mounting step']
+  },
+  {
+    component_id: 'build_steps.mill_rabbet_then_assemble_frame',
+    category_id: 'build_steps',
+    title: 'Mill Rabbet Then Assemble Floating Frame',
+    description: 'A build-step pattern for machining rabbeted frame stock before final miters, dry fitting the frame, seating strainer rails, spacing the canvas reveal, and adding mounting hardware.',
+    aliases: ['rabbet milling step', 'picture frame build order', 'strainer frame assembly', 'floating frame assembly sequence'],
+    inputs: ['rabbeted_face_part_ids', 'strainer_part_ids', 'canvas_reference_id', 'mounting_hardware_ids'],
+    outputs: ['assembly_steps', 'machining_step_requirements', 'dry_fit_checks', 'stage_visual_requirements'],
+    example_uses: ['floating frame strainer on rabbet', 'canvas frame with support ledge', 'rabbeted picture frame instructions']
+  },
+  {
     component_id: 'rendering.stage_aware_reference_view',
     category_id: 'rendering',
     title: 'Stage-Aware Reference View',
-    description: 'A rendered build-step view that can show physical parts, reference holes, labels, and partial assembly state separately.',
-    aliases: ['stage view', 'drill layout view', 'reference labels', 'partial assembly image', 'build step screenshot'],
+    description: 'A rendered build-step view that can show physical parts, reference holes, labels, highlighted current parts, and partial assembly state separately.',
+    aliases: ['stage view', 'stage-specific diagram', 'drill layout view', 'pre-assembly drill guide', 'reference labels', 'partial assembly image', 'build step screenshot'],
     inputs: ['step_id', 'visible_part_ids', 'reference_part_ids', 'labels'],
-    outputs: ['build_step_image', 'vision_review_target'],
-    example_uses: ['drill-before-assembly view', 'cut-list part layout', 'mounting-hole callouts']
+    outputs: ['build_step_image', 'preassembly_drill_layout', 'vision_review_target'],
+    example_uses: ['drill-before-assembly view', 'highlighted assembly step', 'cut-list part layout', 'mounting-hole callouts']
+  },
+  {
+    component_id: 'rendering.generated_assembly_animation',
+    category_id: 'rendering',
+    title: 'Generated Assembly Animation',
+    description: 'A reusable mini-video mode that animates generated-plan parts from assembly_steps.part_ids, including one overall build sequence and per-step motion.',
+    aliases: ['mini-video', 'assembly animation', 'piece by piece build', 'overall build sequence', 'animated build step'],
+    inputs: ['assembly_step_ids', 'part_ids', 'stage_order'],
+    outputs: ['build_step_animation', 'overall_build_animation', 'sequence_review_target'],
+    example_uses: ['tray feeder rails coming together', 'wall rack hooks appearing after layout', 'step stool subassemblies in build order']
+  },
+  {
+    component_id: 'rendering.rabbet_milling_operation_view',
+    category_id: 'rendering',
+    title: 'Rabbet Milling Operation View',
+    description: 'A pre-assembly machining diagram or mini-animation that shows rectangular stock, highlighted rabbet waste, cutter travel, and the resulting ledge/notch before frame assembly.',
+    aliases: ['rabbet cut animation', 'milling operation view', 'router rabbet diagram', 'table saw rabbet view', 'notched board animation'],
+    inputs: ['host_part_id', 'rabbet_width_in', 'rabbet_depth_in', 'cut_edge', 'tool_method'],
+    outputs: ['build_step_image', 'build_step_animation', 'machining_guidance'],
+    example_uses: ['mill rabbet before assembly', 'floating frame stock prep', 'pre-assembly rabbet cut visual']
+  },
+  {
+    component_id: 'rendering.dimensioned_callout_view',
+    category_id: 'rendering',
+    title: 'Dimensioned Callout View',
+    description: 'A rendered diagram mode with measurement arrows, labels, highlighted parts, screw paths, and optional close-up inset views.',
+    aliases: ['dimension arrows', 'callout labels', 'screw callout', 'close-up inset', 'PDF-style diagram'],
+    inputs: ['visible_part_ids', 'dimension_pairs', 'label_targets', 'fastener_paths', 'inset_camera'],
+    outputs: ['build_step_image', 'printable_diagram', 'vision_review_target'],
+    example_uses: ['caster screw layout', 'diagonal pocket screw warning', 'tote runner spacing diagram']
   }
 ];
 

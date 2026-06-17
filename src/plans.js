@@ -22,7 +22,12 @@ export const PLAN_CATALOG = [
       { title: 'Install mounting hardware', stage: 12, instructions: ['For screws, predrill through the liner into the canvas stretcher and stay within the recommended screw length range.', 'For Z-clips, confirm the selected clip offset matches the support depth before fastening.', 'After mounting, inspect the front reveal one last time before hanging.'] }
     ],
     tags: ['canvas', 'frame', 'miter', 'cut list'],
-    thumbnail: 'frame-liner'
+    thumbnail: 'frame-liner',
+    media: {
+      thumbnail: { type: 'capture' },
+      overallAnimation: { type: 'frame-stage-sequence' },
+      stepAnimation: { type: 'frame-stage-sequence' }
+    }
   },
   {
     id: 'frame-strainer',
@@ -47,7 +52,12 @@ export const PLAN_CATALOG = [
       { title: 'Mount the canvas', stage: 13, instructions: ['Place spacer blocks around the canvas to hold the reveal.', 'Predrill for screws or install matching Z-clips according to the selected mounting method.', 'Confirm the canvas clears the rabbeted frame face and sits flat against the support.'] }
     ],
     tags: ['canvas', 'frame', 'rabbet', 'lighter build'],
-    thumbnail: 'frame-strainer'
+    thumbnail: 'frame-strainer',
+    media: {
+      thumbnail: { type: 'capture' },
+      overallAnimation: { type: 'frame-stage-sequence' },
+      stepAnimation: { type: 'frame-stage-sequence' }
+    }
   },
   {
     id: 'basement-shelves',
