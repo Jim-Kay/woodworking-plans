@@ -706,6 +706,10 @@ function reviewComponentCompositionProposal(proposal, scenario = {}) {
   if (!proposal.open_questions.length) warnings.push('open_questions is empty; proposals should surface uncertainties for Codex review.');
   if (proposal.requested_missing_component_ids.length) warnings.push(`Requested missing component IDs need Codex review before implementation: ${proposal.requested_missing_component_ids.join(', ')}`);
   if (unknownRendererComponentIds.length) warnings.push(`Renderer requirements mention missing component IDs: ${unknownRendererComponentIds.join(', ')}`);
+  const suggestedExistingComponents = suggestExistingComponentsForMissingIds(proposal);
+  if (suggestedExistingComponents.length) {
+    warnings.push(`Some requested missing component IDs look close to existing catalog entries: ${suggestedExistingComponents.map((item) => `${item.requested_id} -> ${item.suggested_component_id}`).join(', ')}`);
+  }
   const scenarioParameters = scenario?.parameters || {};
   const missingScenarioParameters = Object.keys(scenarioParameters)
     .filter((key) => proposal.parameters?.[key] === undefined);
@@ -725,12 +729,29 @@ function reviewComponentCompositionProposal(proposal, scenario = {}) {
         category_id: item.component.category_id,
         outputs: item.component.outputs || []
       })),
+    suggested_existing_components: suggestedExistingComponents,
     required_codex_review: [
       'Confirm formula correctness and generated part geometry.',
       'Add deterministic tests for schema, cut list, validation, and portal adapter output.',
       'Review woodworking safety, load assumptions, and build-step clarity before publishing.'
     ]
   };
+}
+
+function suggestExistingComponentsForMissingIds(proposal) {
+  const existingIds = new Set(proposal.component_ids);
+  return proposal.requested_missing_component_ids
+    .map((requestedId) => {
+      const query = requestedId.split(/[._-]+/).join(' ');
+      const [candidate] = searchComponents({ query, limit: 1 });
+      if (!candidate || existingIds.has(candidate.component_id) || candidate.score < 8) return null;
+      return {
+        requested_id: requestedId,
+        suggested_component_id: candidate.component_id,
+        score: candidate.score
+      };
+    })
+    .filter(Boolean);
 }
 
 function normalizeProposalParameters(parameters = {}) {

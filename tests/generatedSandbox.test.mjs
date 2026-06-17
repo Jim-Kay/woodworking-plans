@@ -556,6 +556,28 @@ assert.equal(executed.result.ok, true);
 assert.equal(executed.state.compositionProposal.build_steps[0].instructions[0], 'Cut a consistent rabbet before assembly.');
 assert.equal(executed.state.compositionProposal.build_steps[1].instructions[0], 'Dry fit the strainer rails on the rabbet ledge.');
 
+executed = executeSandboxTool({
+  name: 'propose_component_composition',
+  arguments: {
+    template_id: 'rolling_tote_rack_workbench',
+    title: 'Rolling Tote Rack Workbench',
+    component_ids: ['hardware.caster_plate_set'],
+    requested_missing_component_ids: ['frame.rectangular_frame_bay', 'dimensioning.dimensioned_stage_sequence'],
+    parameters: { width_in: 69, depth_in: 27, height_in: 34 },
+    design_algorithm: ['Calculate frame dimensions.', 'Place casters.', 'Place tote runners.'],
+    validation_strategy: ['Check frame clearance.', 'Check caster layout.'],
+    build_steps: [
+      { id: 'step.frame', title: 'Build frame', instructions: ['Assemble rectangular frame.'] },
+      { id: 'step.casters', title: 'Install casters', instructions: ['Attach caster plates.'] }
+    ],
+    renderer_requirements: ['Show caster plate layout.'],
+    open_questions: ['Confirm tote runner spacing.']
+  }
+}, { scenario: { design_id: 'duplicate_missing_hint_test' } });
+assert.equal(executed.result.ok, true);
+assert.equal(executed.result.review.suggested_existing_components.some((item) => item.requested_id === 'frame.rectangular_frame_bay' && item.suggested_component_id === 'geometry.rectangular_frame_bay'), true);
+assert.equal(executed.result.review.suggested_existing_components.some((item) => item.requested_id === 'dimensioning.dimensioned_stage_sequence' && item.suggested_component_id === 'build_steps.dimensioned_stage_sequence'), true);
+
 executed = executeSandboxTool({ name: 'generate_design', arguments: { parameters: { width_in: 13 } } }, toolState);
 assert.equal(executed.result.ok, true);
 assert.equal(executed.state.design.parameters.width_in, 13);

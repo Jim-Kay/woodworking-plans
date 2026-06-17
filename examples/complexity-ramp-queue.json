@@ -1,0 +1,197 @@
+{
+  "schema_version": "0.1",
+  "title": "Generated woodworking complexity ramp queue",
+  "defaults": {
+    "model": "qwen3:14b",
+    "baseUrl": "http://localhost:11434/v1",
+    "maxIterations": 10
+  },
+  "jobs": [
+    {
+      "id": "simple-mug-peg-rail",
+      "title": "Simple Mug Peg Rail",
+      "priority": "normal",
+      "scenario": {
+        "template_id": "mug_peg_rail",
+        "design_id": "queue_simple_mug_peg_rail",
+        "intent": "Generate a beginner wall-mounted mug peg rail using a single back board, evenly spaced pegs or hooks, wall mounting holes, and clear mark-drill-install instructions.",
+        "builder_goals": [
+          "use one common 1x4 board",
+          "space six mug hooks evenly with safe edge clearance",
+          "include wall mounting holes and pilot hole guidance",
+          "produce a simple staged build sequence"
+        ],
+        "parameters": {
+          "width_in": 24,
+          "height_in": 4,
+          "board_thickness_in": 0.75,
+          "hook_count": 6,
+          "hook_spacing_in": 3.5,
+          "min_end_inset_in": 1.75,
+          "mounting_holes": true,
+          "material": "pine_1x4",
+          "hardware_type": "screw_hook"
+        }
+      }
+    },
+    {
+      "id": "entry-mail-cubby-hooks",
+      "title": "Entry Mail Cubby With Hooks",
+      "priority": "normal",
+      "scenario": {
+        "template_id": "entry_mail_cubby_hooks",
+        "design_id": "queue_entry_mail_cubby_hooks",
+        "intent": "Generate a wall-mounted entry organizer with a back panel, shallow mail cubby, lower row of key hooks, and wall mounting holes.",
+        "builder_goals": [
+          "use existing pocket, panel, hook, spacing, and wall-mount components if available",
+          "avoid requesting a duplicate mail pocket component if a shallow wall pocket already exists",
+          "include staged build steps that show pocket assembly before hook installation"
+        ],
+        "parameters": {
+          "width_in": 20,
+          "height_in": 12,
+          "board_thickness_in": 0.75,
+          "pocket_depth_in": 3,
+          "pocket_height_in": 4.5,
+          "hook_count": 5,
+          "hook_spacing_in": 3.25,
+          "min_end_inset_in": 1.5,
+          "mounting_holes": true,
+          "material": "pine_1x6",
+          "pocket_material": "thin_plywood",
+          "hardware_type": "screw_hook"
+        }
+      }
+    },
+    {
+      "id": "small-slatted-planter-box",
+      "title": "Small Slatted Planter Box",
+      "priority": "normal",
+      "scenario": {
+        "template_id": "small_slatted_planter_box",
+        "design_id": "queue_small_slatted_planter_box",
+        "intent": "Generate a small outdoor planter box with slatted sides, a bottom panel, drainage holes, and beginner-friendly build guidance.",
+        "builder_goals": [
+          "use cedar or outdoor-friendly stock",
+          "show bottom panel as a flat panel, not a long narrow rail",
+          "include drainage hole location guidance and edge clearance",
+          "sequence the side slats and end panels logically"
+        ],
+        "parameters": {
+          "width_in": 18,
+          "depth_in": 10,
+          "height_in": 8,
+          "stock_thickness_in": 0.75,
+          "slat_count_per_side": 3,
+          "drainage_holes": true,
+          "material": "cedar"
+        }
+      }
+    },
+    {
+      "id": "desktop-bookshelf-adjustable-dividers",
+      "title": "Desktop Bookshelf With Adjustable Dividers",
+      "priority": "normal",
+      "scenario": {
+        "template_id": "desktop_bookshelf_with_adjustable_dividers",
+        "design_id": "queue_desktop_bookshelf_adjustable_dividers",
+        "intent": "Generate a compact desktop bookshelf with side panels, top and bottom shelves, two adjustable dividers, and optional back rail for racking resistance.",
+        "builder_goals": [
+          "use plywood or 1x boards",
+          "validate divider spacing and clear book openings",
+          "show box assembly before dividers are installed",
+          "include square-check guidance before fastening the back rail"
+        ],
+        "parameters": {
+          "width_in": 24,
+          "height_in": 12,
+          "depth_in": 8,
+          "material_thickness_in": 0.75,
+          "divider_count": 2,
+          "adjustable_dividers": true,
+          "back_rail": true
+        }
+      }
+    },
+    {
+      "id": "rolling-tote-rack-workbench",
+      "title": "Rolling Tote Rack Workbench",
+      "priority": "high",
+      "scenario": {
+        "template_id": "rolling_tote_rack_workbench",
+        "design_id": "queue_rolling_tote_rack_workbench",
+        "intent": "Generate a rolling garage workbench base that stores two 27-gallon totes on runner rails and uses casters under a rectangular frame.",
+        "builder_goals": [
+          "use reusable rectangular frame bay, tote runner, caster plate, spacing, and overlap validation components if available",
+          "include clear tote lip clearance assumptions",
+          "show front/back frame assembly before runner installation",
+          "include caster plate layout and reinforcement guidance"
+        ],
+        "parameters": {
+          "width_in": 69,
+          "depth_in": 27,
+          "height_in": 34,
+          "tote_count": 2,
+          "tote_width_in": 30,
+          "tote_depth_in": 20,
+          "tote_lip_clearance_in": 0.5,
+          "caster_count": 4,
+          "material": "2x4"
+        }
+      }
+    },
+    {
+      "id": "folding-sawhorse-with-spreader",
+      "title": "Folding Sawhorse With Spreader",
+      "priority": "high",
+      "scenario": {
+        "template_id": "folding_sawhorse_with_spreader",
+        "design_id": "queue_folding_sawhorse_with_spreader",
+        "intent": "Generate a folding sawhorse concept with paired angled legs, top beam, hinge hardware, spreader restraint, and conservative safety warnings.",
+        "builder_goals": [
+          "avoid claiming load capacity without deterministic structural validation",
+          "include hinge and spreader hardware layout",
+          "validate leg clearances and fastener edge distance",
+          "request missing folding-mechanism support if current components cannot represent it safely"
+        ],
+        "parameters": {
+          "length_in": 36,
+          "height_in": 30,
+          "top_beam_width_in": 3.5,
+          "leg_stock_width_in": 3.5,
+          "leg_stock_thickness_in": 1.5,
+          "leg_angle_degrees": 12,
+          "claimed_capacity_lbs": 0
+        }
+      }
+    },
+    {
+      "id": "fold-flat-step-stool",
+      "title": "Fold-Flat Two-Step Stool",
+      "priority": "high",
+      "scenario": {
+        "template_id": "fold_flat_two_step_stool",
+        "design_id": "queue_fold_flat_two_step_stool",
+        "intent": "Generate a fold-flat two-step stool concept with hinged side frames, two treads, locking spreader arms, and conservative warnings for human structural review.",
+        "builder_goals": [
+          "treat this as a dimensional concept only unless deterministic load validation exists",
+          "check for overlapping parts and unsafe cantilevered treads",
+          "sequence hinge layout, tread installation, and spreader installation clearly",
+          "request missing components or validators if folding geometry cannot be represented"
+        ],
+        "parameters": {
+          "width_in": 16,
+          "depth_in": 18,
+          "height_in": 18,
+          "lower_step_height_in": 8,
+          "upper_step_height_in": 16,
+          "tread_thickness_in": 0.75,
+          "leg_width_in": 1.5,
+          "leg_depth_in": 1.5,
+          "claimed_capacity_lbs": 0,
+          "material": "hardwood"
+        }
+      }
+    }
+  ]
+}
