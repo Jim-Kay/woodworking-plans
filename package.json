@@ -17,7 +17,7 @@
     "sandbox:watch": "node scripts/llm-sandbox-watch.mjs",
     "llm:check": "node scripts/llm-host-check.mjs",
     "llm:benchmark": "node scripts/llm-sandbox-benchmark.mjs",
-    "test": "node tests/frameMath.test.mjs && node tests/generatedSandbox.test.mjs && node tests/generatedReview.test.mjs && node tests/llmSandboxQueue.test.mjs && node tests/sandboxMcpServer.test.mjs && node tests/syntheticPhotoSet.test.mjs && node tests/portalBrowser.test.mjs"
+    "test": "node tests/frameMath.test.mjs && node tests/generatedSandbox.test.mjs && node tests/generatedReview.test.mjs && node tests/llmSandboxLoopRunner.test.mjs && node tests/llmSandboxQueue.test.mjs && node tests/sandboxMcpServer.test.mjs && node tests/syntheticPhotoSet.test.mjs && node tests/portalBrowser.test.mjs"
   },
   "devDependencies": {
     "playwright": "^1.61.0"

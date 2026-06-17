@@ -152,6 +152,7 @@ async function chooseNextAction(state, options) {
         'If review_build_steps recommends annotations, use annotate_design and then run review_build_steps again.',
         'If review_build_steps reports missing visual, diagram, or renderer capabilities that annotations cannot solve, call request_capability with those details.',
         'Use annotate_design when the design is valid but build instructions, drill guidance, labels, or part notes need improvement.',
+        'If check_publishability returns ok=true, portal_integration_notes are advisory follow-ups, not blockers. The next action should be export_plan_package.',
         'Prefer this sequence unless feedback says otherwise: inspect_scenario, search_components when composing an unsupported plan, propose_component_composition if the components are enough to describe the missing template, generate_design, validate_design, review_build_steps, annotate_design if needed, check_publishability, export_plan_package.',
         'Return JSON only.'
       ].join(' ')
@@ -238,7 +239,7 @@ async function readOpenAiStream(response, onToken) {
   return content;
 }
 
-function enforceWorkflowGate(next, state) {
+export function enforceWorkflowGate(next, state) {
   const action = next?.tool_call?.name || next?.action;
   if (next?.action === 'request_capability' && action !== 'request_capability') {
     return {
@@ -255,6 +256,17 @@ function enforceWorkflowGate(next, state) {
     };
   }
   const publishingAction = ['check_publishability', 'export_plan_package'].includes(action);
+  if (action === 'request_capability' && lastPublishabilityOk(state.transcript)) {
+    return {
+      action: 'export_plan_package',
+      rationale: [
+        'Workflow gate inserted by the sandbox loop: check_publishability returned ok=true.',
+        'Portal integration notes are advisory follow-ups, so export the publishable package instead of escalating.'
+      ].join(' '),
+      tool_call: { name: 'export_plan_package', arguments: {} },
+      overridden_model_action: next
+    };
+  }
   if (action === 'annotate_design' && state.buildStepReview?.recommended_tool_call && !hasValidAnnotationArguments(next?.tool_call?.arguments || {})) {
     return {
       action: 'annotate_design',
@@ -278,6 +290,15 @@ function enforceWorkflowGate(next, state) {
     };
   }
   return next;
+}
+
+function lastPublishabilityOk(transcript = []) {
+  for (const item of transcript.slice().reverse()) {
+    const action = item.model_action?.tool_call?.name || item.model_action?.action;
+    if (action !== 'check_publishability') continue;
+    return item.tool_result?.ok === true;
+  }
+  return false;
 }
 
 function capabilityArgumentsFrom(args = {}) {
