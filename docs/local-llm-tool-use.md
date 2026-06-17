@@ -220,6 +220,24 @@ $env:LLM_MODEL = 'qwen3:14b'
 npm run sandbox:loop -- examples/tray-bird-feeder.scenario.json generated/runs/llm-demo
 ```
 
+To let the local model work through a backlog of ideas, run the queue runner:
+
+```powershell
+$env:LLM_BASE_URL = 'http://localhost:11434/v1'
+$env:LLM_MODEL = 'qwen3:14b'
+npm run sandbox:queue -- examples/idea-queue.json generated/runs/queue-demo
+```
+
+The queue runner processes jobs sequentially and writes one folder per idea under the output directory. Its `index.json` groups outcomes into review queues:
+
+- `published_candidates` for packages that passed deterministic publishability checks
+- `composition_proposals` for reusable template/component proposals that need Codex review
+- `capability_requests` for missing tools, validators, renderers, or components
+- `generated_needs_review` for designs that were produced but did not reach a publishable package
+- `failed_loops` for jobs whose transcripts should be inspected or discarded
+
+Use `LLM_QUEUE_MAX_JOBS=1` for a quick smoke run, or leave it unset for a longer unattended run. The default queue in `examples/idea-queue.json` intentionally mixes known-supported plans with harder unsupported project families, so the output should reveal both publishable candidates and reusable capability gaps.
+
 The loop can also run an optional visual review immediately after package export when a screenshot and vision model are configured. This review is framed as an end-user comprehension pass: can a builder tell what to do next, locate the relevant parts/features, trust that the text matches the image, and understand whether the view is pre-assembly, partial assembly, or finished assembly?
 
 Before export, the text loop should also call `review_build_steps`. This deterministic tool checks the package against an instruction-quality rubric based on good shop plans: pre-assembly drill-layout views, stage-specific diagrams, mini-video animation intent, dimensions in the diagram, highlighted current parts, host-part callouts for holes, and close-ups for fasteners or caster plates. If the tool recommends annotations, the local model should call `annotate_design` and review again. If the tool reports missing stage-specific, animation, or callout rendering capability, the local model should call `request_capability` and cite the affected step IDs.

@@ -1,0 +1,133 @@
+{
+  "schema_version": "0.1",
+  "title": "Generated woodworking plan exploration queue",
+  "defaults": {
+    "model": "qwen3:14b",
+    "baseUrl": "http://localhost:11434/v1",
+    "maxIterations": 8
+  },
+  "jobs": [
+    {
+      "id": "tray-bird-feeder-baseline",
+      "title": "Tray Bird Feeder Baseline",
+      "scenario_path": "examples/tray-bird-feeder.scenario.json",
+      "priority": "normal",
+      "notes": "Known supported template; useful as a smoke-test job."
+    },
+    {
+      "id": "wall-key-rack-baseline",
+      "title": "Wall Key Rack Baseline",
+      "scenario_path": "examples/wall-key-rack.scenario.json",
+      "priority": "normal",
+      "notes": "Known supported component-composed wall hardware plan."
+    },
+    {
+      "id": "mail-key-organizer-baseline",
+      "title": "Mail And Key Organizer Baseline",
+      "scenario_path": "examples/mail-key-organizer.scenario.json",
+      "priority": "normal",
+      "notes": "Known supported multi-component wall-panel plan."
+    },
+    {
+      "id": "floating-frame-strainer-rabbet",
+      "title": "Floating Frame Strainer On Rabbet",
+      "priority": "high",
+      "scenario": {
+        "template_id": "floating_frame_strainer_on_rabbet",
+        "design_id": "queue_frame_strainer_rabbet",
+        "intent": "Generate a woodworking plan equivalent to a floating canvas frame with a rabbeted back edge and thin strainer rails seated on the rabbet ledge.",
+        "builder_goals": [
+          "support a 16 x 20 inch stretched canvas with an even floating reveal",
+          "mill a rabbet into the inside back edge before assembly",
+          "seat thinner strainer rails on the rabbet ledge",
+          "include cut list, staged build steps, and clear milling/assembly visuals"
+        ],
+        "parameters": {
+          "canvas_width_in": 16,
+          "canvas_height_in": 20,
+          "canvas_thickness_in": 0.75,
+          "reveal_in": 0.25,
+          "face_width_in": 1.5,
+          "frame_depth_in": 1.25,
+          "rabbet_depth_in": 0.125,
+          "strainer_width_in": 0.75,
+          "strainer_depth_in": 0.5,
+          "joinery": "miter",
+          "mounting_method": "z_clips"
+        }
+      }
+    },
+    {
+      "id": "small-planter-box",
+      "title": "Small Outdoor Planter Box",
+      "priority": "normal",
+      "scenario": {
+        "template_id": "small_planter_box",
+        "design_id": "queue_small_planter_box",
+        "intent": "Generate a simple rectangular outdoor planter box with slatted sides, a bottom panel, drainage holes, and beginner-friendly build steps.",
+        "builder_goals": [
+          "use common cedar fence picket or 1x stock",
+          "include drainage holes and outdoor material notes",
+          "show cut layout, drill layout, and staged side assembly"
+        ],
+        "parameters": {
+          "width_in": 18,
+          "depth_in": 10,
+          "height_in": 8,
+          "stock_thickness_in": 0.75,
+          "slat_count_per_side": 3,
+          "drainage_holes": true,
+          "material": "cedar"
+        }
+      }
+    },
+    {
+      "id": "desktop-bookshelf",
+      "title": "Desktop Bookshelf With Dividers",
+      "priority": "normal",
+      "scenario": {
+        "template_id": "desktop_bookshelf_with_dividers",
+        "design_id": "queue_desktop_bookshelf",
+        "intent": "Generate a compact desktop bookshelf with two side panels, top and bottom shelves, and adjustable vertical dividers.",
+        "builder_goals": [
+          "use plywood or 1x boards",
+          "include shelf/divider spacing guidance",
+          "validate panel overlap and clear book openings",
+          "show staged assembly with dividers added after the box is square"
+        ],
+        "parameters": {
+          "width_in": 24,
+          "height_in": 12,
+          "depth_in": 8,
+          "material_thickness_in": 0.75,
+          "divider_count": 2,
+          "back_panel": false
+        }
+      }
+    },
+    {
+      "id": "folding-sawhorse",
+      "title": "Folding Sawhorse",
+      "priority": "high",
+      "scenario": {
+        "template_id": "folding_sawhorse",
+        "design_id": "queue_folding_sawhorse",
+        "intent": "Generate a folding sawhorse plan with paired legs, a top beam, hinge hardware, spreader restraint, and conservative load-bearing warnings.",
+        "builder_goals": [
+          "use common 2x stock",
+          "include hinge and spreader hardware layout",
+          "validate leg angles, fastener clearances, and load-bearing caution",
+          "show folding mechanism as an assembly and review concern"
+        ],
+        "parameters": {
+          "length_in": 36,
+          "height_in": 30,
+          "top_beam_width_in": 3.5,
+          "leg_stock_width_in": 3.5,
+          "leg_stock_thickness_in": 1.5,
+          "claimed_capacity_lbs": 0
+        }
+      }
+    }
+  ]
+}
