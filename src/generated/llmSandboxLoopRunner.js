@@ -14,6 +14,7 @@ import {
   writeJson,
   writePlanPackage
 } from './sandbox.js';
+import { findTemplateCandidates } from './schema.js';
 
 const sandboxTools = listSandboxTools();
 const sandboxToolNames = sandboxTools.map((tool) => tool.name);
@@ -145,6 +146,7 @@ async function chooseNextAction(state, options) {
         'When requesting a component capability, cite the closest existing component IDs you considered so Codex can avoid duplicate components.',
         'If a tool result says recommended_action is search_components, you must search components before calling request_capability.',
         'If generate_design reports an unsupported template, do not immediately request a template; search for reusable components that could compose the requested plan.',
+        'If generate_design reports compatible_template_ids, generate with the first compatible template before proposing a new composition.',
         'When an unsupported template can be described with existing components, call propose_component_composition before request_capability. Include exact component_ids, deterministic algorithm steps, validation strategy, build steps, renderer requirements, and open questions.',
         'A component composition proposal is not executable code. It is a Codex-review artifact; do not claim it is publishable until Codex adds deterministic implementation support.',
         'If propose_component_composition reports unknown component_ids, repair the proposal with exact known component IDs from the result or search_components. Do not request new components based only on invented IDs.',
@@ -256,6 +258,58 @@ export function enforceWorkflowGate(next, state) {
     };
   }
   const publishingAction = ['check_publishability', 'export_plan_package'].includes(action);
+  const compatibleTemplate = state.design ? null : lastCompatibleTemplate(state.transcript) || scenarioTemplateAliasCandidate(state.scenario);
+  if (compatibleTemplate && ['propose_component_composition', 'request_capability'].includes(action)) {
+    return {
+      action: 'generate_design',
+      rationale: [
+        'Workflow gate inserted by the sandbox loop: the previous generate_design result reported a compatible supported template.',
+        `Trying ${compatibleTemplate} before creating a duplicate composition proposal or capability request.`
+      ].join(' '),
+      tool_call: {
+        name: 'generate_design',
+        arguments: {
+          template_id: compatibleTemplate,
+          design_id: state.scenario?.design_id,
+          parameters: state.scenario?.parameters || {}
+        }
+      },
+      overridden_model_action: next
+    };
+  }
+  if (state.design && !state.validation && action !== 'validate_design') {
+    return {
+      action: 'validate_design',
+      rationale: [
+        'Workflow gate inserted by the sandbox loop: a design has been generated but deterministic validation has not run yet.',
+        'Validate the generated design before additional proposals, capability requests, review, or export.'
+      ].join(' '),
+      tool_call: { name: 'validate_design', arguments: {} },
+      overridden_model_action: next
+    };
+  }
+  if (state.design && state.validation?.ok && !state.buildStepReview && action !== 'review_build_steps') {
+    return {
+      action: 'review_build_steps',
+      rationale: [
+        'Workflow gate inserted by the sandbox loop: the design validated successfully but build-step quality review has not run.',
+        'Run review_build_steps before proposals, capability requests, publishability checks, or export.'
+      ].join(' '),
+      tool_call: { name: 'review_build_steps', arguments: {} },
+      overridden_model_action: next
+    };
+  }
+  if (state.design && state.validation?.ok && buildStepReviewReady(state.buildStepReview) && !state.finalPackage && action !== 'export_plan_package') {
+    return {
+      action: 'export_plan_package',
+      rationale: [
+        'Workflow gate inserted by the sandbox loop: validation and build-step review both passed.',
+        'Export the package instead of making a late proposal or capability request.'
+      ].join(' '),
+      tool_call: { name: 'export_plan_package', arguments: {} },
+      overridden_model_action: next
+    };
+  }
   if (action === 'request_capability' && lastPublishabilityOk(state.transcript)) {
     return {
       action: 'export_plan_package',
@@ -299,6 +353,26 @@ function lastPublishabilityOk(transcript = []) {
     return item.tool_result?.ok === true;
   }
   return false;
+}
+
+function buildStepReviewReady(review) {
+  return review?.quality_gate_passed === true || review?.status === 'ready';
+}
+
+function lastCompatibleTemplate(transcript = []) {
+  const last = transcript.at(-1);
+  const action = last?.model_action?.tool_call?.name || last?.model_action?.action;
+  if (action !== 'generate_design') return null;
+  const compatible = last.tool_result?.compatible_template_ids;
+  if (!Array.isArray(compatible) || compatible.length === 0) return null;
+  return compatible.find((templateId) => typeof templateId === 'string' && templateId.length) || null;
+}
+
+function scenarioTemplateAliasCandidate(scenario = {}) {
+  if (!scenario?.template_id) return null;
+  const candidates = findTemplateCandidates(scenario.template_id);
+  const compatible = candidates.find((templateId) => templateId !== scenario.template_id);
+  return compatible || null;
 }
 
 function capabilityArgumentsFrom(args = {}) {

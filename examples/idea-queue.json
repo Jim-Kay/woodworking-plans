@@ -4,7 +4,7 @@
   "defaults": {
     "model": "qwen3:14b",
     "baseUrl": "http://localhost:11434/v1",
-    "maxIterations": 8
+    "maxIterations": 10
   },
   "jobs": [
     {
