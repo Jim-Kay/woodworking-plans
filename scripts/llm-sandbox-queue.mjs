@@ -11,10 +11,14 @@ const result = await runLlmSandboxQueue({
   maxIterations: process.env.LLM_MAX_ITERATIONS,
   model: process.env.LLM_MODEL,
   baseUrl: process.env.LLM_BASE_URL,
+  resume: process.env.LLM_QUEUE_RESUME === '1',
   streamModel: process.env.LLM_QUEUE_STREAM === '1',
   onEvent: (event) => {
     if (event.type === 'queue_job_start') {
       console.log(`start ${event.data.index + 1}: ${event.data.job.title}`);
+    }
+    if (event.type === 'queue_job_skipped') {
+      console.log(`skip ${event.data.index + 1}: ${event.data.id} -> ${event.data.outcome}`);
     }
     if (event.type === 'queue_job_complete') {
       console.log(`done ${event.data.index + 1}: ${event.data.id} -> ${event.data.outcome}`);

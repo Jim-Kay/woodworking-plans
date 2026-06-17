@@ -243,6 +243,17 @@ The queue runner processes jobs sequentially and writes one folder per idea unde
 
 Use `LLM_QUEUE_MAX_JOBS=1` for a quick smoke run, or leave it unset for a longer unattended run. The default queue in `examples/idea-queue.json` uses a slightly larger iteration budget than the single-scenario smoke test so the model has room to browse components, generate, validate, review build steps, annotate, and export. It intentionally mixes known-supported plans with harder unsupported project families, so the output should reveal both publishable candidates and reusable capability gaps.
 
+For long unattended runs, the queue also writes `review.md` next to `index.json` and `summary.txt`. Open `review.md` first after a bulk run; it ranks Codex review items by likely usefulness, putting composition proposals and capability requests ahead of publishable-package review.
+
+If a long queue is interrupted, rerun it with resume enabled:
+
+```powershell
+$env:LLM_QUEUE_RESUME = '1'
+npm run sandbox:queue -- examples/idea-queue.json generated/runs/queue-demo
+```
+
+Resume mode reuses non-failed jobs already present in the output directory's `index.json`, then continues through the remaining jobs. Failed jobs are intentionally not skipped, so prompt/tool fixes can retry them.
+
 The loop can also run an optional visual review immediately after package export when a screenshot and vision model are configured. This review is framed as an end-user comprehension pass: can a builder tell what to do next, locate the relevant parts/features, trust that the text matches the image, and understand whether the view is pre-assembly, partial assembly, or finished assembly?
 
 Before export, the text loop should also call `review_build_steps`. This deterministic tool checks the package against an instruction-quality rubric based on good shop plans: pre-assembly drill-layout views, stage-specific diagrams, mini-video animation intent, dimensions in the diagram, highlighted current parts, host-part callouts for holes, and close-ups for fasteners or caster plates. If the tool recommends annotations, the local model should call `annotate_design` and review again. If the tool reports missing stage-specific, animation, or callout rendering capability, the local model should call `request_capability` and cite the affected step IDs.

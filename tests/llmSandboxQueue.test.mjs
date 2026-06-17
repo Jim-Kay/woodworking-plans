@@ -95,7 +95,10 @@ assert.equal(index.summary.counts.published_candidate, 1);
 assert.equal(index.summary.counts.composition_proposal, 1);
 assert.equal(index.review_queues.published_candidates[0].id, 'publishable-job');
 assert.equal(index.review_queues.composition_proposals[0].id, 'proposal-job');
+assert.equal(index.review_items[0].id, 'proposal-job');
+assert.equal(index.review_items[1].id, 'publishable-job');
 assert.equal(index.results[0].artifacts.package.endsWith(join('01-publishable-job', 'package')), true);
+assert.equal(typeof index.results[0].duration_ms, 'number');
 assert.equal(events.some((event) => event.type === 'queue_complete'), true);
 
 const writtenIndex = JSON.parse(await readFile(join(outDir, 'index.json'), 'utf8'));
@@ -104,5 +107,23 @@ const summary = await readFile(join(outDir, 'summary.txt'), 'utf8');
 assert.match(summary, /published_candidates=1/);
 assert.match(summary, /composition_proposals=1/);
 assert.match(summary, /generated_needs_review=0/);
+const review = await readFile(join(outDir, 'review.md'), 'utf8');
+assert.match(review, /# Fake LLM Queue/);
+assert.match(review, /Composition proposal/);
+
+const resumeCalls = [];
+const resumed = await runLlmSandboxQueue({
+  queuePath,
+  outDir,
+  resume: true,
+  loopRunner: async (options) => {
+    resumeCalls.push(options);
+    return { transcript: [], state: {} };
+  }
+});
+assert.equal(resumeCalls.length, 0);
+assert.equal(resumed.results.length, 2);
+assert.equal(resumed.results.every((result) => result.resumed === true), true);
+assert.equal(resumed.review_queues.published_candidates[0].resumed, true);
 
 console.log('llm sandbox queue tests passed');
