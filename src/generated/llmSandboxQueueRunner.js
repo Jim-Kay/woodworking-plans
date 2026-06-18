@@ -7,7 +7,7 @@ export async function runLlmSandboxQueue(options = {}) {
   const queuePath = options.queuePath || 'examples/idea-queue.json';
   const queue = normalizeIdeaQueue(JSON.parse(await readFile(queuePath, 'utf8')));
   const outDir = options.outDir || join('generated', 'runs', `queue-${new Date().toISOString().replaceAll(':', '-').replace(/\.\d+Z$/, 'Z')}`);
-  const maxJobs = Number(options.maxJobs || process.env.LLM_QUEUE_MAX_JOBS || queue.jobs.length);
+  const maxJobs = Number(options.maxJobs ?? process.env.LLM_QUEUE_MAX_JOBS ?? queue.jobs.length);
   const onEvent = typeof options.onEvent === 'function' ? options.onEvent : () => {};
   const loopRunner = options.loopRunner || runLlmSandboxLoop;
   const resume = options.resume === true || process.env.LLM_QUEUE_RESUME === '1';
@@ -42,9 +42,9 @@ export async function runLlmSandboxQueue(options = {}) {
         outDir: jobOutDir,
         model: options.model || job.model || queue.defaults.model,
         baseUrl: options.baseUrl || queue.defaults.baseUrl,
-          maxIterations: job.max_iterations || options.maxIterations || queue.defaults.maxIterations,
-          numCtx: options.numCtx || queue.defaults.numCtx || queue.defaults.num_ctx,
-          requestTimeoutMs: options.requestTimeoutMs || queue.defaults.requestTimeoutMs || queue.defaults.request_timeout_ms,
+          maxIterations: job.max_iterations ?? options.maxIterations ?? queue.defaults.maxIterations,
+          numCtx: options.numCtx ?? queue.defaults.numCtx ?? queue.defaults.num_ctx,
+          requestTimeoutMs: options.requestTimeoutMs ?? queue.defaults.requestTimeoutMs ?? queue.defaults.request_timeout_ms,
           streamModel: options.streamModel === true,
           onEvent: (event) => emit(onEvent, 'queue_job_event', { index, job_id: job.id, event })
         });

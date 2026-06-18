@@ -47,9 +47,9 @@ export async function runLlmSandboxLoop(options = {}) {
   const visionScreenshot = options.visionScreenshot || process.env.LLM_VISION_SCREENSHOT || '';
   const scenarioPath = options.scenarioPath || 'examples/tray-bird-feeder.scenario.json';
   const outDir = options.outDir || join('generated', 'runs', `llm-${new Date().toISOString().replaceAll(':', '-').replace(/\.\d+Z$/, 'Z')}`);
-  const maxIterations = Number(options.maxIterations || process.env.LLM_MAX_ITERATIONS || 6);
-  const numCtx = Number(options.numCtx || process.env.LLM_NUM_CTX || 16384);
-  const requestTimeoutMs = Number(options.requestTimeoutMs || process.env.LLM_REQUEST_TIMEOUT_MS || 180000);
+  const maxIterations = Number(options.maxIterations ?? process.env.LLM_MAX_ITERATIONS ?? 6);
+  const numCtx = Number(options.numCtx ?? process.env.LLM_NUM_CTX ?? 16384);
+  const requestTimeoutMs = Number(options.requestTimeoutMs ?? process.env.LLM_REQUEST_TIMEOUT_MS ?? 180000);
   const streamModel = options.streamModel === true;
   const onEvent = typeof options.onEvent === 'function' ? options.onEvent : () => {};
 
@@ -188,6 +188,13 @@ async function chooseNextAction(state, options) {
       json_schema: { name: 'sandbox_action', strict: true, schema: sandboxActionSchema }
     }
   };
+
+  emit(options.onEvent, 'model_prompt', {
+    iteration: options.iteration,
+    model: options.model,
+    messages,
+    response_format: body.response_format
+  });
 
   if (options.streamModel) return chooseNextActionStreaming(body, options);
 
