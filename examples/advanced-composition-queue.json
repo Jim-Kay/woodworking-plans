@@ -1,0 +1,224 @@
+{
+  "schema_version": "0.1",
+  "title": "Advanced generated woodworking composition queue",
+  "defaults": {
+    "model": "qwen3:14b",
+    "baseUrl": "http://localhost:11434/v1",
+    "maxIterations": 12
+  },
+  "jobs": [
+    {
+      "id": "narrow-window-herb-shelf",
+      "title": "Narrow Window Herb Shelf",
+      "priority": "normal",
+      "scenario": {
+        "template_id": "narrow_window_herb_shelf",
+        "design_id": "queue_narrow_window_herb_shelf",
+        "intent": "Generate a narrow freestanding herb shelf sized for a window sill, with two side frames, two shallow shelves, a back stop rail, and simple screw assembly.",
+        "builder_goals": [
+          "search existing shelf, rail, rectangular panel, and screw-layout components before proposing anything new",
+          "keep the footprint narrow enough for a sill and avoid top-heavy proportions",
+          "show shelf panels as flat panels, not long rails",
+          "include pilot hole edge-distance guidance and staged assembly visuals"
+        ],
+        "parameters": {
+          "width_in": 22,
+          "depth_in": 5,
+          "height_in": 14,
+          "material_thickness_in": 0.75,
+          "shelf_count": 2,
+          "back_stop_height_in": 1.25,
+          "material": "pine_1x6"
+        }
+      }
+    },
+    {
+      "id": "garage-battery-charging-shelf",
+      "title": "Garage Battery Charging Shelf",
+      "priority": "normal",
+      "scenario": {
+        "template_id": "garage_battery_charging_shelf",
+        "design_id": "queue_garage_battery_charging_shelf",
+        "intent": "Generate a wall-mounted charging shelf for cordless tool batteries with a shallow tray, lower cord slot, mounting holes, and conservative electrical safety notes.",
+        "builder_goals": [
+          "reuse wall panel, shallow tray, drill layout, and wall-mount hardware components if available",
+          "show where cords exit without requiring electrical modification",
+          "include mounting-hole spacing and edge-clearance guidance",
+          "avoid claiming the shelf can carry heavy tools unless load validation exists"
+        ],
+        "parameters": {
+          "width_in": 26,
+          "height_in": 9,
+          "shelf_depth_in": 6,
+          "lip_height_in": 1.5,
+          "battery_slots": 5,
+          "cord_slot_width_in": 0.5,
+          "material_thickness_in": 0.75,
+          "mounting_holes": true,
+          "material": "plywood"
+        }
+      }
+    },
+    {
+      "id": "stackable-produce-crate",
+      "title": "Stackable Produce Crate",
+      "priority": "normal",
+      "scenario": {
+        "template_id": "stackable_produce_crate",
+        "design_id": "queue_stackable_produce_crate",
+        "intent": "Generate a stackable slatted produce crate with open sides, corner posts, bottom slats, hand openings, and nesting/stacking clearance assumptions.",
+        "builder_goals": [
+          "reuse slat, post, rectangular frame, spacing, and overlap-validation components if available",
+          "include air gaps between side slats and bottom slats",
+          "show a logical assembly order from corner posts to side slats to bottom slats",
+          "request a reusable hand-hole or stacking-lip component only if no existing component can represent it"
+        ],
+        "parameters": {
+          "width_in": 18,
+          "depth_in": 12,
+          "height_in": 8,
+          "post_size_in": 1.5,
+          "slat_thickness_in": 0.5,
+          "side_slat_count": 3,
+          "bottom_slat_count": 5,
+          "stacking_lip": true,
+          "material": "cedar"
+        }
+      }
+    },
+    {
+      "id": "desktop-monitor-riser-with-cubby",
+      "title": "Desktop Monitor Riser With Cubby",
+      "priority": "normal",
+      "scenario": {
+        "template_id": "desktop_monitor_riser_with_cubby",
+        "design_id": "queue_desktop_monitor_riser_with_cubby",
+        "intent": "Generate a monitor riser with a flat top, two side panels, a center divider, open storage cubbies, and an optional rear anti-rack rail.",
+        "builder_goals": [
+          "search for existing bookshelf, shelf, divider, and panel components before proposing a new template",
+          "validate clear openings and panel overlaps",
+          "show box assembly before divider installation",
+          "include a warning that load capacity is not certified without structural validation"
+        ],
+        "parameters": {
+          "width_in": 28,
+          "depth_in": 9,
+          "height_in": 5,
+          "material_thickness_in": 0.75,
+          "divider_count": 1,
+          "back_rail": true,
+          "claimed_capacity_lbs": 0,
+          "material": "plywood"
+        }
+      }
+    },
+    {
+      "id": "wall-mounted-fold-down-desk",
+      "title": "Wall-Mounted Fold-Down Desk",
+      "priority": "high",
+      "scenario": {
+        "template_id": "wall_mounted_fold_down_desk",
+        "design_id": "queue_wall_mounted_fold_down_desk",
+        "intent": "Generate a compact wall-mounted fold-down desk concept with a wall cleat, hinged work surface, side chains or folding brackets, and explicit capability requests if safe hinge geometry cannot be validated.",
+        "builder_goals": [
+          "reuse wall cleat, panel, hinge, bracket, drill-layout, and mounting-hole components if available",
+          "do not claim usable load capacity without deterministic structural validation",
+          "sequence wall cleat installation before hinge alignment and desk-panel attachment",
+          "request missing hinge-motion or load-path validation support if needed"
+        ],
+        "parameters": {
+          "width_in": 30,
+          "depth_open_in": 18,
+          "height_closed_in": 20,
+          "panel_thickness_in": 0.75,
+          "cleat_height_in": 3.5,
+          "support_style": "side_chains",
+          "claimed_capacity_lbs": 0,
+          "material": "plywood"
+        }
+      }
+    },
+    {
+      "id": "folding-laundry-drying-rack",
+      "title": "Folding Laundry Drying Rack",
+      "priority": "high",
+      "scenario": {
+        "template_id": "folding_laundry_drying_rack",
+        "design_id": "queue_folding_laundry_drying_rack",
+        "intent": "Generate a wall-mounted folding laundry drying rack with two side frames, parallel dowels, a wall frame, hinges, and a stop chain or brace.",
+        "builder_goals": [
+          "use existing rail, dowel, rectangular frame, hinge, wall-mount, and stage-animation components if available",
+          "validate dowel spacing and frame clearances",
+          "show dowels installed into one side rail before the second side rail is attached",
+          "request missing folding-frame motion support if the existing renderer cannot show the open and closed states"
+        ],
+        "parameters": {
+          "width_in": 28,
+          "height_in": 24,
+          "open_depth_in": 20,
+          "frame_stock_width_in": 1.5,
+          "frame_stock_thickness_in": 0.75,
+          "dowel_count": 6,
+          "dowel_diameter_in": 0.5,
+          "claimed_capacity_lbs": 0,
+          "material": "poplar"
+        }
+      }
+    },
+    {
+      "id": "corner-plant-stand-stepped-shelves",
+      "title": "Corner Plant Stand With Stepped Shelves",
+      "priority": "high",
+      "scenario": {
+        "template_id": "corner_plant_stand_stepped_shelves",
+        "design_id": "queue_corner_plant_stand_stepped_shelves",
+        "intent": "Generate a triangular corner plant stand with three stepped shelves, vertical corner posts, rear rails, and conservative anti-tip guidance.",
+        "builder_goals": [
+          "search for rectangular shelf, angled brace, post, rail, and anti-tip/mounting components before proposing new support",
+          "avoid intersecting shelves and posts; request overlap-validator enhancements if needed",
+          "show each shelf level added in sequence with posts already positioned",
+          "do not claim load capacity for heavy planters without deterministic validation"
+        ],
+        "parameters": {
+          "width_in": 24,
+          "depth_in": 24,
+          "height_in": 36,
+          "shelf_count": 3,
+          "shelf_thickness_in": 0.75,
+          "post_size_in": 1.5,
+          "corner_shape": "quarter_round_or_triangular",
+          "claimed_capacity_lbs": 0,
+          "anti_tip_recommended": true,
+          "material": "cedar"
+        }
+      }
+    },
+    {
+      "id": "rolling-miter-saw-stand-with-folding-wings",
+      "title": "Rolling Miter Saw Stand With Folding Wings",
+      "priority": "high",
+      "scenario": {
+        "template_id": "rolling_miter_saw_stand_with_folding_wings",
+        "design_id": "queue_rolling_miter_saw_stand_with_folding_wings",
+        "intent": "Generate a rolling miter saw stand concept with a central cabinet bay, caster base, two folding support wings, stop blocks, and explicit escalation for missing structural or hinge validation.",
+        "builder_goals": [
+          "search for rectangular frame bay, caster plate, shelf, hinge, folding wing, stop-block, and dimensioned build-step components",
+          "treat this as a concept unless load and tipping validators exist",
+          "show the cabinet/base assembly before wings, casters, and stop blocks are installed",
+          "request missing reusable components instead of inventing duplicate names for existing frame, caster, or hinge concepts"
+        ],
+        "parameters": {
+          "base_width_in": 36,
+          "base_depth_in": 24,
+          "base_height_in": 34,
+          "wing_length_in": 30,
+          "wing_count": 2,
+          "caster_count": 4,
+          "material_thickness_in": 0.75,
+          "frame_stock": "2x4",
+          "claimed_capacity_lbs": 0
+        }
+      }
+    }
+  ]
+}
