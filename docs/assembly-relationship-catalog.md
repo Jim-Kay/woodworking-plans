@@ -1,18 +1,20 @@
-# CAD Assembly Ontology Spike
+# Assembly Relationship Catalog
 
 ## Why This Matters
 
-The local design loop is starting to need an assembly vocabulary that is larger
+The local design loop is starting to need a relationship catalog that is larger
 than the handcrafted woodworking components in this repo. Qwen can already ask
 for reusable components, but it still invents opaque names such as
 `wooden_frame_001`, picks semantically mismatched components, or treats a nearby
 template as valid when it is only superficially similar.
 
-Existing CAD assembly datasets may help us avoid inventing this ontology from
-scratch. The goal is not to import arbitrary mechanical CAD parts as publishable
-woodworking plans. The useful layer is the language and metadata around how
-parts relate to each other: joints, contacts, holes, faces, edges, motion, and
-assembly graph relationships.
+Existing CAD assembly datasets may help us avoid inventing the vocabulary from
+scratch. This starts as a taxonomy of relationship types and part roles. It can
+grow toward an ontology when we add stronger rules such as "a hinged panel needs
+a hinge axis, swing clearance, and a stop or support." The goal is not to import
+arbitrary mechanical CAD parts as publishable woodworking plans. The useful
+layer is the language and metadata around how parts relate to each other:
+joints, contacts, holes, faces, edges, motion, and assembly graph relationships.
 
 ## Candidate Sources
 
@@ -82,11 +84,11 @@ Why it is promising:
 Fit for this repo:
 
 - Useful as a stable naming influence.
-- Too low-level as the first ontology for Qwen.
+- Too low-level as the first user-facing taxonomy for Qwen.
 - Best treated as a future interoperability layer, not the user-facing local
   model vocabulary.
 
-## Proposed Internal Vocabulary
+## Proposed Internal Record
 
 Use a small normalized relationship record that can be populated from datasets,
 hand-authored components, or Qwen proposals.
@@ -145,7 +147,7 @@ unless they introduce a reusable relationship we need.
 
 ## How This Helps Qwen
 
-The imported ontology should not become another huge text blob in the prompt.
+The imported catalog should not become another huge text blob in the prompt.
 Instead, it should back tools that Qwen can query:
 
 - `search_assembly_relationships(query, part_roles, relationship_type)`
@@ -160,10 +162,12 @@ closest known relationships."
 
 ## First Implementation Pass
 
-1. Add a local `assemblyRelationshipCatalog` module with 20-40 hand-authored
+1. Add a local `assemblyRelationshipCatalog` module with hand-authored
    relationship records based on woodworking concepts and terms observed in
-   Fusion/AutoMate docs.
-2. Add `search_assembly_relationships` to the sandbox tools.
+   Fusion/AutoMate docs. This initial version exists in
+   `src/generated/assemblyRelationshipCatalog.js`.
+2. Add `search_assembly_relationships` to the sandbox tools. This initial
+   query tool is available to Qwen alongside component search.
 3. Update proposal review so suspicious IDs such as `wooden_frame_001` or
    `sled_base_002` are flagged and replaced with catalog relationship searches.
 4. Run the advanced composition queue again and compare:

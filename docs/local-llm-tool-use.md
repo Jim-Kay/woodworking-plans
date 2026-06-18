@@ -165,6 +165,10 @@ npm run sandbox -- export_plan_package generated/runs/demo/design.json generated
 - `list_components`
 - `search_components`
 - `get_component`
+- `list_assembly_relationship_types`
+- `list_assembly_relationships`
+- `search_assembly_relationships`
+- `get_assembly_relationship`
 - `generate_design`
 - `summarize_design`
 - `validate_design`
@@ -181,14 +185,15 @@ The intended model sequence is usually:
 
 1. Inspect the scenario and tool surface.
 2. Browse or search the component catalog when composing an unsupported plan family or considering a missing capability.
-3. Select exact component IDs with `get_component` before relying on them in a scenario or capability request.
-4. Generate a design from the selected template.
-5. Validate the generated design.
-6. Revise if validation fails.
-7. Run `review_build_steps` to check whether the build instructions and rendered step visuals are understandable to a first-time builder.
-8. Use `annotate_design` when the design is structurally valid but needs better build guidance, drill instructions, labels, or part notes.
-9. Check publishability.
-10. Export a plan package, or propose/request a missing capability from Codex.
+3. Search the assembly relationship catalog when the important question is how parts connect, support, locate, clear, or move relative to each other.
+4. Select exact component IDs with `get_component` and exact relationship IDs with `get_assembly_relationship` before relying on them in a scenario, composition proposal, or capability request.
+5. Generate a design from the selected template.
+6. Validate the generated design.
+7. Revise if validation fails.
+8. Run `review_build_steps` to check whether the build instructions and rendered step visuals are understandable to a first-time builder.
+9. Use `annotate_design` when the design is structurally valid but needs better build guidance, drill instructions, labels, or part notes.
+10. Check publishability.
+11. Export a plan package, or propose/request a missing capability from Codex.
 
 Codex should generally improve prompts, tool schemas, validators, adapters, and portal support. The local model should make design-level choices through sandbox tools: dimensions, parameter revisions, build guidance, labels, notes, and missing-capability requests. If the model cannot express a desired improvement through the current tools, that is a signal for Codex to add a narrower tool rather than directly hardcoding the design improvement.
 
@@ -203,17 +208,19 @@ This avoids creating duplicate components under slightly different names, such a
 
 Catalog search uses a hybrid retrieval strategy. Exact IDs and aliases score highest, but the search layer also expands common woodworking synonyms, tolerates invalid category hints, and uses fuzzy text similarity over descriptions, inputs, outputs, and example uses. The search result is still only a candidate list: the model should select exact `template_id` or `component_id` values and let deterministic generation, proposal review, validation, and publishability checks decide whether the candidate is actually usable.
 
+The assembly relationship catalog is the connection-language layer. It starts as a taxonomy of relationship types such as `fixed_contact`, `support`, `motion`, `layout_reference`, and `clearance`. The records can later grow toward ontology-like rules, but the current tool is intentionally pragmatic: use `search_assembly_relationships` to find exact relationship IDs for cases like a rail fastened to a panel, a shelf spanning between side panels, a hinged fold-down panel, a rabbet ledge supporting strainer rails, or caster plates mounted to a base. Composition proposals should include `relationship_ids` when relationships are central to the design.
+
 Before proposing a new template, the model should call `search_templates` with the scenario `template_id`, project name, and plain-language intent. This helps map names such as `mail_key_organizer` or `entry organizer with hooks` to existing supported templates instead of creating duplicate composition proposals.
 
 Unsupported templates should recover through component discovery before escalation. For example, a `wall_key_rack` scenario should search for `hardware.linear_hook_array`, `hardware.wall_mount_hole_pair`, `geometry.rectangular_panel`, `patterns.centered_linear_spacing`, and related validators before asking Codex for composition support. A good request is "add composition support using these existing components plus any missing glue," not "add a one-off wall key rack generator."
 
-For unsupported project families that can be described with known building blocks, the local model should use `propose_component_composition` before `request_capability`. The proposal is a review artifact, not executable source code. It should include exact `component_ids`, template parameters, deterministic generation steps, validation rules, build-step intent, renderer requirements, and open questions. The sandbox checks that referenced components exist and that the proposal is complete enough to review, then writes `composition-proposal.json` for Codex. Codex can then approve, revise, or reject the proposal and add deterministic generator/validator/renderer code with tests.
+For unsupported project families that can be described with known building blocks, the local model should use `propose_component_composition` before `request_capability`. The proposal is a review artifact, not executable source code. It should include exact `component_ids`, exact `relationship_ids` where applicable, template parameters, deterministic generation steps, validation rules, build-step intent, renderer requirements, and open questions. The sandbox checks that referenced components and relationships exist and that the proposal is complete enough to review, then writes `composition-proposal.json` for Codex. Codex can then approve, revise, or reject the proposal and add deterministic generator/validator/renderer code with tests.
 
 This lets the local model spend cheap tokens on design exploration while preserving quality gates:
 
-1. Qwen searches and inspects existing components.
-2. Qwen drafts a composition proposal using exact component IDs.
-3. Deterministic sandbox checks reject unknown components or thin proposals.
+1. Qwen searches and inspects existing components and relationships.
+2. Qwen drafts a composition proposal using exact component IDs and relationship IDs.
+3. Deterministic sandbox checks reject unknown IDs or thin proposals.
 4. Codex reviews the proposal and implements only the reusable pieces that survive review.
 5. Tests, validators, rendered screenshots, and publishability checks decide whether the implementation graduates to the catalog.
 

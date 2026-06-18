@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { canonicalToPortalResult } from '../src/generated/adapter.js';
 import { generateCanonicalOpenScad } from '../src/generated/openScad.js';
 import { calculateGeneratedPlan } from '../src/generated/portal.js';
-import { generateDesign, exportPlanPackage, validateGeneratedDesign, checkPublishability, createCapabilityRequest, executeSandboxTool, listComponentCategories, listComponents, listSandboxTools, reviewBuildSteps, searchComponents, searchTemplates } from '../src/generated/sandbox.js';
+import { generateDesign, exportPlanPackage, validateGeneratedDesign, checkPublishability, createCapabilityRequest, executeSandboxTool, listAssemblyRelationshipTypes, listAssemblyRelationships, listComponentCategories, listComponents, listSandboxTools, reviewBuildSteps, searchAssemblyRelationships, searchComponents, searchTemplates } from '../src/generated/sandbox.js';
 
 const scenario = {
   template_id: 'tray_bird_feeder',
@@ -260,12 +260,15 @@ const tools = listSandboxTools();
 assert.equal(tools.some((tool) => tool.name === 'generate_design'), true);
 assert.equal(tools.some((tool) => tool.name === 'search_templates'), true);
 assert.equal(tools.some((tool) => tool.name === 'search_components'), true);
+assert.equal(tools.some((tool) => tool.name === 'search_assembly_relationships'), true);
 assert.equal(tools.some((tool) => tool.name === 'review_build_steps'), true);
 assert.equal(tools.some((tool) => tool.name === 'propose_component_composition'), true);
 assert.equal(tools.some((tool) => tool.name === 'request_capability'), true);
 
 assert.equal(listComponentCategories().some((category) => category.id === 'hardware'), true);
 assert.equal(listComponents({ category_id: 'hardware' }).some((component) => component.component_id === 'hardware.linear_hook_array'), true);
+assert.equal(listAssemblyRelationshipTypes().some((type) => type.id === 'motion'), true);
+assert.equal(listAssemblyRelationships({ type_id: 'support' }).some((relationship) => relationship.relationship_id === 'relationship.support.shelf_between_side_panels'), true);
 assert.equal(searchComponents({ query: 'key hooks pilot holes' }).some((component) => component.component_id === 'hardware.linear_hook_array'), true);
 assert.equal(searchComponents({ query: 'mail pocket' }).some((component) => component.component_id === 'geometry.shallow_wall_pocket'), true);
 assert.equal(searchComponents({ query: 'entryway mail cubby catchall' })[0].component_id, 'geometry.shallow_wall_pocket');
@@ -277,6 +280,9 @@ assert.equal(searchComponents({ query: 'key hooks pilot holes', category_id: 'ha
 assert.equal(searchComponents({ query: '27 gallon tote rack runner rails caster wheels workbench' }).some((component) => component.component_id === 'geometry.tote_runner_pair'), true);
 assert.equal(searchComponents({ query: '27 gallon tote rack runner rails caster wheels workbench' }).some((component) => component.component_id === 'hardware.caster_plate_set'), true);
 assert.equal(searchComponents({ query: 'PDF style dimensioned build step fastener callout' }).some((component) => component.component_id === 'build_steps.dimensioned_stage_sequence'), true);
+assert.equal(searchAssemblyRelationships({ query: 'fold down hinged desk panel support chain swing clearance' })[0].relationship_id, 'relationship.motion.hinge_panel_to_cleat');
+assert.equal(searchAssemblyRelationships({ query: 'dowel laundry drying rack wall frame hinge', part_roles: ['dowel', 'side rail', 'wall frame'] })[0].relationship_id, 'relationship.motion.dowel_frame_hinged_to_wall_frame');
+assert.equal(searchAssemblyRelationships({ query: 'caster wheels under rolling workbench base plate screws' }).some((relationship) => relationship.relationship_id === 'relationship.support.caster_plate_to_base'), true);
 assert.equal(searchTemplates({ query: 'entryway mail cubby hooks' })[0].template_id, 'wall_panel_with_pocket_and_linear_hardware');
 assert.equal(searchTemplates({ query: 'rockport step ladder stool' })[0].template_id, 'two_step_stool');
 
@@ -294,6 +300,10 @@ assert.equal(executed.result.components.some((component) => component.component_
 executed = executeSandboxTool({ name: 'search_templates', arguments: { query: 'mail and key organizer', limit: 3 } }, toolState);
 assert.equal(executed.result.ok, true);
 assert.equal(executed.result.templates[0].template_id, 'wall_panel_with_pocket_and_linear_hardware');
+
+executed = executeSandboxTool({ name: 'search_assembly_relationships', arguments: { query: 'rail fastened to panel face', part_roles: ['rail', 'panel'], limit: 3 } }, toolState);
+assert.equal(executed.result.ok, true);
+assert.equal(executed.result.relationships[0].relationship_id, 'relationship.fixed_contact.panel_to_rail');
 
 executed = executeSandboxTool({ name: 'get_component', arguments: { component_id: 'hardware.linear_hook_array' } }, toolState);
 assert.equal(executed.result.ok, true);
@@ -439,6 +449,7 @@ executed = executeSandboxTool({
     template_id: 'floating_frame_strainer_on_rabbet',
     title: 'Floating Frame Strainer On Rabbet',
     component_ids: ['geometry.rabbeted_frame_face_set', 'geometry.strainer_rail_set', 'validators.rabbet_strainer_fit', 'build_steps.mill_rabbet_then_assemble_frame', 'rendering.rabbet_milling_operation_view'],
+    relationship_ids: ['relationship.clearance.reveal_between_frame_and_insert', 'relationship.support.rabbet_ledge_supports_strainer'],
     parameters: {
       canvas_width_in: { type: 'number', default: 16 },
       canvas_height_in: { type: 'number', default: 20 },
@@ -467,7 +478,10 @@ executed = executeSandboxTool({
 assert.equal(executed.result.ok, true);
 assert.equal(executed.result.approval_status, 'codex_review_required');
 assert.equal(executed.state.compositionProposal.template_id, 'floating_frame_strainer_on_rabbet');
+assert.equal(executed.state.compositionProposal.relationship_ids.includes('relationship.support.rabbet_ledge_supports_strainer'), true);
+assert.equal(executed.result.review.relationship_summaries.some((item) => item.relationship_id === 'relationship.support.rabbet_ledge_supports_strainer'), true);
 assert.match(executed.result.capability_request_arguments.evidence.join('\n'), /composition_proposal_id/);
+assert.match(executed.result.capability_request_arguments.evidence.join('\n'), /relationship_ids=.*relationship\.support\.rabbet_ledge_supports_strainer/);
 const validCompositionProposal = executed.state.compositionProposal;
 const proposalState = executed.state;
 
@@ -496,6 +510,7 @@ assert.equal(executed.result.ok, false);
 assert.match(executed.result.review.errors.join('\n'), /component_ids must name exact existing/);
 assert.equal(executed.state.compositionProposal, undefined);
 assert.equal(executed.result.known_component_ids.includes('geometry.rabbeted_frame_face_set'), true);
+assert.equal(executed.result.known_relationship_ids.includes('relationship.support.rabbet_ledge_supports_strainer'), true);
 assert.equal(validCompositionProposal.template_id, 'floating_frame_strainer_on_rabbet');
 
 executed = executeSandboxTool({

@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { canonicalToPortalResult } from './adapter.js';
+import { getAssemblyRelationship, listAssemblyRelationshipTypes, listAssemblyRelationships, searchAssemblyRelationships } from './assemblyRelationshipCatalog.js';
 import { reviewBuildSteps } from './buildStepQuality.js';
 import { generateBoardWithLinearHardwareDesign } from './boardWithLinearHardware.js';
 import { getComponent, listComponentCategories, listComponents, searchComponents } from './componentCatalog.js';
@@ -12,7 +13,7 @@ import { generateTwoStepStoolDesign } from './twoStepStool.js';
 import { checkPublishability, validateGeneratedDesign } from './validator.js';
 import { generateWallPanelPocketHardwareDesign } from './wallPanelPocketHardware.js';
 
-export { checkPublishability, createCapabilityRequest, generateCanonicalOpenScad, getComponent, listComponentCategories, listComponents, listTemplates, normalizePhotoDesignBrief, reviewBuildSteps, scenarioFromPhotoDesignBrief, searchComponents, searchTemplates, summarizePhotoDesignBrief, validateGeneratedDesign };
+export { checkPublishability, createCapabilityRequest, generateCanonicalOpenScad, getAssemblyRelationship, getComponent, listAssemblyRelationshipTypes, listAssemblyRelationships, listComponentCategories, listComponents, listTemplates, normalizePhotoDesignBrief, reviewBuildSteps, scenarioFromPhotoDesignBrief, searchAssemblyRelationships, searchComponents, searchTemplates, summarizePhotoDesignBrief, validateGeneratedDesign };
 
 const DESIGN_PARAMETER_KEYS = [
   'width_in',
@@ -127,6 +128,54 @@ export const SANDBOX_TOOLS = [
       required: ['component_id'],
       properties: {
         component_id: { type: 'string' }
+      }
+    }
+  },
+  {
+    name: 'list_assembly_relationship_types',
+    description: 'List relationship taxonomy types such as fixed contact, support, motion, layout reference, and clearance.',
+    input_schema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {}
+    }
+  },
+  {
+    name: 'list_assembly_relationships',
+    description: 'List reusable assembly relationship records, optionally scoped to one relationship type.',
+    input_schema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        type_id: { type: 'string' },
+        include_details: { type: 'boolean' }
+      }
+    }
+  },
+  {
+    name: 'search_assembly_relationships',
+    description: 'Search reusable part-to-part relationships by intent, part roles, motion, contact, clearance, or support needs before inventing component names.',
+    input_schema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['query'],
+      properties: {
+        query: { type: 'string' },
+        part_roles: { type: 'array', items: { type: 'string' } },
+        type_id: { type: 'string' },
+        limit: { type: 'number' }
+      }
+    }
+  },
+  {
+    name: 'get_assembly_relationship',
+    description: 'Inspect one assembly relationship by exact relationship_id.',
+    input_schema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['relationship_id'],
+      properties: {
+        relationship_id: { type: 'string' }
       }
     }
   },
@@ -291,6 +340,7 @@ export const SANDBOX_TOOLS = [
         template_id: { type: 'string' },
         title: { type: 'string' },
         component_ids: { type: 'array', items: { type: 'string' } },
+        relationship_ids: { type: 'array', items: { type: 'string' } },
         parameters: { type: 'object', additionalProperties: true },
         design_algorithm: { type: 'array', items: { type: 'string' } },
         validation_strategy: { type: 'array', items: { type: 'string' } },
@@ -409,6 +459,7 @@ export function executeSandboxTool(toolCall, state = {}) {
         scenario: nextState.scenario || null,
         templates: listTemplates(),
         component_categories: listComponentCategories(),
+        assembly_relationship_types: listAssemblyRelationshipTypes(),
         current_design: summarizeGeneratedDesign(nextState.design),
         current_validation: nextState.validation || null,
         current_build_step_review: nextState.buildStepReview || null,
@@ -469,6 +520,46 @@ export function executeSandboxTool(toolCall, state = {}) {
     return component
       ? { state: nextState, result: { ok: true, component } }
       : { state: nextState, result: { ok: false, error: `Unknown component_id: ${args.component_id || 'missing'}`, recommended_action: 'search_components' } };
+  }
+
+  if (name === 'list_assembly_relationship_types') {
+    return { state: nextState, result: { ok: true, types: listAssemblyRelationshipTypes() } };
+  }
+
+  if (name === 'list_assembly_relationships') {
+    return {
+      state: nextState,
+      result: {
+        ok: true,
+        relationships: listAssemblyRelationships({
+          type_id: args.type_id || null,
+          include_details: args.include_details === true
+        })
+      }
+    };
+  }
+
+  if (name === 'search_assembly_relationships') {
+    return {
+      state: nextState,
+      result: {
+        ok: true,
+        query: String(args.query || ''),
+        relationships: searchAssemblyRelationships({
+          query: args.query,
+          part_roles: args.part_roles || [],
+          type_id: args.type_id || null,
+          limit: args.limit
+        })
+      }
+    };
+  }
+
+  if (name === 'get_assembly_relationship') {
+    const relationship = getAssemblyRelationship(args.relationship_id);
+    return relationship
+      ? { state: nextState, result: { ok: true, relationship } }
+      : { state: nextState, result: { ok: false, error: `Unknown relationship_id: ${args.relationship_id || 'missing'}`, recommended_action: 'search_assembly_relationships' } };
   }
 
   if (name === 'inspect_photo_brief') {
@@ -625,12 +716,14 @@ export function executeSandboxTool(toolCall, state = {}) {
         approval_status: 'codex_review_required',
         recommended_action: review.errors.length ? 'propose_component_composition' : 'request_capability',
         known_component_ids: review.errors.length ? listComponents().map((component) => component.component_id) : null,
+        known_relationship_ids: review.errors.length ? listAssemblyRelationships().map((relationship) => relationship.relationship_id) : null,
         capability_request_arguments: review.errors.length ? null : {
           capability: `Implement component composition template ${proposal.template_id}`,
           reason: `Qwen proposed a reusable composition using ${proposal.component_ids.join(', ')}. Codex should review the proposal, add deterministic generator/validator/renderer support, and reject or revise unsafe assumptions.`,
           evidence: [
             `composition_proposal_id=${proposal.proposal_id}`,
             `component_ids=${proposal.component_ids.join(', ')}`,
+            `relationship_ids=${proposal.relationship_ids.join(', ') || 'none'}`,
             `approval_status=${proposal.approval_status}`
           ]
         }
@@ -666,6 +759,9 @@ function normalizeComponentCompositionProposal(args = {}, scenario = {}) {
   const rawComponentIds = uniqueStrings(args.component_ids || args.components || args.existing_component_ids);
   const existingComponentIds = rawComponentIds.filter((id) => getComponent(id));
   const missingComponentIds = rawComponentIds.filter((id) => !getComponent(id));
+  const rawRelationshipIds = uniqueStrings(args.relationship_ids || args.relationships || args.assembly_relationship_ids);
+  const existingRelationshipIds = rawRelationshipIds.filter((id) => getAssemblyRelationship(id));
+  const missingRelationshipIds = rawRelationshipIds.filter((id) => !getAssemblyRelationship(id));
   return {
     type: 'component_composition_proposal',
     schema_version: '0.1',
@@ -676,6 +772,8 @@ function normalizeComponentCompositionProposal(args = {}, scenario = {}) {
     source_design_id: args.design_id || scenario?.design_id || null,
     component_ids: existingComponentIds,
     requested_missing_component_ids: uniqueStrings([...(args.requested_missing_component_ids || []), ...missingComponentIds]),
+    relationship_ids: existingRelationshipIds,
+    requested_missing_relationship_ids: uniqueStrings([...(args.requested_missing_relationship_ids || []), ...missingRelationshipIds]),
     parameters: normalizeProposalParameters(args.parameters || scenario?.parameters || {}),
     design_algorithm: cleanStringArray(args.design_algorithm || args.algorithm || args.generation_steps),
     validation_strategy: cleanStringArray(args.validation_strategy || args.validators || args.validation),
@@ -690,12 +788,15 @@ function reviewComponentCompositionProposal(proposal, scenario = {}) {
   const errors = [];
   const warnings = [];
   const existing = proposal.component_ids.map((id) => ({ id, component: getComponent(id) }));
+  const existingRelationships = proposal.relationship_ids.map((id) => ({ id, relationship: getAssemblyRelationship(id) }));
   const unknownRendererComponentIds = proposal.renderer_requirements
     .filter((item) => /^[a-z_]+\.[a-z0-9_.-]+$/i.test(item))
     .filter((item) => !getComponent(item));
   if (!proposal.template_id) errors.push('template_id is required.');
   if (!proposal.title) errors.push('title is required.');
   if (!proposal.component_ids.length) errors.push('component_ids must name exact existing component IDs.');
+  if (proposal.requested_missing_relationship_ids.length) warnings.push(`Unknown relationship IDs requested: ${proposal.requested_missing_relationship_ids.join(', ')}. Use search_assembly_relationships before inventing relationship IDs.`);
+  if (!proposal.relationship_ids.length) warnings.push('Consider adding exact relationship_ids from search_assembly_relationships so Codex can review how parts connect, not just which components exist.');
   if (!Object.keys(proposal.parameters || {}).length) errors.push('parameters must describe the proposed template inputs.');
   if (proposal.design_algorithm.length < 3) errors.push('design_algorithm should include at least three deterministic generation steps.');
   if (proposal.validation_strategy.length < 2) errors.push('validation_strategy should include at least two deterministic checks.');
@@ -728,6 +829,14 @@ function reviewComponentCompositionProposal(proposal, scenario = {}) {
         component_id: item.component.component_id,
         category_id: item.component.category_id,
         outputs: item.component.outputs || []
+      })),
+    relationship_summaries: existingRelationships
+      .filter((item) => item.relationship)
+      .map((item) => ({
+        relationship_id: item.relationship.relationship_id,
+        type_id: item.relationship.type_id,
+        validator_hints: item.relationship.validator_hints || [],
+        component_hints: item.relationship.component_hints || []
       })),
     suggested_existing_components: suggestedExistingComponents,
     required_codex_review: [
