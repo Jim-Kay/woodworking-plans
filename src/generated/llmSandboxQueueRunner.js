@@ -76,6 +76,8 @@ export async function runLlmSandboxQueue(options = {}) {
 
   const index = queueIndex({ queuePath, queue, outDir, startedAt, results, finishedAt: new Date().toISOString() });
   await writeJson(join(outDir, 'index.json'), index);
+  await writeJson(join(outDir, 'triage.json'), queueTriage(index, queue));
+  await writeJson(join(outDir, 'retry-queue.json'), retryQueue(index, queue));
   await writeFile(join(outDir, 'summary.txt'), queueSummary(index), 'utf8');
   await writeFile(join(outDir, 'review.md'), queueReviewMarkdown(index), 'utf8');
   emit(onEvent, 'queue_complete', index.summary);
@@ -87,7 +89,7 @@ export function normalizeIdeaQueue(value = {}) {
   const defaults = {
     model: value.defaults?.model || process.env.LLM_MODEL || 'qwen3:14b',
     baseUrl: value.defaults?.baseUrl || value.defaults?.base_url || process.env.LLM_BASE_URL || 'http://localhost:11434/v1',
-    maxIterations: Number(value.defaults?.maxIterations || value.defaults?.max_iterations || process.env.LLM_MAX_ITERATIONS || 8)
+    maxIterations: Number(value.defaults?.maxIterations ?? value.defaults?.max_iterations ?? process.env.LLM_MAX_ITERATIONS ?? 8)
   };
   return {
     schema_version: value.schema_version || '0.1',
@@ -115,7 +117,7 @@ function normalizeQueueJob(job = {}, index) {
     scenario_path: job.scenario_path || job.scenarioPath || null,
     scenario: job.scenario || null,
     model: job.model || null,
-    max_iterations: job.max_iterations || job.maxIterations || null,
+    max_iterations: job.max_iterations ?? job.maxIterations ?? null,
     notes: job.notes || ''
   };
 }
@@ -158,6 +160,8 @@ function summarizeQueueJob({ index, job, jobOutDir, scenarioPath, loopResult, jo
       capability_request: state.capabilityRequest ? join(jobOutDir, 'capability-request.json') : null,
       transcript: join(jobOutDir, 'transcript.json')
     },
+    capability_request_summary: summarizeCapabilityRequest(state.capabilityRequest),
+    composition_proposal_summary: summarizeCompositionProposal(state.compositionProposal),
     next_action: nextActionForOutcome(outcome),
     last_actions: summarizeLastActions(loopResult.transcript)
   };
@@ -263,6 +267,10 @@ function queueReviewMarkdown(index) {
       if (item.artifacts?.composition_proposal) lines.push(`- Composition proposal: \`${item.artifacts.composition_proposal}\``);
       if (item.artifacts?.capability_request) lines.push(`- Capability request: \`${item.artifacts.capability_request}\``);
       if (item.artifacts?.transcript) lines.push(`- Transcript: \`${item.artifacts.transcript}\``);
+      const capability = index.results.find((result) => result.id === item.id)?.capability_request_summary;
+      const proposal = index.results.find((result) => result.id === item.id)?.composition_proposal_summary;
+      if (capability) lines.push(`- Capability: ${capability.capability}`);
+      if (proposal) lines.push(`- Composition: ${proposal.template_id}; components=${proposal.component_ids.length}; relationships=${proposal.relationship_ids.length}`);
       lines.push('');
     }
   }
@@ -279,6 +287,8 @@ function queueReviewMarkdown(index) {
 async function writeQueueArtifacts({ queuePath, queue, outDir, startedAt, results }) {
   const index = queueIndex({ queuePath, queue, outDir, startedAt, results });
   await writeJson(join(outDir, 'index.json'), index);
+  await writeJson(join(outDir, 'triage.json'), queueTriage(index, queue));
+  await writeJson(join(outDir, 'retry-queue.json'), retryQueue(index, queue));
   await writeFile(join(outDir, 'summary.txt'), queueSummary(index), 'utf8');
   await writeFile(join(outDir, 'review.md'), queueReviewMarkdown(index), 'utf8');
 }
@@ -309,6 +319,112 @@ function buildReviewItems(results) {
     .sort((a, b) => (rank[a.outcome] ?? 9) - (rank[b.outcome] ?? 9)
       || (priorityRank[a.priority] ?? 9) - (priorityRank[b.priority] ?? 9)
       || a.title.localeCompare(b.title));
+}
+
+export function queueTriage(index, queue = null) {
+  return {
+    schema_version: '0.1',
+    kind: 'local_llm_queue_triage',
+    queue_path: index.queue_path,
+    title: index.title,
+    out_dir: index.out_dir,
+    generated_at: new Date().toISOString(),
+    summary: index.summary,
+    codex_review_order: index.review_items.map((item) => ({
+      id: item.id,
+      title: item.title,
+      outcome: item.outcome,
+      priority: item.priority,
+      next_action: item.next_action,
+      out_dir: item.out_dir
+    })),
+    capability_requests: index.results
+      .filter((result) => result.capability_request_summary)
+      .map((result) => ({
+        job_id: result.id,
+        title: result.title,
+        priority: result.review_priority,
+        out_dir: result.out_dir,
+        artifact: result.artifacts.capability_request,
+        ...result.capability_request_summary
+      })),
+    composition_proposals: index.results
+      .filter((result) => result.composition_proposal_summary)
+      .map((result) => ({
+        job_id: result.id,
+        title: result.title,
+        priority: result.review_priority,
+        out_dir: result.out_dir,
+        artifact: result.artifacts.composition_proposal,
+        ...result.composition_proposal_summary
+      })),
+    retry_queue: {
+      path: join(index.out_dir, 'retry-queue.json'),
+      job_count: retryQueue(index, queue).jobs.length,
+      usage: 'Run this after prompt/tool fixes to retry unresolved jobs without manually reconstructing scenarios.'
+    }
+  };
+}
+
+export function retryQueue(index, queue = null) {
+  const originalJobs = new Map((queue?.jobs || []).map((job) => [job.id, job]));
+  const retryableOutcomes = new Set(['failed_loop', 'generated_needs_review', 'capability_request']);
+  const jobs = index.results
+    .filter((result) => retryableOutcomes.has(result.outcome))
+    .map((result) => retryJobForResult(result, originalJobs.get(result.id)))
+    .filter(Boolean);
+  return {
+    schema_version: '0.1',
+    title: `${index.title} retry queue`,
+    defaults: queue?.defaults || {},
+    jobs
+  };
+}
+
+function retryJobForResult(result, originalJob = null) {
+  const scenario = originalJob?.scenario ? structuredClone(originalJob.scenario) : null;
+  const scenarioPath = originalJob?.scenario_path || (!scenario ? result.scenario_path : null);
+  if (!scenario && !scenarioPath) return null;
+  return {
+    id: `${result.id}-retry`,
+    title: `Retry: ${result.title}`,
+    priority: result.review_priority || originalJob?.priority || 'normal',
+    ...(scenario ? { scenario } : { scenario_path: scenarioPath }),
+    max_iterations: originalJob?.max_iterations ?? null,
+    notes: [
+      originalJob?.notes ? `Original notes: ${originalJob.notes}` : '',
+      `Prior run: ${result.out_dir}`,
+      `Prior outcome: ${result.outcome}`,
+      result.next_action ? `Prior next action: ${result.next_action}` : '',
+      result.capability_request_summary?.capability ? `Requested capability: ${result.capability_request_summary.capability}` : '',
+      result.composition_proposal_summary?.template_id ? `Composition proposal: ${result.composition_proposal_summary.template_id}` : '',
+      result.last_actions?.length ? `Last actions: ${result.last_actions.map((item) => `${item.iteration}:${item.action || 'unknown'}:${item.result_status || 'unknown'}`).join(', ')}` : ''
+    ].filter(Boolean).join('\n')
+  };
+}
+
+function summarizeCapabilityRequest(request) {
+  if (!request) return null;
+  return {
+    capability: request.capability || '',
+    reason: request.reason || '',
+    evidence: Array.isArray(request.evidence) ? request.evidence.slice(0, 8) : [],
+    design_id: request.design_id || null
+  };
+}
+
+function summarizeCompositionProposal(proposal) {
+  if (!proposal) return null;
+  return {
+    template_id: proposal.template_id || '',
+    title: proposal.title || '',
+    component_ids: Array.isArray(proposal.component_ids) ? proposal.component_ids : [],
+    requested_missing_component_ids: Array.isArray(proposal.requested_missing_component_ids) ? proposal.requested_missing_component_ids : [],
+    relationship_ids: Array.isArray(proposal.relationship_ids) ? proposal.relationship_ids : [],
+    requested_missing_relationship_ids: Array.isArray(proposal.requested_missing_relationship_ids) ? proposal.requested_missing_relationship_ids : [],
+    renderer_requirements: Array.isArray(proposal.renderer_requirements) ? proposal.renderer_requirements.slice(0, 8) : [],
+    open_questions: Array.isArray(proposal.open_questions) ? proposal.open_questions.slice(0, 8) : []
+  };
 }
 
 function summarizeLastActions(transcript = []) {
