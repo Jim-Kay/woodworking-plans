@@ -590,6 +590,8 @@ export function executeSandboxTool(toolCall, state = {}) {
     const scenario = scenarioFromToolArguments(nextState.scenario, args);
     const unsupportedTemplate = unsupportedTemplateResult(scenario);
     if (unsupportedTemplate) return { state: nextState, result: unsupportedTemplate };
+    const scenarioFit = supportedTemplateScenarioFit(scenario);
+    if (!scenarioFit.ok) return { state: nextState, result: scenarioFit };
     nextState.design = generateDesign(scenario);
     nextState.validation = null;
     nextState.finalPackage = null;
@@ -967,7 +969,9 @@ export function scenarioFromToolArguments(scenario = {}, args = {}) {
   return {
     design_id: args.design_id || scenario.design_id,
     template_id: args.template_id || scenario.template_id,
+    title: args.title || scenario.title,
     intent: args.intent || scenario.intent,
+    builder_goals: args.builder_goals || scenario.builder_goals,
     source_brief: args.source_brief || scenario.source_brief,
     photo_design_brief: args.photo_design_brief || scenario.photo_design_brief,
     parameters: { ...(scenario.parameters || {}), ...parameterArguments(args) }
@@ -1030,7 +1034,7 @@ function normalizeToolArguments(args = {}) {
 function unsupportedTemplateResult(scenario = {}) {
   if (listTemplates().some((template) => template.template_id === scenario.template_id)) return null;
   const suggestedQueries = componentSearchQueriesForScenario(scenario);
-  const compatibleTemplateIds = findTemplateCandidates(scenario.template_id);
+  const templateFit = compatibleTemplateFit(scenario);
   return {
     ok: false,
     error: `Unsupported template_id: ${scenario.template_id || 'missing'}`,
@@ -1041,19 +1045,71 @@ function unsupportedTemplateResult(scenario = {}) {
       'Only then request a missing capability, citing the closest component IDs considered.'
     ],
     suggested_component_queries: suggestedQueries,
-    compatible_template_ids: compatibleTemplateIds,
+    suggested_relationship_queries: assemblyRelationshipQueriesForScenario(scenario),
+    compatible_template_ids: templateFit.compatible_template_ids,
+    compatible_template_blockers: templateFit.blockers,
     capability: `Add reusable composition support for ${scenario.template_id || 'the requested plan type'}.`,
     available_templates: listTemplates().map((template) => template.template_id)
   };
 }
 
+function compatibleTemplateFit(scenario = {}) {
+  const candidates = findTemplateCandidates(scenario.template_id);
+  const blockers = unsupportedRelationshipBlockers(scenario, candidates);
+
+  return {
+    compatible_template_ids: blockers.length ? [] : candidates,
+    blockers
+  };
+}
+
+function supportedTemplateScenarioFit(scenario = {}) {
+  const blockers = unsupportedRelationshipBlockers(scenario, [scenario.template_id]);
+  if (!blockers.length) return { ok: true };
+  return {
+    ok: false,
+    error: `Template ${scenario.template_id} is supported but does not fit this scenario's required assembly relationships.`,
+    recommended_action: 'search_assembly_relationships',
+    next_steps: [
+      'Search assembly relationships for the required motion, support, clearance, or layout relationships.',
+      'Search components for reusable physical parts and validators.',
+      'Use propose_component_composition with exact component_ids and relationship_ids, or request a missing capability with the closest IDs considered.'
+    ],
+    attempted_template_id: scenario.template_id,
+    template_fit_blockers: blockers,
+    suggested_component_queries: componentSearchQueriesForScenario(scenario),
+    suggested_relationship_queries: assemblyRelationshipQueriesForScenario(scenario)
+  };
+}
+
+function unsupportedRelationshipBlockers(scenario = {}, candidateTemplateIds = []) {
+  const text = scenarioSearchText(scenario);
+  const candidateComponents = new Set(
+    listTemplates()
+      .filter((template) => candidateTemplateIds.includes(template.template_id))
+      .flatMap((template) => template.components || [])
+  );
+  const blockers = [];
+
+  if (/\b(hinge|hinged|fold|folding|fold-down|fold down|swing|rotate|chain|brace|bracket|open state|closed state)\b/i.test(text)) {
+    blockers.push('Scenario requires motion, hinge, swing, or support-stop relationships that no supported deterministic template currently represents.');
+  }
+  if (/\b(dowel|rod|round rail|cylinder)\b/i.test(text)) {
+    blockers.push('Scenario requires round dowel or captured-rod geometry that no supported deterministic template currently represents.');
+  }
+  if (/\b(caster|casters|wheel|wheels|rolling|mobile)\b/i.test(text) && !candidateComponents.has('hardware.caster_plate_set')) {
+    blockers.push('Scenario requires caster or rolling-base relationships that no supported deterministic template currently represents.');
+  }
+  const hasFreestandingShelfSupport = candidateComponents.has('geometry.step_tread') && candidateComponents.has('geometry.square_leg_post');
+  if (/\b(monitor|riser|desktop riser|center divider|anti-rack|anti rack)\b/i.test(text) && !hasFreestandingShelfSupport) {
+    blockers.push('Scenario requires freestanding shelf/divider support relationships that no supported deterministic template currently represents.');
+  }
+
+  return blockers;
+}
+
 function componentSearchQueriesForScenario(scenario = {}) {
-  const values = [
-    scenario.template_id,
-    scenario.intent,
-    ...(Array.isArray(scenario.builder_goals) ? scenario.builder_goals : []),
-    ...Object.keys(scenario.parameters || {})
-  ].filter(Boolean).join(' ');
+  const values = scenarioSearchText(scenario);
   const queries = [];
   if (/key|hook|peg|coat|mug/i.test(values)) queries.push('key hooks pegs repeated hardware pilot holes');
   if (/wall|mount|screw|hanger/i.test(values)) queries.push('wall mount screw holes edge clearance');
@@ -1065,6 +1121,30 @@ function componentSearchQueriesForScenario(scenario = {}) {
   if (/board|panel|back|height|width|thickness/i.test(values)) queries.push('rectangular board panel centered spacing');
   if (!queries.length) queries.push(values || 'reusable generated design components');
   return queries;
+}
+
+function assemblyRelationshipQueriesForScenario(scenario = {}) {
+  const values = scenarioSearchText(scenario);
+  const queries = [];
+  if (/hinge|fold|folding|fold-down|fold down|swing|chain|brace|bracket/i.test(values)) queries.push('hinged panel to cleat swing clearance stop support');
+  if (/dowel|drying rack|rod|parallel/i.test(values)) queries.push('dowel frame hinged to wall frame parallel dowels stop chain');
+  if (/slat|crate|planter|air gap|open side/i.test(values)) queries.push('slats fastened to corner posts repeated gaps edge clearance');
+  if (/shelf|riser|bookcase|cubby|divider/i.test(values)) queries.push('shelf between side panels supported shelf clear opening');
+  if (/caster|wheel|rolling|mobile|cart/i.test(values)) queries.push('caster plate to reinforced base rolling frame screw layout');
+  if (/rabbet|strainer|floating|reveal|canvas/i.test(values)) queries.push('rabbet ledge supports strainer reveal between frame and insert');
+  if (/rail|post|frame|stretcher|bay/i.test(values)) queries.push('rail to post butt joint rectangular frame bay');
+  if (/wall|mount|cleat|screw/i.test(values)) queries.push('wall mount holes on backer edge clearance');
+  return [...new Set(queries)];
+}
+
+function scenarioSearchText(scenario = {}) {
+  return [
+    scenario.template_id,
+    scenario.title,
+    scenario.intent,
+    ...(Array.isArray(scenario.builder_goals) ? scenario.builder_goals : []),
+    ...Object.keys(scenario.parameters || {})
+  ].filter(Boolean).join(' ');
 }
 
 export async function writePlanPackage(outDir, planPackage) {

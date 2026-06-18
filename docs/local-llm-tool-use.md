@@ -229,14 +229,18 @@ The first local-model loop runner uses the same tool surface:
 ```powershell
 $env:LLM_BASE_URL = 'http://localhost:11434/v1'
 $env:LLM_MODEL = 'qwen3:14b'
+$env:LLM_NUM_CTX = '16384'
 npm run sandbox:loop -- examples/tray-bird-feeder.scenario.json generated/runs/llm-demo
 ```
+
+For Ollama, set `LLM_NUM_CTX` high enough for the current tool surface. The model may support a larger context than the runtime default shown by `/api/ps`; the sandbox loop passes `options.num_ctx` through the OpenAI-compatible request body. `LLM_REQUEST_TIMEOUT_MS` can also be set to fail stalled local-model calls cleanly during long queues.
 
 To let the local model work through a backlog of ideas, run the queue runner:
 
 ```powershell
 $env:LLM_BASE_URL = 'http://localhost:11434/v1'
 $env:LLM_MODEL = 'qwen3:14b'
+$env:LLM_NUM_CTX = '16384'
 npm run sandbox:queue -- examples/idea-queue.json generated/runs/queue-demo
 ```
 

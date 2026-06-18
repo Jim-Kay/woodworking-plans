@@ -1,0 +1,174 @@
+{
+  "schema_version": "0.1",
+  "title": "Relationship-aware generated woodworking queue",
+  "defaults": {
+    "model": "qwen3:14b",
+    "baseUrl": "http://localhost:11434/v1",
+    "numCtx": 16384,
+    "requestTimeoutMs": 180000,
+    "maxIterations": 12
+  },
+  "jobs": [
+    {
+      "id": "fold-down-entry-shelf",
+      "title": "Fold-Down Entry Shelf",
+      "priority": "high",
+      "scenario": {
+        "template_id": "fold_down_entry_shelf",
+        "design_id": "queue_fold_down_entry_shelf",
+        "intent": "Generate a wall-mounted fold-down entry shelf concept with a back cleat, hinged shelf panel, side chain supports, wall mounting holes, and conservative load warnings.",
+        "builder_goals": [
+          "search assembly relationships for hinged panel motion, wall mounting, support chains, and swing clearance before proposing components",
+          "include exact relationship_ids in any component composition proposal",
+          "do not claim load capacity unless deterministic validation exists",
+          "request hinge-motion or load-path capability only after citing closest existing components and relationships"
+        ],
+        "parameters": {
+          "width_in": 24,
+          "depth_open_in": 10,
+          "height_closed_in": 12,
+          "panel_thickness_in": 0.75,
+          "cleat_height_in": 3.5,
+          "support_style": "side_chains",
+          "claimed_capacity_lbs": 0,
+          "material": "plywood"
+        }
+      }
+    },
+    {
+      "id": "wall-dowel-drying-rack",
+      "title": "Wall Dowel Drying Rack",
+      "priority": "high",
+      "scenario": {
+        "template_id": "wall_dowel_drying_rack",
+        "design_id": "queue_wall_dowel_drying_rack",
+        "intent": "Generate a wall-mounted folding drying rack with a rectangular wall frame, hinged outer frame, six parallel dowels, and stop-chain open-depth limit.",
+        "builder_goals": [
+          "search assembly relationships for dowel frame hinged to wall frame",
+          "search components for rails, spacing validators, stage diagrams, and any missing dowel primitive",
+          "include relationship_ids and missing capability hints in the proposal",
+          "show dowels installed into one side rail before the second side rail is attached"
+        ],
+        "parameters": {
+          "width_in": 28,
+          "height_in": 24,
+          "open_depth_in": 18,
+          "frame_stock_width_in": 1.5,
+          "frame_stock_thickness_in": 0.75,
+          "dowel_count": 6,
+          "dowel_diameter_in": 0.5,
+          "claimed_capacity_lbs": 0,
+          "material": "poplar"
+        }
+      }
+    },
+    {
+      "id": "slatted-produce-crate-v2",
+      "title": "Slatted Produce Crate V2",
+      "priority": "normal",
+      "scenario": {
+        "template_id": "slatted_produce_crate",
+        "design_id": "queue_slatted_produce_crate_v2",
+        "intent": "Generate a stackable open slatted produce crate with corner posts, repeated side slats, bottom slats, hand openings, and stacking clearance.",
+        "builder_goals": [
+          "search assembly relationships for slats fastened to corner posts and shelf/slat support",
+          "use relationship_ids for slat-to-post contact and any spacing or clearance assumptions",
+          "avoid opaque missing IDs such as wooden_frame_001 or crate_side_002",
+          "sequence posts, side slats, bottom slats, and stacking checks logically"
+        ],
+        "parameters": {
+          "width_in": 18,
+          "depth_in": 12,
+          "height_in": 8,
+          "post_size_in": 1.5,
+          "slat_thickness_in": 0.5,
+          "side_slat_count": 3,
+          "bottom_slat_count": 5,
+          "stacking_lip": true,
+          "material": "cedar"
+        }
+      }
+    },
+    {
+      "id": "compact-monitor-riser-v2",
+      "title": "Compact Monitor Riser V2",
+      "priority": "normal",
+      "scenario": {
+        "template_id": "compact_monitor_riser",
+        "design_id": "queue_compact_monitor_riser_v2",
+        "intent": "Generate a compact monitor riser with a top shelf, two side panels, one center divider, open cubbies, and rear anti-rack rail.",
+        "builder_goals": [
+          "search templates first, but do not force this through a wall organizer or bird feeder template",
+          "search assembly relationships for shelf between side panels and panel-to-rail support",
+          "include exact relationship_ids in a composition proposal if no supported template fits",
+          "warn that monitor load capacity needs human review unless structural validation exists"
+        ],
+        "parameters": {
+          "width_in": 28,
+          "depth_in": 9,
+          "height_in": 5,
+          "material_thickness_in": 0.75,
+          "divider_count": 1,
+          "back_rail": true,
+          "claimed_capacity_lbs": 0,
+          "material": "plywood"
+        }
+      }
+    },
+    {
+      "id": "rolling-shop-cart-base",
+      "title": "Rolling Shop Cart Base",
+      "priority": "high",
+      "scenario": {
+        "template_id": "rolling_shop_cart_base",
+        "design_id": "queue_rolling_shop_cart_base",
+        "intent": "Generate a rolling rectangular shop cart base with a 2x4 frame bay, lower shelf, caster plates, and conservative load and tipping warnings.",
+        "builder_goals": [
+          "search assembly relationships for caster plate to reinforced base, rail-to-post joints, and shelf support",
+          "search components for rectangular frame bay, caster plate set, panel shelf, and dimensioned build steps",
+          "avoid invented opaque IDs for frames or sled bases",
+          "include caster plate layout and reinforcement guidance"
+        ],
+        "parameters": {
+          "width_in": 32,
+          "depth_in": 20,
+          "height_in": 8,
+          "frame_stock": "2x4",
+          "shelf_thickness_in": 0.75,
+          "caster_count": 4,
+          "claimed_capacity_lbs": 0,
+          "material": "construction_lumber"
+        }
+      }
+    },
+    {
+      "id": "floating-frame-rabbet-regression",
+      "title": "Floating Frame Rabbet Regression",
+      "priority": "normal",
+      "scenario": {
+        "template_id": "floating_frame_strainer_on_rabbet",
+        "design_id": "queue_floating_frame_rabbet_regression",
+        "intent": "Generate a floating canvas frame with rabbeted face members and strainer rails seated on the rabbet ledge, using relationship catalog language for reveal and support.",
+        "builder_goals": [
+          "search assembly relationships for reveal between frame and insert and rabbet ledge support",
+          "include exact relationship_ids in a composition proposal",
+          "preserve the correct design intent rather than inventing unrelated frame or rack components",
+          "surface renderer needs for rabbet milling and strainer seating visuals"
+        ],
+        "parameters": {
+          "canvas_width_in": 16,
+          "canvas_height_in": 20,
+          "canvas_thickness_in": 0.75,
+          "reveal_in": 0.25,
+          "face_width_in": 1.5,
+          "frame_depth_in": 1.25,
+          "rabbet_depth_in": 0.125,
+          "strainer_width_in": 0.75,
+          "strainer_depth_in": 0.5,
+          "joinery": "miter",
+          "mounting_method": "z_clips"
+        }
+      }
+    }
+  ]
+}

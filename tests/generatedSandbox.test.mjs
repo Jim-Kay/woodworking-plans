@@ -394,6 +394,40 @@ assert.equal(executed.result.compatible_template_ids.includes('wall_panel_with_p
 
 executed = executeSandboxTool({
   name: 'generate_design',
+  arguments: { template_id: 'fold_down_entry_shelf', design_id: 'unsupported_fold_down_test' }
+}, {
+  scenario: {
+    template_id: 'fold_down_entry_shelf',
+    design_id: 'unsupported_fold_down_test',
+    intent: 'Wall-mounted fold-down shelf with hinged panel, side chains, swing clearance, and conservative load warning.',
+    builder_goals: ['search relationships for hinged panel motion and stop support'],
+    parameters: { width_in: 24, depth_open_in: 10 }
+  }
+});
+assert.equal(executed.result.ok, false);
+assert.equal(executed.result.compatible_template_ids.length, 0);
+assert.equal(executed.result.compatible_template_blockers.some((blocker) => /motion|hinge|swing/i.test(blocker)), true);
+assert.equal(executed.result.suggested_relationship_queries.some((query) => /hinged panel/.test(query)), true);
+
+executed = executeSandboxTool({
+  name: 'generate_design',
+  arguments: { template_id: 'wall_panel_with_pocket_and_linear_hardware', design_id: 'wrong_supported_template_test' }
+}, {
+  scenario: {
+    template_id: 'fold_down_entry_shelf',
+    design_id: 'wrong_supported_template_test',
+    intent: 'Wall-mounted fold-down shelf with hinged panel, side chains, swing clearance, and conservative load warning.',
+    builder_goals: ['do not force this through a wall organizer template'],
+    parameters: { width_in: 24, height_in: 12, board_thickness_in: 0.75 }
+  }
+});
+assert.equal(executed.result.ok, false);
+assert.match(executed.result.error, /does not fit this scenario/);
+assert.equal(executed.result.recommended_action, 'search_assembly_relationships');
+assert.equal(executed.state.design, undefined);
+
+executed = executeSandboxTool({
+  name: 'generate_design',
   arguments: { template_id: 'mobile_tote_rack_workbench', design_id: 'unsupported_tote_rack_test' }
 }, toolState);
 assert.equal(executed.result.ok, false);

@@ -93,6 +93,108 @@ assert.equal(compatibleTemplateGate.tool_call.arguments.design_id, 'mail_key_org
 assert.equal(compatibleTemplateGate.tool_call.arguments.parameters.width_in, 18);
 assert.equal(compatibleTemplateGate.overridden_model_action.action, 'propose_component_composition');
 
+const blockedCompatibleTemplateGate = enforceWorkflowGate({
+  action: 'propose_component_composition',
+  rationale: 'The fold-down shelf needs hinge and support relationships.',
+  tool_call: {
+    name: 'propose_component_composition',
+    arguments: {
+      template_id: 'fold_down_entry_shelf',
+      component_ids: ['geometry.rectangular_panel'],
+      relationship_ids: ['relationship.motion.hinge_panel_to_cleat']
+    }
+  }
+}, {
+  scenario: {
+    design_id: 'fold_down_shelf_probe',
+    parameters: { width_in: 24 }
+  },
+  transcript: [
+    {
+      model_action: {
+        action: 'generate_design',
+        tool_call: { name: 'generate_design', arguments: { template_id: 'fold_down_entry_shelf' } }
+      },
+      tool_result: {
+        ok: false,
+        error: 'Unsupported template_id: fold_down_entry_shelf',
+        compatible_template_ids: ['wall_panel_with_pocket_and_linear_hardware'],
+        compatible_template_blockers: ['Scenario requires motion, hinge, swing, or support-stop relationships that no supported deterministic template currently represents.']
+      }
+    }
+  ]
+});
+
+assert.equal(blockedCompatibleTemplateGate.action, 'propose_component_composition');
+assert.equal(blockedCompatibleTemplateGate.tool_call.name, 'propose_component_composition');
+
+const blockedTemplateRetryGate = enforceWorkflowGate({
+  action: 'generate_design',
+  rationale: 'Try the wall organizer template again.',
+  tool_call: {
+    name: 'generate_design',
+    arguments: {
+      template_id: 'wall_panel_with_pocket_and_linear_hardware',
+      design_id: 'fold_down_shelf_probe',
+      parameters: { width_in: 24 }
+    }
+  }
+}, {
+  scenario: {
+    template_id: 'fold_down_entry_shelf',
+    design_id: 'fold_down_shelf_probe',
+    intent: 'Wall-mounted fold-down shelf with hinged panel, side chains, and swing clearance.',
+    parameters: { width_in: 24, depth_open_in: 10 }
+  },
+  transcript: [
+    {
+      model_action: {
+        action: 'search_assembly_relationships',
+        tool_call: { name: 'search_assembly_relationships', arguments: { query: 'hinged panel to cleat' } }
+      },
+      tool_result: {
+        ok: true,
+        relationships: [
+          {
+            relationship_id: 'relationship.motion.hinge_panel_to_cleat',
+            component_hints: ['geometry.rectangular_panel', 'hardware.wall_mount_hole_pair'],
+            missing_capability_hints: ['hinge-motion validator', 'open/closed state renderer']
+          }
+        ]
+      }
+    },
+    {
+      model_action: {
+        action: 'search_components',
+        tool_call: { name: 'search_components', arguments: { query: 'wall mount holes panel' } }
+      },
+      tool_result: {
+        ok: true,
+        components: [
+          { component_id: 'geometry.rectangular_panel' },
+          { component_id: 'hardware.wall_mount_hole_pair' }
+        ]
+      }
+    },
+    {
+      model_action: {
+        action: 'generate_design',
+        tool_call: { name: 'generate_design', arguments: { template_id: 'wall_panel_with_pocket_and_linear_hardware' } }
+      },
+      tool_result: {
+        ok: false,
+        attempted_template_id: 'wall_panel_with_pocket_and_linear_hardware',
+        template_fit_blockers: ['Scenario requires motion, hinge, swing, or support-stop relationships that no supported deterministic template currently represents.']
+      }
+    }
+  ]
+});
+
+assert.equal(blockedTemplateRetryGate.action, 'propose_component_composition');
+assert.equal(blockedTemplateRetryGate.tool_call.arguments.template_id, 'fold_down_entry_shelf');
+assert.equal(blockedTemplateRetryGate.tool_call.arguments.relationship_ids.includes('relationship.motion.hinge_panel_to_cleat'), true);
+assert.equal(blockedTemplateRetryGate.tool_call.arguments.requested_missing_component_ids.includes('hardware.hinge_pair'), true);
+
 const aliasTemplateGate = enforceWorkflowGate({
   action: 'propose_component_composition',
   rationale: 'The mail organizer can be composed from known components.',

@@ -43,6 +43,8 @@ export async function runLlmSandboxQueue(options = {}) {
         model: options.model || job.model || queue.defaults.model,
         baseUrl: options.baseUrl || queue.defaults.baseUrl,
           maxIterations: job.max_iterations || options.maxIterations || queue.defaults.maxIterations,
+          numCtx: options.numCtx || queue.defaults.numCtx || queue.defaults.num_ctx,
+          requestTimeoutMs: options.requestTimeoutMs || queue.defaults.requestTimeoutMs || queue.defaults.request_timeout_ms,
           streamModel: options.streamModel === true,
           onEvent: (event) => emit(onEvent, 'queue_job_event', { index, job_id: job.id, event })
         });
