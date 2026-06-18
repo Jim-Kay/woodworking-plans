@@ -1,4 +1,5 @@
 import http from 'node:http';
+import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { runLlmSandboxLoop } from '../src/generated/llmSandboxLoopRunner.js';
 import { runLlmSandboxQueue } from '../src/generated/llmSandboxQueueRunner.js';
@@ -13,6 +14,7 @@ const server = http.createServer(async (request, response) => {
   const url = new URL(request.url, `http://${request.headers.host || `localhost:${port}`}`);
   if (url.pathname === '/') return sendHtml(response);
   if (url.pathname === '/events') return streamRun(url, request, response);
+  if (url.pathname === '/presets') return sendJson(response, await listRunPresets());
   if (url.pathname === '/health') return sendJson(response, { ok: true });
   response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
   response.end('Not found');
@@ -160,7 +162,7 @@ function sendHtml(response) {
     }
     form {
       display: grid;
-      grid-template-columns: 110px minmax(260px, 1fr) minmax(140px, .45fr) 86px 86px 76px 76px;
+      grid-template-columns: 110px minmax(160px, .5fr) minmax(260px, 1fr) minmax(140px, .45fr) 86px 86px 76px 76px;
       gap: 8px;
       width: 100%;
       align-items: center;
@@ -392,6 +394,7 @@ function sendHtml(response) {
         <option value="queue" selected>Queue</option>
         <option value="scenario">Scenario</option>
       </select>
+      <select id="preset" aria-label="Preset"></select>
       <input id="path" value="${escapeHtml(defaultQueue)}" aria-label="Scenario or queue path">
       <input id="model" value="${escapeHtml(defaultModel)}" aria-label="Model">
       <input id="maxIterations" value="8" aria-label="Max iterations">
@@ -429,6 +432,7 @@ function sendHtml(response) {
   <script>
     const form = document.getElementById('runForm');
     const mode = document.getElementById('mode');
+    const preset = document.getElementById('preset');
     const path = document.getElementById('path');
     const model = document.getElementById('model');
     const maxIterations = document.getElementById('maxIterations');
@@ -442,10 +446,18 @@ function sendHtml(response) {
     const log = document.getElementById('log');
     let source = null;
     let activeModelMessage = null;
+    let presets = { queues: [], scenarios: [] };
+
+    loadPresets();
 
     mode.addEventListener('change', () => {
       path.value = mode.value === 'queue' ? '${escapeJs(defaultQueue)}' : '${escapeJs(defaultScenario)}';
       maxJobs.disabled = mode.value !== 'queue';
+      renderPresets();
+    });
+
+    preset.addEventListener('change', () => {
+      if (preset.value) path.value = preset.value;
     });
 
     form.addEventListener('submit', (event) => {
@@ -528,6 +540,7 @@ function sendHtml(response) {
       }
       if (name === 'queue_complete') {
         setState('Complete', '');
+        addChat('result', 'Queue complete', payload.data);
         if (source) source.close();
       }
       if (name === 'error') {
@@ -606,6 +619,25 @@ function sendHtml(response) {
       state.className = 'pill ' + klass;
     }
 
+    async function loadPresets() {
+      try {
+        const response = await fetch('/presets');
+        presets = await response.json();
+        renderPresets();
+      } catch {
+        preset.innerHTML = '<option value="">Manual path</option>';
+      }
+    }
+
+    function renderPresets() {
+      const values = mode.value === 'queue' ? presets.queues : presets.scenarios;
+      const current = path.value;
+      preset.innerHTML = '<option value="">Manual path</option>' + (values || []).map((item) => {
+        const selected = item.path === current ? ' selected' : '';
+        return '<option value="' + escapeText(item.path) + '"' + selected + '>' + escapeText(item.label) + '</option>';
+      }).join('');
+    }
+
     function escapeText(value) {
       return String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
     }
@@ -623,6 +655,30 @@ function sendHtml(response) {
   </script>
 </body>
 </html>`);
+}
+
+async function listRunPresets() {
+  try {
+    const files = await readdir('examples');
+    const jsonFiles = files.filter((file) => file.endsWith('.json')).sort();
+    return {
+      queues: jsonFiles
+        .filter((file) => /queue/i.test(file))
+        .map((file) => presetItem(file)),
+      scenarios: jsonFiles
+        .filter((file) => /scenario/i.test(file) && !/queue/i.test(file))
+        .map((file) => presetItem(file))
+    };
+  } catch {
+    return { queues: [], scenarios: [] };
+  }
+}
+
+function presetItem(file) {
+  return {
+    path: `examples/${file}`,
+    label: file.replace(/\.json$/i, '').replace(/[._-]+/g, ' ')
+  };
 }
 
 function escapeHtml(value) {

@@ -80,7 +80,7 @@ export async function runLlmSandboxQueue(options = {}) {
   await writeJson(join(outDir, 'retry-queue.json'), retryQueue(index, queue));
   await writeFile(join(outDir, 'summary.txt'), queueSummary(index), 'utf8');
   await writeFile(join(outDir, 'review.md'), queueReviewMarkdown(index), 'utf8');
-  emit(onEvent, 'queue_complete', index.summary);
+  emit(onEvent, 'queue_complete', queueCompletePayload(index));
   return index;
 }
 
@@ -237,6 +237,20 @@ function queueSummary(index) {
     `generated_needs_review=${counts.generated_needs_review || 0}`,
     `failed_loops=${counts.failed_loop || 0}`
   ].join('\n');
+}
+
+function queueCompletePayload(index) {
+  return {
+    ...index.summary,
+    out_dir: index.out_dir,
+    artifacts: {
+      index: join(index.out_dir, 'index.json'),
+      triage: join(index.out_dir, 'triage.json'),
+      retry_queue: join(index.out_dir, 'retry-queue.json'),
+      review: join(index.out_dir, 'review.md'),
+      summary: join(index.out_dir, 'summary.txt')
+    }
+  };
 }
 
 function queueReviewMarkdown(index) {
