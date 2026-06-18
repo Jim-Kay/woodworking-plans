@@ -105,6 +105,16 @@ export const COMPONENT_CATALOG = [
     example_uses: ['tote storage rack side frame', 'workbench base frame', 'rolling storage rack']
   },
   {
+    component_id: 'geometry.slatted_panel_set',
+    category_id: 'geometry',
+    title: 'Slatted Panel Or Box Side Set',
+    description: 'A repeated set of narrow slats arranged across a side, bottom, or crate wall with configurable gaps, end support, and material thickness.',
+    aliases: ['slatted side', 'slat set', 'crate wall', 'planter side slats', 'open slatted panel', 'bottom slats'],
+    inputs: ['span_in', 'height_in', 'slat_count', 'slat_width_in', 'slat_thickness_in', 'gap_in', 'material'],
+    outputs: ['physical_parts', 'cut_list_items', 'slat_spacing_metadata', 'air_gap_guidance'],
+    example_uses: ['slatted planter box sides', 'produce crate side wall', 'open bottom slats', 'ventilated storage crate']
+  },
+  {
     component_id: 'geometry.tote_runner_pair',
     category_id: 'geometry',
     title: 'Tote Runner Pair',
@@ -467,6 +477,7 @@ const SYNONYM_GROUPS = [
   ['rabbet', 'notch', 'ledge', 'recess', 'groove'],
   ['frame', 'picture', 'canvas', 'floating', 'miter', 'strainer'],
   ['step', 'stool', 'tread', 'platform', 'standing'],
+  ['slat', 'slats', 'slatted', 'crate', 'planter', 'ventilated'],
   ['wheel', 'caster', 'rolling', 'mobile'],
   ['diagram', 'callout', 'label', 'dimension', 'drawing', 'visual', 'screenshot'],
   ['animation', 'video', 'motion', 'sequence', 'mini']

@@ -279,10 +279,12 @@ assert.equal(searchComponents({ query: 'step stool leg tread load bearing' }).so
 assert.equal(searchComponents({ query: 'key hooks pilot holes', category_id: 'hardware' })[0].component_id, 'hardware.linear_hook_array');
 assert.equal(searchComponents({ query: '27 gallon tote rack runner rails caster wheels workbench' }).some((component) => component.component_id === 'geometry.tote_runner_pair'), true);
 assert.equal(searchComponents({ query: '27 gallon tote rack runner rails caster wheels workbench' }).some((component) => component.component_id === 'hardware.caster_plate_set'), true);
+assert.equal(searchComponents({ query: 'small cedar planter slatted side wall bottom slats' })[0].component_id, 'geometry.slatted_panel_set');
 assert.equal(searchComponents({ query: 'PDF style dimensioned build step fastener callout' }).some((component) => component.component_id === 'build_steps.dimensioned_stage_sequence'), true);
 assert.equal(searchAssemblyRelationships({ query: 'fold down hinged desk panel support chain swing clearance' })[0].relationship_id, 'relationship.motion.hinge_panel_to_cleat');
 assert.equal(searchAssemblyRelationships({ query: 'dowel laundry drying rack wall frame hinge', part_roles: ['dowel', 'side rail', 'wall frame'] })[0].relationship_id, 'relationship.motion.dowel_frame_hinged_to_wall_frame');
 assert.equal(searchAssemblyRelationships({ query: 'caster wheels under rolling workbench base plate screws' }).some((relationship) => relationship.relationship_id === 'relationship.support.caster_plate_to_base'), true);
+assert.equal(searchAssemblyRelationships({ query: 'planter bottom panel supported by slatted box sides drainage holes' })[0].relationship_id, 'relationship.support.bottom_panel_supported_by_box_sides');
 assert.equal(searchTemplates({ query: 'entryway mail cubby hooks' })[0].template_id, 'wall_panel_with_pocket_and_linear_hardware');
 assert.equal(searchTemplates({ query: 'rockport step ladder stool' })[0].template_id, 'two_step_stool');
 
@@ -626,6 +628,37 @@ executed = executeSandboxTool({
 assert.equal(executed.result.ok, true);
 assert.equal(executed.result.review.suggested_existing_components.some((item) => item.requested_id === 'frame.rectangular_frame_bay' && item.suggested_component_id === 'geometry.rectangular_frame_bay'), true);
 assert.equal(executed.result.review.suggested_existing_components.some((item) => item.requested_id === 'dimensioning.dimensioned_stage_sequence' && item.suggested_component_id === 'build_steps.dimensioned_stage_sequence'), true);
+
+executed = executeSandboxTool({
+  name: 'propose_component_composition',
+  arguments: {
+    template_id: 'small_slatted_planter_box',
+    title: 'Small Slatted Planter Box',
+    component_ids: ['geometry.rectangular_frame_bay', 'patterns.centered_linear_spacing', 'geometry.rectangular_panel'],
+    relationship_ids: ['relationship.fixed_contact.slats_to_corner_posts'],
+    parameters: { width_in: 18, depth_in: 10, height_in: 8, drainage_holes: true, slat_count_per_side: 3 },
+    design_algorithm: ['Generate frame bay.', 'Space side slats.', 'Attach bottom panel.'],
+    validation_strategy: ['Check slat spacing.', 'Check bottom panel containment.'],
+    build_steps: [
+      { id: 'step.slats', title: 'Assemble slats', instructions: ['Attach side slats to posts.'] },
+      { id: 'step.drainage', title: 'Drill drainage holes', instructions: ['Drill drainage holes in the bottom panel.'] }
+    ],
+    renderer_requirements: ['Show drainage hole locations.'],
+    open_questions: ['Confirm drainage pattern.']
+  }
+}, {
+  scenario: {
+    design_id: 'planter_proposal_hint_test',
+    template_id: 'small_slatted_planter_box',
+    intent: 'Small cedar slatted planter box with bottom panel drainage holes.',
+    parameters: { width_in: 18, depth_in: 10, height_in: 8, drainage_holes: true, slat_count_per_side: 3 }
+  }
+});
+assert.equal(executed.result.ok, true);
+assert.match(executed.result.review.warnings.join('\n'), /hardware\.drainage_hole_grid/);
+assert.match(executed.result.review.warnings.join('\n'), /relationship\.layout_reference\.drainage_holes_in_panel/);
+assert.match(executed.result.review.warnings.join('\n'), /geometry\.slatted_panel_set/);
+assert.match(executed.result.review.warnings.join('\n'), /relationship\.support\.bottom_panel_supported_by_box_sides/);
 
 executed = executeSandboxTool({ name: 'generate_design', arguments: { parameters: { width_in: 13 } } }, toolState);
 assert.equal(executed.result.ok, true);

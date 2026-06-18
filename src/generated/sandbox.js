@@ -809,6 +809,7 @@ function reviewComponentCompositionProposal(proposal, scenario = {}) {
   if (!proposal.open_questions.length) warnings.push('open_questions is empty; proposals should surface uncertainties for Codex review.');
   if (proposal.requested_missing_component_ids.length) warnings.push(`Requested missing component IDs need Codex review before implementation: ${proposal.requested_missing_component_ids.join(', ')}`);
   if (unknownRendererComponentIds.length) warnings.push(`Renderer requirements mention missing component IDs: ${unknownRendererComponentIds.join(', ')}`);
+  warnings.push(...domainCoverageWarnings(proposal, scenario));
   const suggestedExistingComponents = suggestExistingComponentsForMissingIds(proposal);
   if (suggestedExistingComponents.length) {
     warnings.push(`Some requested missing component IDs look close to existing catalog entries: ${suggestedExistingComponents.map((item) => `${item.requested_id} -> ${item.suggested_component_id}`).join(', ')}`);
@@ -847,6 +848,48 @@ function reviewComponentCompositionProposal(proposal, scenario = {}) {
       'Review woodworking safety, load assumptions, and build-step clarity before publishing.'
     ]
   };
+}
+
+function domainCoverageWarnings(proposal, scenario = {}) {
+  const warnings = [];
+  const componentIds = new Set(proposal.component_ids);
+  const relationshipIds = new Set(proposal.relationship_ids);
+  const text = [
+    proposal.template_id,
+    proposal.title,
+    proposal.intent,
+    scenario?.template_id,
+    scenario?.intent,
+    ...(Array.isArray(scenario?.builder_goals) ? scenario.builder_goals : []),
+    ...proposal.design_algorithm,
+    ...proposal.validation_strategy,
+    ...proposal.renderer_requirements
+  ].join(' ').toLowerCase();
+  const parameters = { ...(scenario?.parameters || {}), ...(proposal.parameters || {}) };
+  const requiresDrainage = parameterValue(parameters, 'drainage_holes') === true || /\bdrainage|weep hole|outdoor planter|planter\b/.test(text);
+  if (requiresDrainage && !componentIds.has('hardware.drainage_hole_grid')) {
+    warnings.push('Scenario appears to require drainage holes; include exact component_id hardware.drainage_hole_grid if the generated template drills bottom-panel holes.');
+  }
+  if (requiresDrainage && !relationshipIds.has('relationship.layout_reference.drainage_holes_in_panel')) {
+    warnings.push('Scenario appears to require drainage holes; include relationship.layout_reference.drainage_holes_in_panel so Codex can validate host containment and edge clearance.');
+  }
+  const requiresSlats = /\bslat|slats|slatted|crate|planter\b/.test(text)
+    || parameterValue(parameters, 'slat_count_per_side') !== undefined
+    || parameterValue(parameters, 'side_slat_count') !== undefined
+    || parameterValue(parameters, 'bottom_slat_count') !== undefined;
+  if (requiresSlats && !componentIds.has('geometry.slatted_panel_set')) {
+    warnings.push('Scenario appears to require repeated slats; include exact component_id geometry.slatted_panel_set instead of representing slatted walls only as generic rails or frame bays.');
+  }
+  const requiresBottomSupport = /\bbottom panel|crate floor|planter bottom|bottom slats\b/.test(text);
+  if (requiresBottomSupport && !relationshipIds.has('relationship.support.bottom_panel_supported_by_box_sides')) {
+    warnings.push('Scenario appears to require a supported bottom panel or crate floor; include relationship.support.bottom_panel_supported_by_box_sides when the bottom is carried by side walls, rails, posts, or slats.');
+  }
+  return warnings;
+}
+
+function parameterValue(parameters, key) {
+  const value = parameters?.[key];
+  return value && typeof value === 'object' && 'default' in value ? value.default : value;
 }
 
 function suggestExistingComponentsForMissingIds(proposal) {

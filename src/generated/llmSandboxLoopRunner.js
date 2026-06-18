@@ -130,6 +130,35 @@ export async function runLlmSandboxLoop(options = {}) {
     }
   }
 
+  if (readyForFinalPackage(state)) {
+    const iteration = transcript.length;
+    const next = {
+      action: 'export_plan_package',
+      rationale: [
+        'Workflow finalization inserted by the sandbox loop: the iteration budget ended after validation and build-step review passed.',
+        'Exporting the package deterministically instead of requiring another local-model turn.'
+      ].join(' '),
+      tool_call: { name: 'export_plan_package', arguments: {} }
+    };
+    transcript.push({ iteration, model_action: next });
+    emit(onEvent, 'model_action', { iteration, action: next.action, rationale: next.rationale, tool_call: next.tool_call, finalized_on_exhaustion: true });
+    emit(onEvent, 'tool_start', { iteration, tool_call: next.tool_call });
+    const executed = executeSandboxTool(next.tool_call, state);
+    state = executed.state;
+    const redacted = redactToolResult(executed.result);
+    transcript.at(-1).tool_result = redacted;
+    emit(onEvent, 'tool_result', { iteration, tool_call: next.tool_call, result: redacted });
+    if (state.finalPackage) {
+      await writePlanPackage(join(outDir, 'package'), state.finalPackage);
+      emit(onEvent, 'artifact', { iteration, path: join(outDir, 'package'), kind: 'package' });
+      if (visionScreenshot && visionModel) {
+        state.visualReview = await runVisualReview(state.finalPackage, visionScreenshot, { visionBaseUrl, visionModel });
+        await writeJson(join(outDir, 'visual-review.json'), state.visualReview);
+        emit(onEvent, 'visual_review', { iteration, review: state.visualReview });
+      }
+    }
+  }
+
   await writeJson(join(outDir, 'transcript.json'), transcript);
   await writeFile(join(outDir, 'summary.txt'), loopSummary({ model, visionModel, outDir, transcript, state }), 'utf8');
   const summary = loopSummary({ model, visionModel, outDir, transcript, state });
@@ -374,6 +403,10 @@ function lastPublishabilityOk(transcript = []) {
 
 function buildStepReviewReady(review) {
   return review?.quality_gate_passed === true || review?.status === 'ready';
+}
+
+export function readyForFinalPackage(state = {}) {
+  return Boolean(state.design && state.validation?.ok && buildStepReviewReady(state.buildStepReview) && !state.finalPackage && !state.capabilityRequest && !state.compositionProposal);
 }
 
 function lastCompatibleTemplate(transcript = []) {

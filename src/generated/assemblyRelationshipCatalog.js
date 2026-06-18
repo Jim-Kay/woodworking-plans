@@ -184,8 +184,20 @@ export const ASSEMBLY_RELATIONSHIP_CATALOG = [
     part_roles: ['slat', 'post', 'rail', 'crate', 'planter'],
     geometry_cues: ['repeated gaps', 'slat end support', 'fastener clearance', 'open side airflow'],
     validator_hints: ['validators.linear_spacing', 'validators.edge_clearance', 'validators.physical_part_overlap'],
-    component_hints: ['geometry.linear_rail', 'geometry.square_leg_post', 'patterns.centered_linear_spacing'],
+    component_hints: ['geometry.slatted_panel_set', 'geometry.linear_rail', 'geometry.square_leg_post', 'patterns.centered_linear_spacing'],
     example_uses: ['produce crate sides', 'slatted planter', 'open storage crate']
+  },
+  {
+    relationship_id: 'relationship.support.bottom_panel_supported_by_box_sides',
+    type_id: 'support',
+    title: 'Bottom Panel Supported By Box Sides',
+    description: 'A flat bottom panel or slatted bottom is captured by side panels, slatted walls, rails, or posts and carries tray, crate, or planter contents.',
+    aliases: ['bottom panel in box', 'planter bottom', 'crate floor', 'tray bottom supported by sides', 'bottom slats supported'],
+    part_roles: ['bottom panel', 'side panel', 'slat', 'rail', 'post', 'box'],
+    geometry_cues: ['bottom sits below or between side walls', 'side support on all edges', 'drainage or air gap references contained in bottom'],
+    validator_hints: ['validators.physical_part_overlap', 'validators.host_containment', 'validators.edge_clearance'],
+    component_hints: ['geometry.rectangular_panel', 'geometry.slatted_panel_set', 'hardware.drainage_hole_grid'],
+    example_uses: ['small planter bottom panel', 'produce crate floor', 'tray feeder bottom supported by rails']
   },
   {
     relationship_id: 'relationship.support.caster_plate_to_base',
@@ -381,6 +393,7 @@ const SYNONYM_GROUPS = [
   ['contact', 'mate', 'joint', 'attach', 'fasten', 'seat', 'seated', 'butt'],
   ['gap', 'clearance', 'reveal', 'inset', 'spacing', 'space'],
   ['dowel', 'rod', 'round', 'cylinder'],
+  ['slat', 'slats', 'slatted', 'crate', 'planter', 'ventilated'],
   ['caster', 'wheel', 'rolling', 'mobile'],
   ['frame', 'bay', 'rack', 'stand'],
   ['notch', 'rabbet', 'ledge', 'groove', 'recess']

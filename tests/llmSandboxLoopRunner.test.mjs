@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { enforceWorkflowGate } from '../src/generated/llmSandboxLoopRunner.js';
+import { enforceWorkflowGate, readyForFinalPackage } from '../src/generated/llmSandboxLoopRunner.js';
 
 const gated = enforceWorkflowGate({
   action: 'request_capability',
@@ -306,5 +306,19 @@ const exportAfterReviewReadyGate = enforceWorkflowGate({
 assert.equal(exportAfterReviewReadyGate.action, 'export_plan_package');
 assert.equal(exportAfterReviewReadyGate.tool_call.name, 'export_plan_package');
 assert.equal(exportAfterReviewReadyGate.overridden_model_action.action, 'request_capability');
+
+assert.equal(readyForFinalPackage({
+  design: { design_id: 'ready_design' },
+  validation: { ok: true, status: 'valid' },
+  buildStepReview: { ok: true, status: 'ready', quality_gate_passed: true },
+  finalPackage: null
+}), true);
+
+assert.equal(readyForFinalPackage({
+  design: { design_id: 'needs_capability' },
+  validation: { ok: true, status: 'valid' },
+  buildStepReview: { ok: true, status: 'ready', quality_gate_passed: true },
+  capabilityRequest: { capability: 'missing renderer' }
+}), false);
 
 console.log('llm sandbox loop runner tests passed');
