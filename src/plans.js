@@ -212,7 +212,7 @@ export const PLAN_CATALOG = [
     id: 'generated-extension-leaf-table',
     title: 'Generated Extension Leaf Table',
     family: 'Generated Plans',
-    status: 'draft',
+    status: 'ready',
     build: 'generated-extension-leaf-table',
     defaults: {
       build: 'generated-extension-leaf-table',

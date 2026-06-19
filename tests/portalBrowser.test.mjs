@@ -18,6 +18,10 @@ try {
   await expectCount(card, 1, 'generated stool catalog card');
   const thumbnailLoaded = await card.locator('.planThumb img').evaluate((img) => img.complete && img.naturalWidth > 0 && img.naturalHeight > 0);
   assert.equal(thumbnailLoaded, true);
+  const extensionTableCard = page.locator('[data-plan-id="generated-extension-leaf-table"]');
+  await expectCount(extensionTableCard, 1, 'generated extension table catalog card');
+  assert.equal(await extensionTableCard.getAttribute('data-status'), 'ready');
+  assert.equal(await extensionTableCard.locator('.badge.ok').textContent(), 'Ready');
 
   await page.goto(`${baseUrl}?plan=generated-two-step-stool`, { waitUntil: 'networkidle' });
   assert.equal(await page.locator('#appTitle').textContent(), 'Generated Two-Step Stool');
@@ -31,6 +35,12 @@ try {
   assert.equal(Boolean(box && box.width > 300 && box.height > 250), true);
   const screenshot = await viewport.screenshot();
   assert.equal(screenshot.length > 10_000, true);
+
+  await page.goto(`${baseUrl}?plan=generated-extension-leaf-table`, { waitUntil: 'networkidle' });
+  assert.equal(await page.locator('#appTitle').textContent(), 'Generated Extension Leaf Table');
+  assert.match(await page.locator('#statusBar').textContent(), /Extension table/);
+  assert.match(await page.locator('#dimensionSummary').textContent(), /Extension leaf table/);
+  assert.deepEqual(await page.locator('.badge.err').allTextContents(), []);
   assert.deepEqual(errors, []);
 } finally {
   await browser.close();
