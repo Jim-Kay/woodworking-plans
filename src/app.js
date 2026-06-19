@@ -14,6 +14,7 @@ let purchaseBoardLength = 96;
 let buildStepAnimationViewers = [];
 let modalBuildStepAnimation = null;
 let modalBuildStepPageOverflow = null;
+let activePlanInfoTab = 'notes';
 
 const fields = {
   canvasW: $('#canvasW'),
@@ -159,6 +160,9 @@ function bindInputs() {
   $('#btnShare').addEventListener('click', copyShareLink);
   $('#btnOpenAdvanced').addEventListener('click', () => $('#advancedDialog').showModal());
   $('#btnSelectCanvas').addEventListener('click', () => $('#canvasDialog').showModal());
+  $$('[data-plan-info-tab]').forEach((button) => {
+    button.addEventListener('click', () => showPlanInfoTab(button.dataset.planInfoTab));
+  });
   $('#btnCloseBuildAnimation').addEventListener('click', () => $('#buildAnimationDialog').close());
   $('#buildAnimationDialog').addEventListener('close', cleanupModalBuildStepAnimation);
   $('#btnExportCsv').addEventListener('click', exportCsv);
@@ -389,6 +393,7 @@ function selectPlan(planId) {
   plan = applyPlanRules(next);
   plan.stage = 0;
   viewer.manualCamera = false;
+  activePlanInfoTab = 'notes';
   render();
   showPlanner();
 }
@@ -427,6 +432,7 @@ function render() {
   renderToggles();
   renderDimensionSummary();
   renderPlanDetails();
+  renderPlanInfoTabs();
   renderStatus();
   renderCutList();
   renderOpenScad();
@@ -726,10 +732,9 @@ function renderDimensionSummary() {
 function renderPlanDetails() {
   const definition = getPlanDefinition(currentPlanId);
   const details = definition.details;
-  const card = $('#planDetailsCard');
+  const card = $('#planNotesPane');
   if (!details) {
-    card.classList.add('hidden');
-    card.innerHTML = '';
+    card.innerHTML = `<p>${escapeHtml(definition.summary || '')}</p>`;
     return;
   }
   const sections = [
@@ -737,9 +742,7 @@ function renderPlanDetails() {
     ['Tools', details.tools],
     ['Notes', details.notes]
   ].filter(([, items]) => items?.length);
-  card.classList.remove('hidden');
   card.innerHTML = `
-    <h2>Plan Notes</h2>
     <p>${escapeHtml(details.description || definition.summary)}</p>
     ${sections.map(([title, items]) => `
       <div class="planDetailSection">
@@ -748,6 +751,21 @@ function renderPlanDetails() {
       </div>
     `).join('')}
   `;
+}
+
+function showPlanInfoTab(tab) {
+  activePlanInfoTab = tab === 'dimensions' ? 'dimensions' : 'notes';
+  renderPlanInfoTabs();
+}
+
+function renderPlanInfoTabs() {
+  const showDimensions = activePlanInfoTab === 'dimensions';
+  $('#planNotesTab').classList.toggle('active', !showDimensions);
+  $('#planDimensionsTab').classList.toggle('active', showDimensions);
+  $('#planNotesTab').setAttribute('aria-selected', String(!showDimensions));
+  $('#planDimensionsTab').setAttribute('aria-selected', String(showDimensions));
+  $('#planNotesPane').classList.toggle('hidden', showDimensions);
+  $('#planDimensionsPane').classList.toggle('hidden', !showDimensions);
 }
 
 function renderStatus() {

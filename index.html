@@ -49,7 +49,16 @@
               <button data-unit="mm" type="button">mm</button>
             </div>
           </div>
-          <div class="kvlist" id="dimensionSummary"></div>
+          <div class="planInfoPanel">
+            <div class="segmented fill planInfoTabs" role="tablist" aria-label="Plan information">
+              <button class="active" id="planNotesTab" data-plan-info-tab="notes" role="tab" aria-selected="true" aria-controls="planNotesPane" type="button">Notes</button>
+              <button id="planDimensionsTab" data-plan-info-tab="dimensions" role="tab" aria-selected="false" aria-controls="planDimensionsPane" type="button">Dimensions</button>
+            </div>
+            <section class="planInfoPane planDetailsCard" id="planNotesPane" role="tabpanel" aria-labelledby="planNotesTab"></section>
+            <section class="planInfoPane hidden" id="planDimensionsPane" role="tabpanel" aria-labelledby="planDimensionsTab">
+              <div class="kvlist" id="dimensionSummary"></div>
+            </section>
+          </div>
           <div class="toolbar">
             <button class="btn ghost" id="btnPlanCatalog" type="button">Plans</button>
             <button class="btn primary" id="btnCalculate" type="button">Calculate</button>
@@ -58,8 +67,6 @@
           </div>
           <div class="status" id="statusBar" aria-live="polite"></div>
         </div>
-
-        <div class="card planDetailsCard" id="planDetailsCard"></div>
 
         <div class="card">
           <h2>Build Stages</h2>

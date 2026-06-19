@@ -227,6 +227,18 @@ h1 { font-size: 18px; }
 h2 { font-size: 16px; }
 h3 { margin: 0; font-size: 12px; line-height: 1.2; }
 
+.planInfoPanel {
+  margin: 14px 0;
+}
+
+.planInfoTabs {
+  margin-bottom: 10px;
+}
+
+.planInfoPane {
+  min-height: 120px;
+}
+
 .planDetailsCard {
   color: var(--muted);
 }
@@ -490,7 +502,7 @@ label {
 .kvlist {
   display: grid;
   gap: 0;
-  margin: 14px 0;
+  margin: 0;
   border: var(--bd);
   border-radius: var(--radius);
   overflow: hidden;

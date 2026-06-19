@@ -41,6 +41,13 @@ try {
 
   await page.goto(`${baseUrl}?plan=generated-extension-leaf-table`, { waitUntil: 'networkidle' });
   assert.equal(await page.locator('#appTitle').textContent(), 'Generated Extension Leaf Table');
+  assert.equal(await page.locator('#planNotesTab').getAttribute('aria-selected'), 'true');
+  assert.equal(await page.locator('#planNotesPane').isVisible(), true);
+  assert.equal(await page.locator('#planDimensionsPane').isVisible(), false);
+  assert.match(await page.locator('#planNotesPane').textContent(), /advanced generated plan/i);
+  await page.locator('#planDimensionsTab').click();
+  assert.equal(await page.locator('#planDimensionsTab').getAttribute('aria-selected'), 'true');
+  assert.equal(await page.locator('#planDimensionsPane').isVisible(), true);
   assert.match(await page.locator('#statusBar').textContent(), /Extension table/);
   assert.match(await page.locator('#dimensionSummary').textContent(), /Extension leaf table/);
   assert.deepEqual(await page.locator('.badge.err').allTextContents(), []);
