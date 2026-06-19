@@ -181,6 +181,8 @@ async function chooseNextAction(state, options) {
         'If a tool result says recommended_action is search_components, you must search components before calling request_capability.',
         'If generate_design reports an unsupported template, do not immediately request a template; search for reusable components that could compose the requested plan.',
         'If generate_design reports compatible_template_ids, generate with the first compatible template before proposing a new composition.',
+        'If the scenario includes target_geometry or photo-derived clean 3D shape data, inspect_target_geometry, fit_primitives_to_target, and target_geometry_to_component_graph before generating a complete design.',
+        'Use target geometry as the target shape to explain with woodworking primitives; do not treat a reconstructed mesh or silhouette as a finished build plan.',
         'When an unsupported template can be described with existing components and relationships, call propose_component_composition before request_capability. Include exact component_ids, relationship_ids when applicable, deterministic algorithm steps, validation strategy, build steps, renderer requirements, and open questions.',
         'A component composition proposal is not executable code. It is a Codex-review artifact; do not claim it is publishable until Codex adds deterministic implementation support.',
         'If propose_component_composition reports unknown component_ids or relationship_ids, repair the proposal with exact known IDs from the result, search_components, or search_assembly_relationships. Do not request new components based only on invented IDs.',
@@ -201,6 +203,9 @@ async function chooseNextAction(state, options) {
         available_tools: sandboxToolPromptManifest,
         scenario: state.scenario,
         current_design_summary: summarizeGeneratedDesign(state.design),
+        current_target_geometry_summary: state.targetGeometry ? state.targetGeometry.target_id : null,
+        current_primitive_fit: state.primitiveFit || null,
+        current_component_graph: state.componentGraph || null,
         current_validation: state.validation,
         current_component_interface_review: state.componentInterfaceReview || null,
         current_build_step_review: state.buildStepReview || null,
@@ -305,6 +310,39 @@ export function enforceWorkflowGate(next, state) {
     };
   }
   const publishingAction = ['check_publishability', 'export_plan_package'].includes(action);
+  if (!state.design && state.scenario?.target_geometry && !state.targetGeometry && action !== 'inspect_target_geometry') {
+    return {
+      action: 'inspect_target_geometry',
+      rationale: [
+        'Workflow gate inserted by the sandbox loop: the scenario includes target geometry from photo or clean-shape extraction.',
+        'Normalize the target geometry before template generation or composition proposals.'
+      ].join(' '),
+      tool_call: { name: 'inspect_target_geometry', arguments: { target_geometry: state.scenario.target_geometry } },
+      overridden_model_action: next
+    };
+  }
+  if (!state.design && state.targetGeometry && !state.primitiveFit && action !== 'fit_primitives_to_target') {
+    return {
+      action: 'fit_primitives_to_target',
+      rationale: [
+        'Workflow gate inserted by the sandbox loop: target geometry exists but has not been fitted to woodworking primitives.',
+        'Fit panels, rails, posts, support arms, and hardware tracks before selecting a template or component graph.'
+      ].join(' '),
+      tool_call: { name: 'fit_primitives_to_target', arguments: {} },
+      overridden_model_action: next
+    };
+  }
+  if (!state.design && state.primitiveFit && !state.componentGraph && action !== 'target_geometry_to_component_graph') {
+    return {
+      action: 'target_geometry_to_component_graph',
+      rationale: [
+        'Workflow gate inserted by the sandbox loop: fitted target primitives need to be mapped into component and relationship graph hints.',
+        'Build the graph before generation or composition proposal so the local model explains the target shape with reusable parts.'
+      ].join(' '),
+      tool_call: { name: 'target_geometry_to_component_graph', arguments: {} },
+      overridden_model_action: next
+    };
+  }
   const exactSupportedTemplate = state.design ? null : exactTemplateFromSearchHistory(state.transcript, state.scenario);
   if (exactSupportedTemplate && action !== 'generate_design') {
     return {

@@ -31,6 +31,7 @@ Important context:
 - If a design is valid but needs better builder-facing guidance, the local LLM should use an annotation/revision tool to add instructions or notes to the generated design package. If no suitable tool exists, it should emit a structured capability request for Codex.
 - Screenshot review should be handled by a vision-language local model when available. The vision reviewer should pretend to be a first-time builder, compare rendered app/build-step images against the generated package intent, judge whether the visible screen makes the next build action clear, then return findings, proposed annotations, or missing-capability requests rather than source-code patches.
 - Photo-to-plan work should start with a multi-photo design brief, not direct plan generation. A vision-language model should reconcile front/side/detail/back photos into structured observations, known/inferred dimensions, visible parts, component-search queries, uncertainties, and missing capabilities. The local text model should then search/select reusable components and generate a scenario from the brief.
+- For shape-heavy photo work, use a target-geometry intermediate stage: photos or clean isolated renders become a coarse target envelope of primitive volumes, the sandbox fits woodworking-friendly primitives to that target, and the local model maps those primitives to components and relationships before generating a plan.
 - Complex photo-derived mechanisms should be planned component-first. The local model should identify independent subsystems, choose exact component and relationship IDs, and run component-interface review before trusting a complete assembled render. If the final 3D model only looks plausible because a tabletop, panel, or cover hides missing moving/support members, the model should request a reusable capability from Codex instead of publishing.
 - The local LLM should iterate as far as it can with the available tools. If the tools are insufficient, it should produce a structured request for Codex describing the missing designer capability, why it is needed, and the design attempt that exposed the gap.
 - The first generated project should be a simple tray-style bird feeder, not a load-bearing stool. It should prove the canonical schema, sandbox loop, validation, OpenSCAD export, and portal-publish pathway with low structural risk.
@@ -49,6 +50,7 @@ Suggested first milestone:
    - validate a candidate design
    - apply model-authored annotations such as build guidance, drill notes, and part notes without editing source code
    - normalize a multi-photo design brief and map it into component searches and a candidate scenario
+   - normalize target geometry from photos or clean object renders, fit woodworking primitives to it, and map those primitives into component/relationship searches
    - review rendered screenshots with a vision model acting as an end-user builder comprehension reviewer
    - export OpenSCAD and a simple plan package
    - report missing tool/capability requests in a Codex-readable format

@@ -10,12 +10,13 @@ import { generateExtensionLeafTableDesign } from './extensionLeafTable.js';
 import { generateCanonicalOpenScad } from './openScad.js';
 import { normalizePhotoDesignBrief, scenarioFromPhotoDesignBrief, summarizePhotoDesignBrief } from './photoBrief.js';
 import { createCapabilityRequest, findTemplateCandidates, listTemplates, searchTemplates } from './schema.js';
+import { fitPrimitivesToTarget, normalizeTargetGeometry, proposeComponentGraphFromTarget, summarizeTargetGeometry } from './targetGeometry.js';
 import { generateTrayBirdFeederDesign } from './trayBirdFeeder.js';
 import { generateTwoStepStoolDesign } from './twoStepStool.js';
 import { checkPublishability, validateGeneratedDesign } from './validator.js';
 import { generateWallPanelPocketHardwareDesign } from './wallPanelPocketHardware.js';
 
-export { checkPublishability, createCapabilityRequest, generateCanonicalOpenScad, getAssemblyRelationship, getComponent, listAssemblyRelationshipTypes, listAssemblyRelationships, listComponentCategories, listComponents, listTemplates, normalizePhotoDesignBrief, reviewBuildSteps, reviewComponentInterfaces, scenarioFromPhotoDesignBrief, searchAssemblyRelationships, searchComponents, searchTemplates, summarizePhotoDesignBrief, validateGeneratedDesign };
+export { checkPublishability, createCapabilityRequest, fitPrimitivesToTarget, generateCanonicalOpenScad, getAssemblyRelationship, getComponent, listAssemblyRelationshipTypes, listAssemblyRelationships, listComponentCategories, listComponents, listTemplates, normalizePhotoDesignBrief, normalizeTargetGeometry, proposeComponentGraphFromTarget, reviewBuildSteps, reviewComponentInterfaces, scenarioFromPhotoDesignBrief, searchAssemblyRelationships, searchComponents, searchTemplates, summarizePhotoDesignBrief, summarizeTargetGeometry, validateGeneratedDesign };
 
 const DESIGN_PARAMETER_KEYS = [
   'width_in',
@@ -229,6 +230,39 @@ export const SANDBOX_TOOLS = [
         brief: { type: 'object', additionalProperties: true },
         template_id: { type: 'string' },
         design_id: { type: 'string' }
+      }
+    }
+  },
+  {
+    name: 'inspect_target_geometry',
+    description: 'Normalize a coarse target geometry extracted from photos or clean object renders before fitting woodworking primitives.',
+    input_schema: {
+      type: 'object',
+      additionalProperties: true,
+      properties: {
+        target_geometry: { type: 'object', additionalProperties: true }
+      }
+    }
+  },
+  {
+    name: 'fit_primitives_to_target',
+    description: 'Fit woodworking-friendly primitives such as panels, rails, posts, support arms, and hardware tracks to a normalized target geometry.',
+    input_schema: {
+      type: 'object',
+      additionalProperties: true,
+      properties: {
+        target_geometry: { type: 'object', additionalProperties: true }
+      }
+    }
+  },
+  {
+    name: 'target_geometry_to_component_graph',
+    description: 'Convert fitted target primitives into component and relationship search hints before generating or proposing a plan.',
+    input_schema: {
+      type: 'object',
+      additionalProperties: true,
+      properties: {
+        target_geometry: { type: 'object', additionalProperties: true }
       }
     }
   },
@@ -611,6 +645,27 @@ export function executeSandboxTool(toolCall, state = {}) {
     nextState.photoBrief = brief;
     nextState.scenario = scenarioFromPhotoDesignBrief(brief, { template_id: args.template_id, design_id: args.design_id });
     return { state: nextState, result: { ok: true, scenario: nextState.scenario, summary: summarizePhotoDesignBrief(brief), recommended_action: 'generate_design' } };
+  }
+
+  if (name === 'inspect_target_geometry') {
+    const targetGeometry = normalizeTargetGeometry(args.target_geometry || nextState.targetGeometry || nextState.scenario?.target_geometry || {}, { photoSet: nextState.scenario?.photo_set });
+    nextState.targetGeometry = targetGeometry;
+    return { state: nextState, result: { ok: true, target_geometry: targetGeometry, summary: summarizeTargetGeometry(targetGeometry), recommended_action: 'fit_primitives_to_target' } };
+  }
+
+  if (name === 'fit_primitives_to_target') {
+    const targetGeometry = normalizeTargetGeometry(args.target_geometry || nextState.targetGeometry || nextState.scenario?.target_geometry || {}, { photoSet: nextState.scenario?.photo_set });
+    nextState.targetGeometry = targetGeometry;
+    nextState.primitiveFit = fitPrimitivesToTarget(targetGeometry);
+    return { state: nextState, result: nextState.primitiveFit };
+  }
+
+  if (name === 'target_geometry_to_component_graph') {
+    const targetGeometry = normalizeTargetGeometry(args.target_geometry || nextState.targetGeometry || nextState.scenario?.target_geometry || {}, { photoSet: nextState.scenario?.photo_set });
+    nextState.targetGeometry = targetGeometry;
+    nextState.primitiveFit = nextState.primitiveFit || fitPrimitivesToTarget(targetGeometry);
+    nextState.componentGraph = proposeComponentGraphFromTarget(targetGeometry, nextState.primitiveFit);
+    return { state: nextState, result: nextState.componentGraph };
   }
 
   if (name === 'generate_design') {

@@ -7,6 +7,13 @@ import {
   summarizePhotoDesignBrief
 } from '../src/generated/photoBrief.js';
 import {
+  buildTargetGeometryMessages,
+  fitPrimitivesToTarget,
+  normalizeTargetGeometry,
+  proposeComponentGraphFromTarget,
+  summarizeTargetGeometry
+} from '../src/generated/targetGeometry.js';
+import {
   PACKAGE_REVIEW_ROLES,
   VISUAL_REVIEW_SCHEMA,
   buildPackageReviewInput,
@@ -194,5 +201,35 @@ const wrappedPhotoBrief = normalizePhotoDesignBrief({
 });
 assert.equal(wrappedPhotoBrief.photo_set_id, 'wrapped_reference');
 assert.equal(wrappedPhotoBrief.parts[0].name, 'step board');
+
+const extensionTarget = normalizeTargetGeometry({
+  target_id: 'extension_table_no_top_reference',
+  object_type: 'extension leaf table undercarriage',
+  confidence: 'medium',
+  source_views: ['no tabletop underside detail'],
+  volumes: [
+    { id: 'leg.front.left', name: 'front left leg', kind: 'post', role: 'square leg post', position: { x: -32, y: -18, z: 14 }, size: { x: 3.75, y: 3.75, z: 28 }, confidence: 'high', visible_in: ['no tabletop underside detail'] },
+    { id: 'leg.front.right', name: 'front right leg', kind: 'post', role: 'square leg post', position: { x: 32, y: -18, z: 14 }, size: { x: 3.75, y: 3.75, z: 28 }, confidence: 'high', visible_in: ['no tabletop underside detail'] },
+    { id: 'apron.front', name: 'front apron rail', kind: 'rail', role: 'front apron rail', position: { x: 0, y: -18, z: 27 }, size: { x: 64, y: 1.5, z: 3.5 }, confidence: 'high', visible_in: ['no tabletop underside detail'] },
+    { id: 'slide.front.left', name: 'front left slide track', kind: 'hardware_track', role: 'fixed telescoping slide track', position: { x: -20, y: -15, z: 23 }, size: { x: 18, y: 0.5, z: 0.5 }, confidence: 'medium', visible_in: ['no tabletop underside detail'] },
+    { id: 'support.front.left', name: 'front left pull-out support arm', kind: 'support_arm', role: 'moving support arm under end leaf', position: { x: -38, y: -15, z: 22 }, size: { x: 16.5, y: 1.5, z: 1.5 }, confidence: 'medium', visible_in: ['no tabletop underside detail'] },
+    { id: 'leaf.left', name: 'left removable leaf envelope', kind: 'panel', role: 'end leaf panel target', position: { x: -38, y: 0, z: 30 }, size: { x: 12, y: 40, z: 1.75 }, confidence: 'medium', visible_in: ['front'] }
+  ],
+  uncertainties: ['Back-side support track count inferred from symmetry.']
+});
+assert.equal(extensionTarget.schema_version, '0.1');
+assert.equal(summarizeTargetGeometry(extensionTarget).volume_count, 6);
+const primitiveFit = fitPrimitivesToTarget(extensionTarget);
+assert.equal(primitiveFit.ok, true);
+assert.equal(primitiveFit.primitives.some((primitive) => primitive.primitive_type === 'hardware_track'), true);
+assert.equal(primitiveFit.relationship_searches.some((search) => /telescoping slide/.test(search.query)), true);
+const componentGraph = proposeComponentGraphFromTarget(extensionTarget, primitiveFit);
+assert.equal(componentGraph.components.some((item) => item.component_id === 'hardware.telescoping_leaf_support_slide'), true);
+assert.equal(componentGraph.relationships.some((item) => item.relationship_id === 'relationship.motion.telescoping_slide_support_under_leaf'), true);
+
+const targetMessages = buildTargetGeometryMessages(photoSet, ['data:image/jpeg;base64,clean-object']);
+assert.equal(targetMessages.length, 2);
+assert.match(targetMessages[0].content, /target-geometry extraction agent/);
+assert.equal(targetMessages[1].content.length, 2);
 
 console.log('generated review tests passed');

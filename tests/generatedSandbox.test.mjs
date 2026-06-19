@@ -322,6 +322,8 @@ assert.equal(tools.some((tool) => tool.name === 'generate_design'), true);
 assert.equal(tools.some((tool) => tool.name === 'search_templates'), true);
 assert.equal(tools.some((tool) => tool.name === 'search_components'), true);
 assert.equal(tools.some((tool) => tool.name === 'search_assembly_relationships'), true);
+assert.equal(tools.some((tool) => tool.name === 'fit_primitives_to_target'), true);
+assert.equal(tools.some((tool) => tool.name === 'target_geometry_to_component_graph'), true);
 assert.equal(tools.some((tool) => tool.name === 'review_build_steps'), true);
 assert.equal(tools.some((tool) => tool.name === 'propose_component_composition'), true);
 assert.equal(tools.some((tool) => tool.name === 'request_capability'), true);
@@ -356,6 +358,28 @@ assert.equal(searchAssemblyRelationships({ query: 'leg apron table base frame fi
 assert.equal(searchTemplates({ query: 'entryway mail cubby hooks' })[0].template_id, 'wall_panel_with_pocket_and_linear_hardware');
 assert.equal(searchTemplates({ query: 'rockport step ladder stool' })[0].template_id, 'two_step_stool');
 assert.equal(searchTemplates({ query: 'dining table with retractable end leaves' })[0].template_id, 'extension_leaf_dining_table');
+
+const targetGeometryToolResult = executeSandboxTool({
+  name: 'fit_primitives_to_target',
+  arguments: {
+    target_geometry: {
+      target_id: 'extension_target_tool_test',
+      object_type: 'extension leaf table underside',
+      confidence: 'medium',
+      source_views: ['underside'],
+      volumes: [
+        { id: 'leg.a', kind: 'post', role: 'square leg post', position: { x: -32, y: -18, z: 14 }, size: { x: 3.75, y: 3.75, z: 28 }, confidence: 'high' },
+        { id: 'apron.front', kind: 'rail', role: 'front apron rail', position: { x: 0, y: -18, z: 27 }, size: { x: 64, y: 1.5, z: 3.5 }, confidence: 'high' },
+        { id: 'slide.front', kind: 'hardware_track', role: 'fixed telescoping slide track', position: { x: -20, y: -15, z: 23 }, size: { x: 18, y: 0.5, z: 0.5 }, confidence: 'medium' },
+        { id: 'support.front', kind: 'support_arm', role: 'moving support arm under leaf', position: { x: -38, y: -15, z: 22 }, size: { x: 16.5, y: 1.5, z: 1.5 }, confidence: 'medium' }
+      ]
+    }
+  }
+}, {});
+assert.equal(targetGeometryToolResult.result.ok, true);
+assert.equal(targetGeometryToolResult.result.primitives.some((primitive) => primitive.primitive_type === 'support_arm'), true);
+const componentGraphToolResult = executeSandboxTool({ name: 'target_geometry_to_component_graph', arguments: {} }, targetGeometryToolResult.state);
+assert.equal(componentGraphToolResult.result.components.some((item) => item.component_id === 'hardware.telescoping_leaf_support_slide'), true);
 
 let toolState = { scenario };
 let executed = executeSandboxTool({ name: 'inspect_scenario', arguments: {} }, toolState);

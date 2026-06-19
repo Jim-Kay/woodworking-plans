@@ -169,6 +169,12 @@ npm run sandbox -- export_plan_package generated/runs/demo/design.json generated
 - `list_assembly_relationships`
 - `search_assembly_relationships`
 - `get_assembly_relationship`
+- `inspect_photo_brief`
+- `search_photo_brief_components`
+- `photo_brief_to_scenario`
+- `inspect_target_geometry`
+- `fit_primitives_to_target`
+- `target_geometry_to_component_graph`
 - `generate_design`
 - `summarize_design`
 - `validate_design`
@@ -191,11 +197,12 @@ The intended model sequence is usually:
 5. Generate a design from the selected template.
 6. Validate the generated design.
 7. Revise if validation fails.
-8. Run `review_component_interfaces` for complex, photo-derived, moving, load-bearing, or hidden mechanisms before trusting the assembled model.
-9. Run `review_build_steps` to check whether the build instructions and rendered step visuals are understandable to a first-time builder.
-10. Use `annotate_design` when the design is structurally valid but needs better build guidance, drill instructions, labels, or part notes.
-11. Check publishability.
-12. Export a plan package, or propose/request a missing capability from Codex.
+8. If the scenario includes target geometry from photos or clean object renders, run `inspect_target_geometry`, `fit_primitives_to_target`, and `target_geometry_to_component_graph` before generation.
+9. Run `review_component_interfaces` for complex, photo-derived, moving, load-bearing, or hidden mechanisms before trusting the assembled model.
+10. Run `review_build_steps` to check whether the build instructions and rendered step visuals are understandable to a first-time builder.
+11. Use `annotate_design` when the design is structurally valid but needs better build guidance, drill instructions, labels, or part notes.
+12. Check publishability.
+13. Export a plan package, or propose/request a missing capability from Codex.
 
 Codex should generally improve prompts, tool schemas, validators, adapters, and portal support. The local model should make design-level choices through sandbox tools: dimensions, parameter revisions, build guidance, labels, notes, and missing-capability requests. If the model cannot express a desired improvement through the current tools, that is a signal for Codex to add a narrower tool rather than directly hardcoding the design improvement.
 
@@ -213,6 +220,8 @@ Catalog search uses a hybrid retrieval strategy. Exact IDs and aliases score hig
 The assembly relationship catalog is the connection-language layer. It starts as a taxonomy of relationship types such as `fixed_contact`, `support`, `motion`, `layout_reference`, and `clearance`. The records can later grow toward ontology-like rules, but the current tool is intentionally pragmatic: use `search_assembly_relationships` to find exact relationship IDs for cases like a rail fastened to a panel, a shelf spanning between side panels, a hinged fold-down panel, a rabbet ledge supporting strainer rails, or caster plates mounted to a base. Composition proposals should include `relationship_ids` when relationships are central to the design.
 
 For complex reference objects, the model should prefer component-first planning over whole-object guessing. It should identify independent subsystems, such as tabletop panels, leg-and-apron base, slide carriers, moving support arms, stops, and alignment hardware, then check the interfaces between those subsystems. A final 3D render can look plausible while hiding missing mechanism details under a tabletop or panel. `review_component_interfaces` is the deterministic guard for that failure mode: if it reports that a moving or load-bearing subsystem is not decomposed into explicit fixed and moving members, the model should request a reusable capability from Codex rather than continuing toward publication.
+
+The target-geometry path is the intermediate layer between vision and plan generation. A vision-capable model can turn multiple photos or a clean no-background object render into a coarse target envelope: named boxes, panels, rails, posts, tracks, cylinders, and uncertain hidden volumes in a shared coordinate system. The sandbox then uses `fit_primitives_to_target` to translate those volumes into woodworking-friendly primitives and `target_geometry_to_component_graph` to produce component and relationship search hints. This keeps the hard visual problem separate from the hard buildability problem: the local text model explains a target shape with reusable components instead of inventing a complete project from a flat photo.
 
 Before proposing a new template, the model should call `search_templates` with the scenario `template_id`, project name, and plain-language intent. This helps map names such as `mail_key_organizer` or `entry organizer with hooks` to existing supported templates instead of creating duplicate composition proposals.
 

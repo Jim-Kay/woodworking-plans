@@ -166,6 +166,65 @@ assert.equal(exactTemplateSearchGate.tool_call.arguments.design_id, 'extension_t
 assert.equal(exactTemplateSearchGate.tool_call.arguments.parameters.leaf_depth_in, 12);
 assert.equal(exactTemplateSearchGate.overridden_model_action.action, 'search_components');
 
+const targetGeometryInspectGate = enforceWorkflowGate({
+  action: 'generate_design',
+  rationale: 'Generate from the known extension table template.',
+  tool_call: {
+    name: 'generate_design',
+    arguments: { template_id: 'extension_leaf_dining_table' }
+  }
+}, {
+  scenario: {
+    template_id: 'extension_leaf_dining_table',
+    design_id: 'target_geometry_probe',
+    target_geometry: {
+      target_id: 'target_geometry_probe',
+      object_type: 'extension leaf table underside',
+      volumes: [
+        { id: 'slide.front', kind: 'hardware_track', role: 'fixed slide track', position: { x: 0, y: 0, z: 10 }, size: { x: 12, y: 0.5, z: 0.5 } }
+      ]
+    }
+  },
+  transcript: []
+});
+
+assert.equal(targetGeometryInspectGate.action, 'inspect_target_geometry');
+assert.equal(targetGeometryInspectGate.tool_call.name, 'inspect_target_geometry');
+assert.equal(targetGeometryInspectGate.overridden_model_action.action, 'generate_design');
+
+const targetPrimitiveFitGate = enforceWorkflowGate({
+  action: 'search_templates',
+  rationale: 'Search matching templates.',
+  tool_call: { name: 'search_templates', arguments: { query: 'extension table' } }
+}, {
+  scenario: {
+    template_id: 'extension_leaf_dining_table',
+    design_id: 'target_geometry_probe'
+  },
+  targetGeometry: { target_id: 'target_geometry_probe', volumes: [] },
+  transcript: []
+});
+
+assert.equal(targetPrimitiveFitGate.action, 'fit_primitives_to_target');
+assert.equal(targetPrimitiveFitGate.tool_call.name, 'fit_primitives_to_target');
+
+const targetComponentGraphGate = enforceWorkflowGate({
+  action: 'generate_design',
+  rationale: 'Generate after primitive fitting.',
+  tool_call: { name: 'generate_design', arguments: { template_id: 'extension_leaf_dining_table' } }
+}, {
+  scenario: {
+    template_id: 'extension_leaf_dining_table',
+    design_id: 'target_geometry_probe'
+  },
+  targetGeometry: { target_id: 'target_geometry_probe', volumes: [] },
+  primitiveFit: { ok: true, primitives: [] },
+  transcript: []
+});
+
+assert.equal(targetComponentGraphGate.action, 'target_geometry_to_component_graph');
+assert.equal(targetComponentGraphGate.tool_call.name, 'target_geometry_to_component_graph');
+
 const blockedTemplateRetryGate = enforceWorkflowGate({
   action: 'generate_design',
   rationale: 'Try the wall organizer template again.',
