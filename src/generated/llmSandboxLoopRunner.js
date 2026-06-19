@@ -302,6 +302,25 @@ export function enforceWorkflowGate(next, state) {
     };
   }
   const publishingAction = ['check_publishability', 'export_plan_package'].includes(action);
+  const exactSupportedTemplate = state.design ? null : exactTemplateFromSearchHistory(state.transcript, state.scenario);
+  if (exactSupportedTemplate && action !== 'generate_design') {
+    return {
+      action: 'generate_design',
+      rationale: [
+        'Workflow gate inserted by the sandbox loop: search_templates found an exact supported template for this scenario.',
+        `Generating ${exactSupportedTemplate} before additional component searches or composition proposals.`
+      ].join(' '),
+      tool_call: {
+        name: 'generate_design',
+        arguments: {
+          template_id: exactSupportedTemplate,
+          design_id: state.scenario?.design_id,
+          parameters: state.scenario?.parameters || {}
+        }
+      },
+      overridden_model_action: next
+    };
+  }
   const compatibleTemplate = state.design ? null : lastCompatibleTemplate(state.transcript) || scenarioTemplateAliasCandidate(state.scenario);
   const blockedTemplateRetry = blockedTemplateRetryProposal(next, state);
   if (blockedTemplateRetry) return blockedTemplateRetry;
@@ -407,6 +426,18 @@ function buildStepReviewReady(review) {
 
 export function readyForFinalPackage(state = {}) {
   return Boolean(state.design && state.validation?.ok && buildStepReviewReady(state.buildStepReview) && !state.finalPackage && !state.capabilityRequest && !state.compositionProposal);
+}
+
+function exactTemplateFromSearchHistory(transcript = [], scenario = {}) {
+  const last = transcript.at(-1);
+  const action = last?.model_action?.tool_call?.name || last?.model_action?.action;
+  if (action !== 'search_templates') return null;
+  const scenarioTemplateId = scenario?.template_id;
+  if (!scenarioTemplateId) return null;
+  const templates = last.tool_result?.templates;
+  if (!Array.isArray(templates)) return null;
+  const match = templates.find((template) => template?.template_id === scenarioTemplateId);
+  return match ? scenarioTemplateId : null;
 }
 
 function lastCompatibleTemplate(transcript = []) {

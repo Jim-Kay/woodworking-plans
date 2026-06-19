@@ -84,7 +84,7 @@ const cameraFields = {
   targetZ: $('#targetZ')
 };
 
-const STRING_PLAN_KEYS = ['unit', 'join', 'build', 'finishColor', 'finishSheen', 'canvasAppearance', 'modelPalette', 'modelOpacity', 'modelScene', 'mountMethod', 'mountClip', 'feederMaterial', 'stoolMaterial'];
+const STRING_PLAN_KEYS = ['unit', 'join', 'build', 'finishColor', 'finishSheen', 'canvasAppearance', 'modelPalette', 'modelOpacity', 'modelScene', 'mountMethod', 'mountClip', 'feederMaterial', 'stoolMaterial', 'tableTopMaterial', 'tableBaseMaterial', 'tableFinish'];
 const BOOLEAN_PLAN_KEYS = ['showDimensions', 'feederHanging', 'feederDrainage'];
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -477,7 +477,7 @@ function isGeneratedPlan() {
 }
 
 function isGeneratedBuild(build) {
-  return build === 'generated-tray-bird-feeder' || build === 'generated-wall-key-rack' || build === 'generated-two-step-stool';
+  return build === 'generated-tray-bird-feeder' || build === 'generated-wall-key-rack' || build === 'generated-two-step-stool' || build === 'generated-extension-leaf-table';
 }
 
 function isGeneratedTrayPlan() {
@@ -492,8 +492,12 @@ function isGeneratedStoolPlan() {
   return plan.build === 'generated-two-step-stool';
 }
 
+function isGeneratedExtensionTablePlan() {
+  return plan.build === 'generated-extension-leaf-table';
+}
+
 function renderFields() {
-  const numericKeys = ['canvasW', 'canvasH', 'canvasT', 'stretcherW', 'face', 'reveal', 'depth', 'faceLip', 'linerW', 'strainerDepth', 'stock', 'kerf', 'rabbet', 'shelfW', 'shelfH', 'shelfD', 'shelfLevels', 'shelfBays', 'shelfSlats', 'shelfPost', 'shelfRail', 'shelfDeck', 'toteW', 'toteLipWidth', 'toteD', 'toteH', 'toteColumns', 'toteRows', 'toteSideClearance', 'toteVerticalClearance', 'toteRailInset', 'feederW', 'feederD', 'feederSideH', 'feederBottomT', 'feederSideT', 'stoolW', 'stoolD', 'stoolH', 'stoolLowerStepH', 'stoolLowerStepD', 'stoolUpperStepD', 'stoolTreadT', 'stoolLegW', 'stoolLegD', 'stoolRailH', 'stoolRailT'];
+  const numericKeys = ['canvasW', 'canvasH', 'canvasT', 'stretcherW', 'face', 'reveal', 'depth', 'faceLip', 'linerW', 'strainerDepth', 'stock', 'kerf', 'rabbet', 'shelfW', 'shelfH', 'shelfD', 'shelfLevels', 'shelfBays', 'shelfSlats', 'shelfPost', 'shelfRail', 'shelfDeck', 'toteW', 'toteLipWidth', 'toteD', 'toteH', 'toteColumns', 'toteRows', 'toteSideClearance', 'toteVerticalClearance', 'toteRailInset', 'feederW', 'feederD', 'feederSideH', 'feederBottomT', 'feederSideT', 'stoolW', 'stoolD', 'stoolH', 'stoolLowerStepH', 'stoolLowerStepD', 'stoolUpperStepD', 'stoolTreadT', 'stoolLegW', 'stoolLegD', 'stoolRailH', 'stoolRailT', 'tableOverallL', 'tableCenterL', 'tableLeafD', 'tableLeafCount', 'tableW', 'tableTopT', 'tableH', 'tableLegSize', 'tableBaseClearL', 'tableApronH', 'tableApronT', 'tableSupportArmCount', 'tableSupportArmExt', 'tableSlideTravel', 'tableSupportArmW', 'tableSupportArmH'];
   numericKeys.forEach((key) => {
     const displayValue = plan.build === 'rolling-shelves' && key === 'shelfDeck' && result?.deck ? result.deck : plan[key];
     const isCount = ['shelfLevels', 'shelfBays', 'shelfSlats', 'toteColumns', 'toteRows'].includes(key);
@@ -540,10 +544,10 @@ function renderFields() {
     label.textContent = normalizeBuild(plan.build) === 'strainer' ? 'Strainer' : 'Liner';
   });
   if (isGeneratedPlan()) {
-    document.querySelector('[data-stage-part="primary"]').textContent = isGeneratedWallRackPlan() ? 'Board' : isGeneratedStoolPlan() ? 'Treads' : 'Panel';
-    document.querySelector('[data-stage-part="support"]').textContent = isGeneratedWallRackPlan() ? 'Hooks' : isGeneratedStoolPlan() ? 'Legs' : 'Rails';
-    document.querySelector('[data-stage-part="surface"]').textContent = isGeneratedWallRackPlan() ? 'Pilot holes' : isGeneratedStoolPlan() ? 'Rails' : 'Drill holes';
-    document.querySelector('[data-stage-part="hardware"]').textContent = isGeneratedWallRackPlan() ? 'Mounting' : isGeneratedStoolPlan() ? 'Safety' : 'Fasteners';
+    document.querySelector('[data-stage-part="primary"]').textContent = isGeneratedExtensionTablePlan() ? 'Top' : isGeneratedWallRackPlan() ? 'Board' : isGeneratedStoolPlan() ? 'Treads' : 'Panel';
+    document.querySelector('[data-stage-part="support"]').textContent = isGeneratedExtensionTablePlan() ? 'Legs' : isGeneratedWallRackPlan() ? 'Hooks' : isGeneratedStoolPlan() ? 'Legs' : 'Rails';
+    document.querySelector('[data-stage-part="surface"]').textContent = isGeneratedExtensionTablePlan() ? 'Supports' : isGeneratedWallRackPlan() ? 'Pilot holes' : isGeneratedStoolPlan() ? 'Rails' : 'Drill holes';
+    document.querySelector('[data-stage-part="hardware"]').textContent = isGeneratedExtensionTablePlan() ? 'Slides' : isGeneratedWallRackPlan() ? 'Mounting' : isGeneratedStoolPlan() ? 'Safety' : 'Fasteners';
   } else if (isShelfPlan()) {
     document.querySelector('[data-stage-part="primary"]').textContent = 'Posts';
     document.querySelector('[data-stage-part="support"]').textContent = 'Rails';
@@ -577,7 +581,14 @@ function renderToggles() {
         ['hardware', 'Fasteners']
       ]
     : isGeneratedPlan()
-      ? isGeneratedStoolPlan()
+      ? isGeneratedExtensionTablePlan()
+        ? [
+            ['panels', 'Top and leaves'],
+            ['legs', 'Legs'],
+            ['rails', 'Aprons/supports'],
+            ['references', 'Slide references']
+          ]
+        : isGeneratedStoolPlan()
         ? [
             ['treads', 'Treads'],
             ['legs', 'Legs'],
@@ -618,7 +629,18 @@ function renderToggles() {
 
 function renderDimensionSummary() {
   if (isGeneratedPlan()) {
-    const rows = isGeneratedStoolPlan() ? [
+    const rows = isGeneratedExtensionTablePlan() ? [
+      ['Plan type', 'Extension leaf table'],
+      ['Extended size', `${formatLength(result.tableOverallL, plan.unit)} x ${formatLength(result.tableW, plan.unit)} x ${formatLength(result.tableH, plan.unit)}`],
+      ['Center top', `${formatLength(result.tableCenterL, plan.unit)} x ${formatLength(result.tableW, plan.unit)}`],
+      ['End leaves', `${plan.tableLeafCount || 2} x ${formatLength(result.tableLeafD, plan.unit)}`],
+      ['Support arms', formatLength(result.tableSupportArmExt, plan.unit)],
+      ['Slide travel', formatLength(result.tableSlideTravel, plan.unit)],
+      ['Physical parts', result.physicalPartCount],
+      ['Guide marks', result.referencePartCount],
+      ['Estimated board feet', result.ok ? result.boardFeet.toFixed(2) : '-'],
+      ['Publishable', result.publishability?.ok ? 'Yes' : 'Needs review']
+    ] : isGeneratedStoolPlan() ? [
       ['Plan type', 'Two-step stool'],
       ['Overall size', `${formatLength(result.stoolW, plan.unit)} x ${formatLength(result.stoolD, plan.unit)} x ${formatLength(result.stoolH, plan.unit)}`],
       ['Lower step height', formatLength(result.lowerStepH, plan.unit)],
@@ -733,7 +755,7 @@ function renderStatus() {
   const badges = [];
   if (result.ok) {
     badges.push(result.warnings.length ? '<span class="badge warn">Needs review</span>' : '<span class="badge ok">Ready</span>');
-    if (isGeneratedPlan()) badges.push(`<span class="badge">${isGeneratedStoolPlan() ? 'Two-step stool' : isGeneratedWallRackPlan() ? 'Wall rack' : 'Tray feeder'}</span>`);
+    if (isGeneratedPlan()) badges.push(`<span class="badge">${isGeneratedExtensionTablePlan() ? 'Extension table' : isGeneratedStoolPlan() ? 'Two-step stool' : isGeneratedWallRackPlan() ? 'Wall rack' : 'Tray feeder'}</span>`);
     else if (isShelfPlan()) badges.push(`<span class="badge">Shelves: ${result.levels} levels, ${result.bays} bays</span>`);
     else badges.push(`<span class="badge">Outer: ${escapeHtml(formatLength(result.outerW, plan.unit))} x ${escapeHtml(formatLength(result.outerH, plan.unit))}</span>`);
   }
@@ -743,7 +765,9 @@ function renderStatus() {
   const mountStatus = $('#mountStatus');
   if (isShelfPlan() || isGeneratedPlan()) {
     mountStatus.textContent = isGeneratedPlan()
-      ? isGeneratedStoolPlan()
+      ? isGeneratedExtensionTablePlan()
+        ? 'Advanced dimensional aid: verify slide ratings, stops, fasteners, and leaf load path before use.'
+        : isGeneratedStoolPlan()
         ? 'Dimensional aid only: verify joinery, fasteners, and weight capacity before use.'
         : isGeneratedWallRackPlan()
           ? 'Blue guide marks show pilot and mounting locations.'
@@ -2217,7 +2241,15 @@ function printPlanDetailsHtml(definition) {
 
 function printDimensionSummaryHtml() {
   const rows = isGeneratedPlan()
-    ? isGeneratedStoolPlan()
+    ? isGeneratedExtensionTablePlan()
+      ? [
+        ['Plan type', 'Extension leaf table'],
+        ['Extended size', `${formatLength(result.tableOverallL, plan.unit)} x ${formatLength(result.tableW, plan.unit)} x ${formatLength(result.tableH, plan.unit)}`],
+        ['Center top', formatLength(result.tableCenterL, plan.unit)],
+        ['End leaves', `${plan.tableLeafCount || 2} x ${formatLength(result.tableLeafD, plan.unit)}`],
+        ['Physical parts', result.physicalPartCount]
+      ]
+      : isGeneratedStoolPlan()
       ? [
         ['Plan type', 'Two-step stool'],
         ['Overall size', `${formatLength(result.stoolW, plan.unit)} x ${formatLength(result.stoolD, plan.unit)} x ${formatLength(result.stoolH, plan.unit)}`],

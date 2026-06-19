@@ -1,15 +1,41 @@
 import { canonicalToPortalResult } from './adapter.js';
 import { generateBoardWithLinearHardwareDesign } from './boardWithLinearHardware.js';
+import { generateExtensionLeafTableDesign } from './extensionLeafTable.js';
 import { generateCanonicalOpenScad } from './openScad.js';
 import { generateTrayBirdFeederDesign } from './trayBirdFeeder.js';
 import { generateTwoStepStoolDesign } from './twoStepStool.js';
 import { checkPublishability, validateGeneratedDesign } from './validator.js';
 
 export function calculateGeneratedPlan(plan) {
-  if (!['generated-tray-bird-feeder', 'generated-wall-key-rack', 'generated-two-step-stool'].includes(plan.build)) {
+  if (!['generated-tray-bird-feeder', 'generated-wall-key-rack', 'generated-two-step-stool', 'generated-extension-leaf-table'].includes(plan.build)) {
     return { type: 'generated', ok: false, errors: [`Unsupported generated build: ${plan.build}`], warnings: [], parts: [] };
   }
-  const design = plan.build === 'generated-two-step-stool' ? generateTwoStepStoolDesign({
+  const design = plan.build === 'generated-extension-leaf-table' ? generateExtensionLeafTableDesign({
+    design_id: 'portal_extension_leaf_table',
+    template_id: 'extension_leaf_dining_table',
+    intent: 'extension leaf dining table with retractable end supports',
+    parameters: {
+      overall_length_extended_in: plan.tableOverallL,
+      center_top_length_in: plan.tableCenterL,
+      leaf_depth_in: plan.tableLeafD,
+      leaf_count: plan.tableLeafCount,
+      width_in: plan.tableW,
+      top_thickness_in: plan.tableTopT,
+      table_height_in: plan.tableH,
+      leg_size_in: plan.tableLegSize,
+      base_clear_length_between_legs_in: plan.tableBaseClearL,
+      apron_height_in: plan.tableApronH,
+      apron_thickness_in: plan.tableApronT,
+      support_arm_count_per_leaf: plan.tableSupportArmCount,
+      support_arm_extension_in: plan.tableSupportArmExt,
+      slide_travel_in: plan.tableSlideTravel,
+      support_arm_stock_width_in: plan.tableSupportArmW,
+      support_arm_stock_height_in: plan.tableSupportArmH,
+      top_material: plan.tableTopMaterial,
+      base_material: plan.tableBaseMaterial,
+      finish: plan.tableFinish
+    }
+  }) : plan.build === 'generated-two-step-stool' ? generateTwoStepStoolDesign({
     design_id: 'portal_two_step_stool',
     template_id: 'two_step_stool',
     intent: 'two-step wooden step stool',
@@ -85,6 +111,13 @@ export function calculateGeneratedPlan(plan) {
     stoolD: design.parameters.depth_in,
     stoolH: design.parameters.height_in,
     lowerStepH: design.parameters.lower_step_height_in,
+    tableW: design.parameters.width_in,
+    tableCenterL: design.parameters.center_top_length_in,
+    tableLeafD: design.parameters.leaf_depth_in,
+    tableOverallL: design.parameters.overall_length_extended_in,
+    tableH: design.parameters.table_height_in,
+    tableSupportArmExt: design.parameters.support_arm_extension_in,
+    tableSlideTravel: design.parameters.slide_travel_in,
     physicalPartCount: physicalParts.length,
     referencePartCount: design.parts.length - physicalParts.length,
     boardFeet: design.estimates.board_feet
@@ -94,6 +127,7 @@ export function calculateGeneratedPlan(plan) {
 function generatedStyle(build) {
   if (build === 'generated-wall-key-rack') return 'linear-wall-hardware';
   if (build === 'generated-two-step-stool') return 'two-step-stool';
+  if (build === 'generated-extension-leaf-table') return 'extension-leaf-table';
   return 'tray-bird-feeder';
 }
 

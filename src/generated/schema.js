@@ -109,6 +109,45 @@ export const TEMPLATE_DEFINITIONS = [
       claimed_capacity_lbs: { type: 'number', min: 0, max: 300, default: 0 },
       material: { type: 'string', default: 'pine' }
     }
+  },
+  {
+    template_id: 'extension_leaf_dining_table',
+    title: 'Extension Leaf Dining Table',
+    aliases: ['extension table', 'dining table with leaves', 'end leaf table', 'retractable leaf support table', 'table with drawer slide supports', 'table with end leaves'],
+    components: [
+      'geometry.extension_tabletop_set',
+      'geometry.leg_apron_table_base',
+      'hardware.telescoping_leaf_support_slide',
+      'validators.extension_leaf_support_path',
+      'validators.load_bearing_caution',
+      'build_steps.extension_leaf_fit_sequence',
+      'rendering.open_closed_state_sequence',
+      'rendering.generated_assembly_animation'
+    ],
+    parameters: {
+      overall_length_extended_in: { type: 'number', min: 36, max: 120, default: 75.5 },
+      center_top_length_in: { type: 'number', min: 24, max: 96, default: 51.5 },
+      leaf_depth_in: { type: 'number', min: 4, max: 24, default: 12 },
+      leaf_count: { type: 'number', min: 0, max: 2, default: 2 },
+      width_in: { type: 'number', min: 24, max: 60, default: 40 },
+      top_thickness_in: { type: 'number', min: 0.75, max: 2.5, default: 1.75 },
+      table_height_in: { type: 'number', min: 24, max: 36, default: 30.5 },
+      leg_size_in: { type: 'number', min: 1.5, max: 6, default: 3.75 },
+      base_clear_length_between_legs_in: { type: 'number', min: 18, max: 96, default: 64.25 },
+      apron_height_in: { type: 'number', min: 2, max: 8, default: 3.5 },
+      apron_thickness_in: { type: 'number', min: 0.5, max: 3, default: 1.5 },
+      support_arm_count_per_leaf: { type: 'number', min: 2, max: 4, default: 2 },
+      support_arm_extension_in: { type: 'number', min: 6, max: 36, default: 16.5 },
+      slide_travel_in: { type: 'number', min: 4, max: 30, default: 12 },
+      support_arm_stock_width_in: { type: 'number', min: 0.75, max: 3, default: 1.5 },
+      support_arm_stock_height_in: { type: 'number', min: 0.75, max: 3, default: 1.5 },
+      support_arm_inset_from_edge_in: { type: 'number', min: 2, max: 12, default: 6 },
+      claimed_capacity_lbs: { type: 'number', min: 0, max: 500, default: 0 },
+      top_material: { type: 'string', default: 'oak_tabletop_stock' },
+      base_material: { type: 'string', default: 'oak_leg_and_apron_stock' },
+      slide_hardware: { type: 'string', default: 'rated_table_leaf_slide_or_heavy_drawer_slide' },
+      finish: { type: 'string', default: 'clear_or_dark_table_finish' }
+    }
   }
 ];
 
@@ -255,5 +294,9 @@ const SYNONYM_GROUPS = [
   ['board', 'panel', 'plank', 'backer', 'base'],
   ['frame', 'picture', 'canvas', 'floating', 'miter', 'strainer'],
   ['step', 'stool', 'tread', 'platform'],
-  ['feeder', 'bird', 'seed', 'tray']
+  ['feeder', 'bird', 'seed', 'tray'],
+  ['table', 'dining', 'worktable', 'desk'],
+  ['leaf', 'leaves', 'extension', 'extendable', 'removable'],
+  ['slide', 'slides', 'telescoping', 'drawer', 'retractable', 'travel'],
+  ['apron', 'base', 'leg', 'frame', 'support']
 ];

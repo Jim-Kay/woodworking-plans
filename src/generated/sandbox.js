@@ -5,6 +5,7 @@ import { getAssemblyRelationship, listAssemblyRelationshipTypes, listAssemblyRel
 import { reviewBuildSteps } from './buildStepQuality.js';
 import { generateBoardWithLinearHardwareDesign } from './boardWithLinearHardware.js';
 import { getComponent, listComponentCategories, listComponents, searchComponents } from './componentCatalog.js';
+import { generateExtensionLeafTableDesign } from './extensionLeafTable.js';
 import { generateCanonicalOpenScad } from './openScad.js';
 import { normalizePhotoDesignBrief, scenarioFromPhotoDesignBrief, summarizePhotoDesignBrief } from './photoBrief.js';
 import { createCapabilityRequest, findTemplateCandidates, listTemplates, searchTemplates } from './schema.js';
@@ -33,6 +34,21 @@ const DESIGN_PARAMETER_KEYS = [
   'bottom_thickness_in',
   'side_thickness_in',
   'height_in',
+  'overall_length_extended_in',
+  'center_top_length_in',
+  'leaf_depth_in',
+  'leaf_count',
+  'top_thickness_in',
+  'table_height_in',
+  'leg_size_in',
+  'base_clear_length_between_legs_in',
+  'apron_height_in',
+  'apron_thickness_in',
+  'support_arm_count_per_leaf',
+  'support_arm_extension_in',
+  'slide_travel_in',
+  'support_arm_stock_width_in',
+  'support_arm_stock_height_in',
   'board_thickness_in',
   'pocket_depth_in',
   'pocket_height_in',
@@ -384,6 +400,7 @@ export function generateDesign(scenario) {
   if (scenario.template_id === 'board_with_linear_hardware') return generateBoardWithLinearHardwareDesign(scenario);
   if (scenario.template_id === 'wall_panel_with_pocket_and_linear_hardware') return generateWallPanelPocketHardwareDesign(scenario);
   if (scenario.template_id === 'two_step_stool') return generateTwoStepStoolDesign(scenario);
+  if (scenario.template_id === 'extension_leaf_dining_table') return generateExtensionLeafTableDesign(scenario);
   throw new Error(`Unsupported template_id: ${scenario.template_id}`);
 }
 
@@ -884,6 +901,40 @@ function domainCoverageWarnings(proposal, scenario = {}) {
   if (requiresBottomSupport && !relationshipIds.has('relationship.support.bottom_panel_supported_by_box_sides')) {
     warnings.push('Scenario appears to require a supported bottom panel or crate floor; include relationship.support.bottom_panel_supported_by_box_sides when the bottom is carried by side walls, rails, posts, or slats.');
   }
+  const requiresExtensionLeaves = /\b(extension leaf|end leaf|end leaves|table leaf|table leaves|leaf support|drawer slide|telescoping|retractable support|slide travel|support arm)\b/.test(text)
+    || parameterValue(parameters, 'leaf_depth_in') !== undefined
+    || parameterValue(parameters, 'support_arm_extension_in') !== undefined
+    || parameterValue(parameters, 'slide_travel_in') !== undefined;
+  if (requiresExtensionLeaves && !componentIds.has('geometry.extension_tabletop_set')) {
+    warnings.push('Scenario appears to require a fixed tabletop plus end leaves; include exact component_id geometry.extension_tabletop_set instead of modeling leaves as generic or slatted panels.');
+  }
+  if (requiresExtensionLeaves && !componentIds.has('geometry.leg_apron_table_base')) {
+    warnings.push('Scenario appears to require a four-leg table base; include exact component_id geometry.leg_apron_table_base for the leg-and-apron frame.');
+  }
+  if (requiresExtensionLeaves && !componentIds.has('hardware.telescoping_leaf_support_slide')) {
+    warnings.push('Scenario appears to require retractable leaf supports; include exact component_id hardware.telescoping_leaf_support_slide for drawer-slide style support arms and travel metadata.');
+  }
+  if (requiresExtensionLeaves && !componentIds.has('validators.extension_leaf_support_path')) {
+    warnings.push('Scenario appears to require load-path and clearance review for supported table leaves; include validators.extension_leaf_support_path.');
+  }
+  if (requiresExtensionLeaves && !componentIds.has('build_steps.extension_leaf_fit_sequence')) {
+    warnings.push('Scenario appears to require open/closed slide fitting steps; include build_steps.extension_leaf_fit_sequence.');
+  }
+  if (requiresExtensionLeaves && !componentIds.has('rendering.open_closed_state_sequence')) {
+    warnings.push('Scenario appears to require closed, support-extended, leaf-installed, and fully-open diagrams; include rendering.open_closed_state_sequence.');
+  }
+  const extensionRelationshipIds = [
+    'relationship.fixed_contact.apron_to_leg_table_frame',
+    'relationship.motion.telescoping_slide_support_under_leaf',
+    'relationship.support.extension_leaf_carried_by_slide_supports',
+    'relationship.clearance.extension_leaf_slide_travel'
+  ];
+  if (requiresExtensionLeaves) {
+    const missingRelationships = extensionRelationshipIds.filter((relationshipId) => !relationshipIds.has(relationshipId));
+    if (missingRelationships.length) {
+      warnings.push(`Scenario appears to require extension-table relationships; include exact relationship_ids ${missingRelationships.join(', ')} when proposing the composition.`);
+    }
+  }
   return warnings;
 }
 
@@ -1132,9 +1183,10 @@ function unsupportedRelationshipBlockers(scenario = {}, candidateTemplateIds = [
       .filter((template) => candidateTemplateIds.includes(template.template_id))
       .flatMap((template) => template.components || [])
   );
+  const hasExtensionLeafSupport = candidateComponents.has('geometry.extension_tabletop_set') && candidateComponents.has('hardware.telescoping_leaf_support_slide');
   const blockers = [];
 
-  if (/\b(hinge|hinged|fold|folding|fold-down|fold down|swing|rotate|chain|brace|bracket|open state|closed state)\b/i.test(text)) {
+  if (/\b(hinge|hinged|fold|folding|fold-down|fold down|swing|rotate|chain|brace|bracket|open state|closed state)\b/i.test(text) && !hasExtensionLeafSupport) {
     blockers.push('Scenario requires motion, hinge, swing, or support-stop relationships that no supported deterministic template currently represents.');
   }
   if (/\b(dowel|rod|round rail|cylinder)\b/i.test(text)) {
@@ -1142,6 +1194,9 @@ function unsupportedRelationshipBlockers(scenario = {}, candidateTemplateIds = [
   }
   if (/\b(caster|casters|wheel|wheels|rolling|mobile)\b/i.test(text) && !candidateComponents.has('hardware.caster_plate_set')) {
     blockers.push('Scenario requires caster or rolling-base relationships that no supported deterministic template currently represents.');
+  }
+  if (/\b(extension leaf|end leaf|end leaves|table leaf|table leaves|drawer slide|telescoping|retractable support|slide travel|support arm)\b/i.test(text) && !hasExtensionLeafSupport) {
+    blockers.push('Scenario requires extension-table leaf motion, slide-travel clearance, and leaf load-path relationships that no supported deterministic template currently represents.');
   }
   const hasFreestandingShelfSupport = candidateComponents.has('geometry.step_tread') && candidateComponents.has('geometry.square_leg_post');
   if (/\b(monitor|riser|desktop riser|center divider|anti-rack|anti rack)\b/i.test(text) && !hasFreestandingShelfSupport) {
@@ -1157,6 +1212,7 @@ function componentSearchQueriesForScenario(scenario = {}) {
   if (/key|hook|peg|coat|mug/i.test(values)) queries.push('key hooks pegs repeated hardware pilot holes');
   if (/wall|mount|screw|hanger/i.test(values)) queries.push('wall mount screw holes edge clearance');
   if (/stool|step|tread|leg|load|standing/i.test(values)) queries.push('step stool tread leg rail load bearing');
+  if (/table|tabletop|dining|leaf|leaves|extension|telescoping|drawer slide|retractable|support arm|apron/i.test(values)) queries.push('extension tabletop set end leaves leg apron table base telescoping leaf support slide');
   if (/tote|bin|storage|rack|runner|garage|workbench|shelf/i.test(values)) queries.push('storage tote rack runner rails rectangular frame bay');
   if (/floating|picture|canvas|frame|rabbet|strainer|miter|reveal/i.test(values)) queries.push('floating frame rabbet strainer rails miter canvas reveal');
   if (/caster|wheel|mobile|rolling/i.test(values)) queries.push('caster wheels plate mounting holes rolling base');
@@ -1174,6 +1230,11 @@ function assemblyRelationshipQueriesForScenario(scenario = {}) {
   if (/slat|crate|planter|air gap|open side/i.test(values)) queries.push('slats fastened to corner posts repeated gaps edge clearance');
   if (/shelf|riser|bookcase|cubby|divider/i.test(values)) queries.push('shelf between side panels supported shelf clear opening');
   if (/caster|wheel|rolling|mobile|cart/i.test(values)) queries.push('caster plate to reinforced base rolling frame screw layout');
+  if (/table|tabletop|dining|leaf|leaves|extension|telescoping|drawer slide|retractable|support arm|apron/i.test(values)) {
+    queries.push('telescoping slide support under leaf drawer slide support arm travel clearance');
+    queries.push('extension leaf carried by slide supports bearing edge load path');
+    queries.push('apron to leg table frame fixed contact');
+  }
   if (/rabbet|strainer|floating|reveal|canvas/i.test(values)) queries.push('rabbet ledge supports strainer reveal between frame and insert');
   if (/rail|post|frame|stretcher|bay/i.test(values)) queries.push('rail to post butt joint rectangular frame bay');
   if (/wall|mount|cleat|screw/i.test(values)) queries.push('wall mount holes on backer edge clearance');

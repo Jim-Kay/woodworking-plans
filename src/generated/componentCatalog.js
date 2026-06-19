@@ -135,6 +135,26 @@ export const COMPONENT_CATALOG = [
     example_uses: ['two-step stool lower tread', 'step stool top tread', 'small platform']
   },
   {
+    component_id: 'geometry.extension_tabletop_set',
+    category_id: 'geometry',
+    title: 'Extension Tabletop Set',
+    description: 'A fixed center tabletop plus one or more matching end leaves, with thickness, overhang, leaf depth, alignment, and closed/extended state metadata.',
+    aliases: ['extension table top', 'table leaves', 'end leaves', 'drop in leaf', 'removable leaf', 'dining table top', 'center tabletop'],
+    inputs: ['center_top_length_in', 'leaf_depth_in', 'leaf_count', 'width_in', 'top_thickness_in', 'overhang_in', 'material'],
+    outputs: ['physical_parts', 'cut_list_items', 'leaf_alignment_metadata', 'open_closed_state_metadata'],
+    example_uses: ['extension leaf dining table', 'table with end leaves', 'removable dining table leaf', 'slide supported table extension']
+  },
+  {
+    component_id: 'geometry.leg_apron_table_base',
+    category_id: 'geometry',
+    title: 'Leg And Apron Table Base',
+    description: 'A four-leg table base with long and short aprons, optional corner blocks or stretchers, clear spans, top bearing height, and leg setback metadata.',
+    aliases: ['table base', 'leg apron frame', 'dining table frame', 'apron rails', 'table legs', 'base frame'],
+    inputs: ['base_length_in', 'base_width_in', 'table_height_in', 'leg_size_in', 'apron_height_in', 'apron_thickness_in', 'leg_setback_in', 'material'],
+    outputs: ['physical_parts', 'cut_list_items', 'assembly_joints', 'clear_span_metadata'],
+    example_uses: ['dining table base', 'extension table base', 'work table frame', 'four leg apron table']
+  },
+  {
     component_id: 'hardware.wall_mount_hole_pair',
     category_id: 'hardware',
     title: 'Wall-Mount Hole Pair',
@@ -173,6 +193,16 @@ export const COMPONENT_CATALOG = [
     inputs: ['caster_count', 'plate_width_in', 'plate_depth_in', 'edge_inset_in', 'fastener_diameter_in', 'load_rating_lbs'],
     outputs: ['hardware_parts_or_references', 'mounting_hole_references', 'base_reinforcement_guidance'],
     example_uses: ['mobile tote rack', 'rolling workbench', 'shop cart base']
+  },
+  {
+    component_id: 'hardware.telescoping_leaf_support_slide',
+    category_id: 'hardware',
+    title: 'Telescoping Leaf Support Slide',
+    description: 'Drawer-slide or table-slide hardware paired with a wooden support arm that retracts under an apron and extends under an end leaf, including travel, stop, load-rating, and screw-pattern guidance.',
+    aliases: ['drawer slide leaf support', 'telescoping support', 'retractable support arm', 'slide out leaf support', 'table leaf slide', 'extension support rail'],
+    inputs: ['slide_travel_in', 'support_arm_extension_in', 'support_arm_stock_width_in', 'support_arm_stock_height_in', 'load_rating_lbs', 'mounting_side', 'fastener_pattern'],
+    outputs: ['hardware_parts_or_references', 'support_arm_parts', 'slide_travel_metadata', 'mounting_hole_references'],
+    example_uses: ['end leaf support arm', 'retractable dining table leaf support', 'pull-out support under table extension', 'drawer-slide assisted table leaf']
   },
   {
     component_id: 'patterns.centered_linear_spacing',
@@ -225,6 +255,16 @@ export const COMPONENT_CATALOG = [
     example_uses: ['step stool safety review', 'bench load warning', 'standing platform caution']
   },
   {
+    component_id: 'validators.extension_leaf_support_path',
+    category_id: 'validators',
+    title: 'Extension Leaf Support Path Validator',
+    description: 'Checks that each table leaf has enough support arms, bearing overlap, slide travel, stop clearance, and conservative load/sag review before publication.',
+    aliases: ['leaf support validation', 'slide support load path', 'table leaf sag check', 'extension support clearance', 'drawer slide load warning'],
+    inputs: ['leaf_part_ids', 'support_arm_part_ids', 'slide_hardware_ids', 'bearing_overlap_in', 'slide_travel_in', 'claimed_capacity_lbs'],
+    outputs: ['validation_errors', 'validation_warnings', 'load_path_review_requirements'],
+    example_uses: ['extension leaf table support review', 'retractable support arm clearance', 'end leaf sag warning']
+  },
+  {
     component_id: 'validators.rabbet_strainer_fit',
     category_id: 'validators',
     title: 'Rabbet And Strainer Fit Validator',
@@ -263,6 +303,16 @@ export const COMPONENT_CATALOG = [
     inputs: ['assembly_step_ids', 'critical_dimensions', 'fastener_reference_ids', 'verification_checks'],
     outputs: ['assembly_steps', 'diagram_requirements', 'review_rubric'],
     example_uses: ['tote rack PDF-style instructions', 'frame assembly sequence', 'caster mounting step']
+  },
+  {
+    component_id: 'build_steps.extension_leaf_fit_sequence',
+    category_id: 'build_steps',
+    title: 'Extension Leaf Fit And Slide Test Sequence',
+    description: 'A build-step pattern for installing table slides and support arms, testing closed/open travel, fitting end leaves, setting stops, and checking leaf flushness before finish.',
+    aliases: ['fit extension leaves', 'install table slides', 'test retractable supports', 'leaf alignment steps', 'open closed table sequence'],
+    inputs: ['tabletop_part_ids', 'support_slide_ids', 'stop_part_ids', 'critical_clearances', 'verification_checks'],
+    outputs: ['assembly_steps', 'state_transition_diagrams', 'load_path_checks', 'builder_guidance'],
+    example_uses: ['extension leaf dining table', 'slide supported table leaf', 'pull-out leaf supports']
   },
   {
     component_id: 'build_steps.mill_rabbet_then_assemble_frame',
@@ -313,6 +363,16 @@ export const COMPONENT_CATALOG = [
     inputs: ['visible_part_ids', 'dimension_pairs', 'label_targets', 'fastener_paths', 'inset_camera'],
     outputs: ['build_step_image', 'printable_diagram', 'vision_review_target'],
     example_uses: ['caster screw layout', 'diagonal pocket screw warning', 'tote runner spacing diagram']
+  },
+  {
+    component_id: 'rendering.open_closed_state_sequence',
+    category_id: 'rendering',
+    title: 'Open And Closed State Sequence',
+    description: 'A renderer convention for showing movable assemblies in closed, support-extended, part-installed, and fully-open states with travel arrows and collision/clearance callouts.',
+    aliases: ['open closed views', 'state sequence', 'extension animation', 'slide travel view', 'deployed and stowed render'],
+    inputs: ['state_names', 'moving_part_ids', 'travel_vectors', 'clearance_callouts', 'collision_checks'],
+    outputs: ['state_diagrams', 'assembly_animation', 'vision_review_target'],
+    example_uses: ['extension table leaves', 'fold-down shelf states', 'retractable support arms']
   }
 ];
 
@@ -479,6 +539,10 @@ const SYNONYM_GROUPS = [
   ['step', 'stool', 'tread', 'platform', 'standing'],
   ['slat', 'slats', 'slatted', 'crate', 'planter', 'ventilated'],
   ['wheel', 'caster', 'rolling', 'mobile'],
+  ['table', 'tabletop', 'dining', 'worktable'],
+  ['leaf', 'leaves', 'extension', 'extendable', 'removable'],
+  ['slide', 'slides', 'telescoping', 'drawer', 'retractable', 'travel'],
+  ['apron', 'base', 'leg', 'legs'],
   ['diagram', 'callout', 'label', 'dimension', 'drawing', 'visual', 'screenshot'],
   ['animation', 'video', 'motion', 'sequence', 'mini']
 ];

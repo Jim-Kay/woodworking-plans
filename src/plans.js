@@ -207,6 +207,45 @@ export const PLAN_CATALOG = [
     },
     tags: ['generated', 'step stool', 'treads', 'component composition'],
     thumbnail: 'asset:assets/thumbnails/two-step-stool-variant.png'
+  },
+  {
+    id: 'generated-extension-leaf-table',
+    title: 'Generated Extension Leaf Table',
+    family: 'Generated Plans',
+    status: 'draft',
+    build: 'generated-extension-leaf-table',
+    defaults: {
+      build: 'generated-extension-leaf-table',
+      tableOverallL: 75.5,
+      tableCenterL: 51.5,
+      tableLeafD: 12,
+      tableLeafCount: 2,
+      tableW: 40,
+      tableTopT: 1.75,
+      tableH: 30.5,
+      tableLegSize: 3.75,
+      tableBaseClearL: 64.25,
+      tableApronH: 3.5,
+      tableApronT: 1.5,
+      tableSupportArmCount: 2,
+      tableSupportArmExt: 16.5,
+      tableSlideTravel: 12,
+      tableSupportArmW: 1.5,
+      tableSupportArmH: 1.5,
+      tableTopMaterial: 'oak_tabletop_stock',
+      tableBaseMaterial: 'oak_leg_and_apron_stock',
+      tableFinish: 'clear_or_dark_table_finish'
+    },
+    summary: 'A photo-derived dining or work table concept with a fixed center top, two 12 in end leaves, and retractable slide-out support arms.',
+    materials: 'Hardwood tabletop stock, leg and apron stock, rated table-leaf slides or heavy slide hardware, tabletop fasteners',
+    details: {
+      description: 'An advanced generated plan for an extension-leaf table similar to the photographed build: a fixed center tabletop on a leg-and-apron base, removable end leaves, and pull-out support arms that deploy under each leaf. It is useful for studying the mechanism and producing a dimensional cut list, but it requires human review of slide ratings, joinery, and load capacity before real use.',
+      materials: ['Hardwood or furniture-grade tabletop stock', 'Square leg stock and apron rail stock', 'Rated table-leaf slide hardware or engineered heavy-duty slide supports', 'Tabletop fasteners or elongated screw holes for wood movement', 'Alignment pins, stops, latches, and finish as selected by the builder'],
+      tools: ['Table saw or track saw', 'Miter saw', 'Drill/driver', 'Router or dado tools for joinery as selected', 'Clamps', 'Square', 'Level'],
+      notes: ['This is a draft generated concept from multi-photo reference, not a certified structural plan.', 'Drawer slides are not automatically rated for vertical leaf loads; use rated hardware or add mechanical support legs/brackets.', 'Test the slide path empty before fitting leaves, then test leaves gradually while checking for sag, binding, and fastener movement.']
+    },
+    tags: ['generated', 'table', 'extension leaf', 'slides', 'advanced'],
+    thumbnail: 'generated-extension-leaf-table'
   }
 ];
 
@@ -226,6 +265,7 @@ export function planIdForBuild(build) {
   if (build === 'generated-tray-bird-feeder') return 'generated-tray-bird-feeder';
   if (build === 'generated-wall-key-rack') return 'generated-wall-key-rack';
   if (build === 'generated-two-step-stool') return 'generated-two-step-stool';
+  if (build === 'generated-extension-leaf-table') return 'generated-extension-leaf-table';
   if (build === 'tote-rack') return 'tote-rack-27';
   if (build === 'rolling-shelves') return 'rolling-storage-shelf';
   if (build === 'shelves') return 'basement-shelves';

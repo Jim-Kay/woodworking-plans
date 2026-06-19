@@ -210,6 +210,56 @@ export const ASSEMBLY_RELATIONSHIP_CATALOG = [
     validator_hints: ['validators.edge_clearance', 'validators.load_bearing_caution'],
     component_hints: ['hardware.caster_plate_set', 'geometry.rectangular_frame_bay', 'rendering.dimensioned_callout_view'],
     example_uses: ['rolling tote rack', 'mobile workbench', 'miter saw stand base']
+  },
+  {
+    relationship_id: 'relationship.fixed_contact.apron_to_leg_table_frame',
+    type_id: 'fixed_contact',
+    title: 'Apron To Leg Table Frame',
+    description: 'Long and short aprons fasten between four table legs to create a square, load-bearing base with clear spans and top-bearing height.',
+    aliases: ['table apron to leg', 'leg apron frame', 'table base frame', 'apron rails into legs', 'dining table frame joint'],
+    part_roles: ['leg', 'apron', 'rail', 'table base', 'corner block'],
+    geometry_cues: ['apron ends meet leg faces', 'top surfaces establish bearing plane', 'leg setbacks preserve overhang', 'base remains square'],
+    validator_hints: ['validators.physical_part_overlap', 'validators.load_bearing_caution'],
+    component_hints: ['geometry.leg_apron_table_base', 'geometry.square_leg_post', 'geometry.linear_rail'],
+    example_uses: ['dining table base', 'extension leaf table frame', 'work table leg and apron assembly']
+  },
+  {
+    relationship_id: 'relationship.motion.telescoping_slide_support_under_leaf',
+    type_id: 'motion',
+    title: 'Telescoping Slide Support Under Leaf',
+    description: 'A wooden support arm or runner moves on slide hardware from a stowed position under the apron to a deployed position under an end leaf, requiring travel limits, stops, and collision clearance.',
+    aliases: ['retractable leaf support', 'drawer slide table leaf', 'telescoping support arm', 'slide out support rail', 'pull out leaf support'],
+    part_roles: ['support arm', 'drawer slide', 'leaf', 'apron', 'stop'],
+    geometry_cues: ['closed and extended states', 'linear travel vector', 'support arm clears leg and apron', 'positive stop before overextension'],
+    validator_hints: ['validators.extension_leaf_support_path', 'validators.physical_part_overlap'],
+    component_hints: ['hardware.telescoping_leaf_support_slide', 'rendering.open_closed_state_sequence', 'rendering.generated_assembly_animation'],
+    missing_capability_hints: ['telescoping slide state renderer', 'slide-travel collision validator', 'leaf-support load-path validator'],
+    example_uses: ['extension dining table end leaves', 'pull-out table leaf support', 'drawer-slide assisted leaf support']
+  },
+  {
+    relationship_id: 'relationship.support.extension_leaf_carried_by_slide_supports',
+    type_id: 'support',
+    title: 'Extension Leaf Carried By Slide Supports',
+    description: 'An end leaf is carried by two or more deployed support arms plus a bearing edge, ledge, pins, or cleats at the main tabletop so the leaf is aligned and not purely cantilevered from slide hardware.',
+    aliases: ['end leaf support', 'table leaf load path', 'leaf carried by support arms', 'leaf bearing ledge', 'slide supported leaf'],
+    part_roles: ['leaf', 'support arm', 'bearing edge', 'alignment pin', 'cleat', 'main tabletop'],
+    geometry_cues: ['minimum bearing overlap', 'two or more support lines', 'flush top surface', 'leaf cannot shift off supports'],
+    validator_hints: ['validators.extension_leaf_support_path', 'validators.load_bearing_caution', 'validators.physical_part_overlap'],
+    component_hints: ['geometry.extension_tabletop_set', 'hardware.telescoping_leaf_support_slide', 'validators.extension_leaf_support_path'],
+    missing_capability_hints: ['leaf sag/load review', 'alignment stop renderer'],
+    example_uses: ['end leaf dining table', 'removable leaf with pull-out supports', 'extension table leaf alignment']
+  },
+  {
+    relationship_id: 'relationship.clearance.extension_leaf_slide_travel',
+    type_id: 'clearance',
+    title: 'Extension Leaf Slide Travel Clearance',
+    description: 'Retractable support arms and slides need a clear linear travel envelope from stowed to deployed states without hitting legs, aprons, brackets, or the underside of the leaf.',
+    aliases: ['slide travel clearance', 'support arm clearance', 'leaf slide path', 'retractable support envelope', 'open closed collision clearance'],
+    part_roles: ['support arm', 'slide', 'leg', 'apron', 'leaf', 'stop'],
+    geometry_cues: ['travel path remains inside clear envelope', 'stowed parts do not protrude unintentionally', 'deployed parts reach leaf bearing zone'],
+    validator_hints: ['validators.extension_leaf_support_path', 'validators.physical_part_overlap'],
+    component_hints: ['hardware.telescoping_leaf_support_slide', 'rendering.open_closed_state_sequence'],
+    example_uses: ['extension table support arms', 'drawer-slide leaf supports', 'pull-out support clearance']
   }
 ];
 
@@ -396,5 +446,9 @@ const SYNONYM_GROUPS = [
   ['slat', 'slats', 'slatted', 'crate', 'planter', 'ventilated'],
   ['caster', 'wheel', 'rolling', 'mobile'],
   ['frame', 'bay', 'rack', 'stand'],
-  ['notch', 'rabbet', 'ledge', 'groove', 'recess']
+  ['notch', 'rabbet', 'ledge', 'groove', 'recess'],
+  ['table', 'tabletop', 'dining', 'worktable'],
+  ['leaf', 'leaves', 'extension', 'extendable', 'removable'],
+  ['slide', 'slides', 'telescoping', 'drawer', 'retractable', 'travel'],
+  ['apron', 'base', 'leg', 'legs']
 ];

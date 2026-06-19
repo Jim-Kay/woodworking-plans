@@ -226,6 +226,63 @@ assert.equal(portalStepStool.parts.length, 15);
 assert.equal(portalStepStool.physicalPartCount, 15);
 assert.equal(portalStepStool.publishability.ok, true);
 
+const extensionTable = generateDesign({
+  template_id: 'extension_leaf_dining_table',
+  design_id: 'extension_leaf_table_test',
+  intent: 'extension leaf dining table with retractable support arms',
+  parameters: {
+    width_in: 40,
+    center_top_length_in: 51.5,
+    leaf_depth_in: 12,
+    leaf_count: 2,
+    slide_travel_in: 12,
+    support_arm_extension_in: 16.5,
+    table_height_in: 30.5
+  }
+});
+assert.equal(extensionTable.template_id, 'extension_leaf_dining_table');
+assert.equal(extensionTable.components.includes('geometry.extension_tabletop_set'), true);
+assert.equal(extensionTable.components.includes('hardware.telescoping_leaf_support_slide'), true);
+assert.equal(extensionTable.relationships.includes('relationship.motion.telescoping_slide_support_under_leaf'), true);
+assert.equal(extensionTable.parts.filter((part) => part.role === 'panel').length, 3);
+assert.equal(extensionTable.parts.filter((part) => part.role === 'leg').length, 4);
+assert.equal(extensionTable.parts.filter((part) => part.role === 'rail').length, 8);
+assert.equal(extensionTable.parts.filter((part) => part.physical === false).length, 4);
+const extensionValidation = validateGeneratedDesign(extensionTable);
+assert.equal(extensionValidation.ok, true);
+assert.match(extensionValidation.warnings.join('\n'), /not load certified/);
+assert.equal(exportPlanPackage(extensionTable).publishability.ok, true);
+assert.match(generateCanonicalOpenScad(extensionTable), /top\.leaf\.left/);
+
+const portalExtensionTable = calculateGeneratedPlan({
+  build: 'generated-extension-leaf-table',
+  tableOverallL: 75.5,
+  tableCenterL: 51.5,
+  tableLeafD: 12,
+  tableLeafCount: 2,
+  tableW: 40,
+  tableTopT: 1.75,
+  tableH: 30.5,
+  tableLegSize: 3.75,
+  tableBaseClearL: 64.25,
+  tableApronH: 3.5,
+  tableApronT: 1.5,
+  tableSupportArmCount: 2,
+  tableSupportArmExt: 16.5,
+  tableSlideTravel: 12,
+  tableSupportArmW: 1.5,
+  tableSupportArmH: 1.5,
+  tableTopMaterial: 'oak_tabletop_stock',
+  tableBaseMaterial: 'oak_leg_and_apron_stock'
+});
+assert.equal(portalExtensionTable.ok, true);
+assert.equal(portalExtensionTable.style, 'extension-leaf-table');
+assert.equal(portalExtensionTable.generatedDesign.template_id, 'extension_leaf_dining_table');
+assert.equal(portalExtensionTable.parts.length, 15);
+assert.equal(portalExtensionTable.physicalPartCount, 15);
+assert.equal(portalExtensionTable.referencePartCount, 4);
+assert.equal(portalExtensionTable.publishability.ok, true);
+
 const cantileveredStepStool = structuredClone(stepStool);
 cantileveredStepStool.parts = cantileveredStepStool.parts.filter((part) => !['leg.middle.left', 'leg.middle.right', 'rail.middle.upper'].includes(part.id));
 const cantileveredStepStoolValidation = validateGeneratedDesign(cantileveredStepStool);
@@ -280,13 +337,21 @@ assert.equal(searchComponents({ query: 'key hooks pilot holes', category_id: 'ha
 assert.equal(searchComponents({ query: '27 gallon tote rack runner rails caster wheels workbench' }).some((component) => component.component_id === 'geometry.tote_runner_pair'), true);
 assert.equal(searchComponents({ query: '27 gallon tote rack runner rails caster wheels workbench' }).some((component) => component.component_id === 'hardware.caster_plate_set'), true);
 assert.equal(searchComponents({ query: 'small cedar planter slatted side wall bottom slats' })[0].component_id, 'geometry.slatted_panel_set');
+assert.equal(searchComponents({ query: 'extension table end leaves retractable drawer slide support arms' }).some((component) => component.component_id === 'geometry.extension_tabletop_set'), true);
+assert.equal(searchComponents({ query: 'extension table end leaves retractable drawer slide support arms' }).some((component) => component.component_id === 'hardware.telescoping_leaf_support_slide'), true);
+assert.equal(searchComponents({ query: 'leg apron dining table base frame' }).some((component) => component.component_id === 'geometry.leg_apron_table_base'), true);
+assert.equal(searchComponents({ query: 'table leaf sag slide travel load path validator' }).some((component) => component.component_id === 'validators.extension_leaf_support_path'), true);
 assert.equal(searchComponents({ query: 'PDF style dimensioned build step fastener callout' }).some((component) => component.component_id === 'build_steps.dimensioned_stage_sequence'), true);
 assert.equal(searchAssemblyRelationships({ query: 'fold down hinged desk panel support chain swing clearance' })[0].relationship_id, 'relationship.motion.hinge_panel_to_cleat');
 assert.equal(searchAssemblyRelationships({ query: 'dowel laundry drying rack wall frame hinge', part_roles: ['dowel', 'side rail', 'wall frame'] })[0].relationship_id, 'relationship.motion.dowel_frame_hinged_to_wall_frame');
 assert.equal(searchAssemblyRelationships({ query: 'caster wheels under rolling workbench base plate screws' }).some((relationship) => relationship.relationship_id === 'relationship.support.caster_plate_to_base'), true);
 assert.equal(searchAssemblyRelationships({ query: 'planter bottom panel supported by slatted box sides drainage holes' })[0].relationship_id, 'relationship.support.bottom_panel_supported_by_box_sides');
+assert.equal(searchAssemblyRelationships({ query: 'drawer slide telescoping support arm under extension table leaf', part_roles: ['support arm', 'drawer slide', 'leaf'] })[0].relationship_id, 'relationship.motion.telescoping_slide_support_under_leaf');
+assert.equal(searchAssemblyRelationships({ query: 'end leaf carried by slide supports bearing edge load path' }).some((relationship) => relationship.relationship_id === 'relationship.support.extension_leaf_carried_by_slide_supports'), true);
+assert.equal(searchAssemblyRelationships({ query: 'leg apron table base frame fixed contact' }).some((relationship) => relationship.relationship_id === 'relationship.fixed_contact.apron_to_leg_table_frame'), true);
 assert.equal(searchTemplates({ query: 'entryway mail cubby hooks' })[0].template_id, 'wall_panel_with_pocket_and_linear_hardware');
 assert.equal(searchTemplates({ query: 'rockport step ladder stool' })[0].template_id, 'two_step_stool');
+assert.equal(searchTemplates({ query: 'dining table with retractable end leaves' })[0].template_id, 'extension_leaf_dining_table');
 
 let toolState = { scenario };
 let executed = executeSandboxTool({ name: 'inspect_scenario', arguments: {} }, toolState);
@@ -435,6 +500,30 @@ executed = executeSandboxTool({
 assert.equal(executed.result.ok, false);
 assert.equal(executed.result.suggested_component_queries.some((query) => /tote rack runner/.test(query)), true);
 assert.equal(executed.result.suggested_component_queries.some((query) => /caster wheels/.test(query)), true);
+
+executed = executeSandboxTool({
+  name: 'generate_design',
+  arguments: { template_id: 'extension_leaf_dining_table', design_id: 'supported_extension_table_test' }
+}, {
+  scenario: {
+    template_id: 'extension_leaf_dining_table',
+    design_id: 'supported_extension_table_test',
+    intent: 'Extension leaf dining table with end leaves, retractable drawer slide support arms, slide travel, and leg apron table base.',
+    builder_goals: ['search extension tabletop, telescoping slide support, and leaf load-path relationships'],
+    parameters: {
+      width_in: 40,
+      center_top_length_in: 51.5,
+      leaf_depth_in: 12,
+      leaf_count: 2,
+      slide_travel_in: 12,
+      support_arm_extension_in: 16.5,
+      table_height_in: 30.5
+    }
+  }
+});
+assert.equal(executed.result.ok, true);
+assert.equal(executed.state.design.template_id, 'extension_leaf_dining_table');
+assert.equal(executed.state.design.parts.some((part) => part.id === 'support.left.front'), true);
 
 executed = executeSandboxTool({
   name: 'request_capability',
@@ -659,6 +748,54 @@ assert.match(executed.result.review.warnings.join('\n'), /hardware\.drainage_hol
 assert.match(executed.result.review.warnings.join('\n'), /relationship\.layout_reference\.drainage_holes_in_panel/);
 assert.match(executed.result.review.warnings.join('\n'), /geometry\.slatted_panel_set/);
 assert.match(executed.result.review.warnings.join('\n'), /relationship\.support\.bottom_panel_supported_by_box_sides/);
+
+executed = executeSandboxTool({
+  name: 'propose_component_composition',
+  arguments: {
+    template_id: 'extension_leaf_dining_table',
+    title: 'Extension Leaf Dining Table',
+    component_ids: ['geometry.rectangular_panel', 'geometry.linear_rail', 'validators.physical_part_overlap'],
+    relationship_ids: ['relationship.fixed_contact.panel_to_rail'],
+    parameters: {
+      width_in: 40,
+      center_top_length_in: 51.5,
+      leaf_depth_in: 12,
+      leaf_count: 2,
+      slide_travel_in: 12,
+      support_arm_extension_in: 16.5,
+      table_height_in: 30.5
+    },
+    design_algorithm: ['Generate generic panels.', 'Add generic rails.', 'Place generic supports.'],
+    validation_strategy: ['Check overlaps.', 'Check cut list.'],
+    build_steps: [
+      { id: 'step.base', title: 'Build base', instructions: ['Assemble base.'] },
+      { id: 'step.leaves', title: 'Install leaves', instructions: ['Install leaves.'] }
+    ],
+    renderer_requirements: ['Show open and closed states.'],
+    open_questions: ['Confirm leaf support method.']
+  }
+}, {
+  scenario: {
+    design_id: 'extension_table_proposal_hint_test',
+    template_id: 'extension_leaf_dining_table',
+    intent: 'Extension leaf dining table with end leaves and retractable drawer slide support arms.',
+    parameters: {
+      width_in: 40,
+      center_top_length_in: 51.5,
+      leaf_depth_in: 12,
+      leaf_count: 2,
+      slide_travel_in: 12,
+      support_arm_extension_in: 16.5,
+      table_height_in: 30.5
+    }
+  }
+});
+assert.equal(executed.result.ok, true);
+assert.match(executed.result.review.warnings.join('\n'), /geometry\.extension_tabletop_set/);
+assert.match(executed.result.review.warnings.join('\n'), /geometry\.leg_apron_table_base/);
+assert.match(executed.result.review.warnings.join('\n'), /hardware\.telescoping_leaf_support_slide/);
+assert.match(executed.result.review.warnings.join('\n'), /validators\.extension_leaf_support_path/);
+assert.match(executed.result.review.warnings.join('\n'), /relationship\.motion\.telescoping_slide_support_under_leaf/);
 
 executed = executeSandboxTool({ name: 'generate_design', arguments: { parameters: { width_in: 13 } } }, toolState);
 assert.equal(executed.result.ok, true);

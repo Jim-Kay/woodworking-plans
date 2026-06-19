@@ -1,0 +1,46 @@
+{
+  "template_id": "extension_leaf_dining_table",
+  "design_id": "photo_extension_leaf_table",
+  "title": "Extension Leaf Dining Table With Retractable Supports",
+  "intent": "Generate a rectangular table based on the supplied shop photos: a fixed center top, end leaves at both short ends, retractable wooden support arms carried on metal drawer-slide style hardware, four square legs, and an apron/frame base. Treat this as an advanced generated-plan challenge and request missing reusable capabilities rather than forcing the design into an unrelated template.",
+  "builder_goals": [
+    "Search templates, components, and assembly relationships for table base, tabletop panels, extension leaves, telescoping slide support, drawer-slide travel, end-leaf support, and open/closed state rendering before proposing a design.",
+    "Use the photo/sketch cues: center top roughly 51.5 in long, two 12 in end leaves, extended length roughly 76.5 in, table height roughly 30.5 in, top thickness roughly 1.75 in, square legs roughly 3.75 in, and a base clear span roughly 64.25 in.",
+    "Represent closed, support-extended, leaf-installed, and fully extended states. Do not show retractable support arms clipping through legs, aprons, or leaves.",
+    "Require conservative load and sag review: standard drawer slides are not automatically rated for vertical leaf loads, and the plan must not claim seating or standing capacity without deterministic validation.",
+    "If the existing components cannot express telescoping leaf supports, slide travel, leaf alignment stops, or load-path validation, propose a component composition and then request a reusable capability from Codex."
+  ],
+  "source_brief": {
+    "photo_summary": "Photos show a large rectangular table with a central top, end leaves, dark finish, four square legs, an apron frame, metal telescoping slides mounted under the long aprons, wooden support arms that pull out beyond the table end, underside cleats/blocks on the leaves, and small metal retaining brackets.",
+    "uncertain_measurements": [
+      "Finished width is estimated at 40 in from photo proportions and sketch marks; replace with measured width when available.",
+      "Leaf support slide travel and load rating are unknown; default values are placeholders for review only."
+    ],
+    "safety_notes": [
+      "Use at least two support arms per leaf, one near each long apron, and consider a third support or rated table-leaf hardware for heavy leaves.",
+      "Leaves should bear on both the pulled-out supports and a positive ledge or bearing edge at the main top, not only on drawer-slide hardware.",
+      "Include positive stops so support arms cannot overextend and leaves cannot shift off the table."
+    ]
+  },
+  "parameters": {
+    "overall_length_extended_in": 76.5,
+    "center_top_length_in": 51.5,
+    "leaf_depth_in": 12,
+    "leaf_count": 2,
+    "width_in": 40,
+    "top_thickness_in": 1.75,
+    "table_height_in": 30.5,
+    "leg_size_in": 3.75,
+    "base_clear_length_between_legs_in": 64.25,
+    "apron_height_in": 3.5,
+    "apron_thickness_in": 1.5,
+    "support_arm_count_per_leaf": 2,
+    "support_arm_extension_in": 16.5,
+    "slide_travel_in": 12,
+    "support_arm_stock_width_in": 1.5,
+    "support_arm_stock_height_in": 1.5,
+    "material": "oak_top_with_pine_or_hardwood_support_frame",
+    "finish": "dark_stain_or_black_top",
+    "claimed_capacity_lbs": 0
+  }
+}

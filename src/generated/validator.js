@@ -57,6 +57,7 @@ export function validateGeneratedDesign(design) {
   validateBoardWithLinearHardwareRules(design, errors, warnings);
   validateWallPanelPocketHardwareRules(design, errors, warnings);
   validateTwoStepStoolRules(design, errors, warnings);
+  validateExtensionLeafTableRules(design, errors, warnings);
 
   return result(errors, warnings);
 }
@@ -75,12 +76,50 @@ export function checkPublishability(design, validation = validateGeneratedDesign
     warnings,
     portal_integration_notes: [
       'Current portal integration supports generated tray-feeder, board-with-linear-hardware, and two-step-stool adapter paths.',
+      'Extension-leaf dining table packages can be rendered and exported as dimensional aids, but need rated hardware and human structural review before real-world use.',
       'Wall-panel pocket-and-hardware packages can be generated and exported, but still need a portal catalog adapter before public browsing.',
       'Two-step stool packages can be generated and exported as dimensional aids, but require human structural review before real-world use.',
       'A generic generated-package loader is still needed for arbitrary generated templates.',
       'Template-driven parameter controls are still needed beyond the first hardcoded generated plan.'
     ]
   };
+}
+
+function validateExtensionLeafTableRules(design, errors, warnings) {
+  if (design.template_id !== 'extension_leaf_dining_table') return;
+  const p = design.parameters || {};
+  if (!between(p.width_in, 24, 60)) errors.push('width_in must be between 24 and 60 in.');
+  if (!between(p.center_top_length_in, 24, 96)) errors.push('center_top_length_in must be between 24 and 96 in.');
+  if (!between(p.leaf_depth_in, 4, 24)) errors.push('leaf_depth_in must be between 4 and 24 in.');
+  if (!between(p.leaf_count, 0, 2)) errors.push('leaf_count must be between 0 and 2.');
+  if (!between(p.top_thickness_in, 0.75, 2.5)) errors.push('top_thickness_in must be between 0.75 and 2.5 in.');
+  if (!between(p.table_height_in, 24, 36)) errors.push('table_height_in must be between 24 and 36 in.');
+  if (!between(p.leg_size_in, 1.5, 6)) errors.push('leg_size_in must be between 1.5 and 6 in.');
+  if (!between(p.apron_height_in, 2, 8)) errors.push('apron_height_in must be between 2 and 8 in.');
+  if (!between(p.apron_thickness_in, 0.5, 3)) errors.push('apron_thickness_in must be between 0.5 and 3 in.');
+  if (!between(p.support_arm_count_per_leaf, 2, 4)) errors.push('support_arm_count_per_leaf must be between 2 and 4.');
+  if (!between(p.support_arm_extension_in, 6, 36)) errors.push('support_arm_extension_in must be between 6 and 36 in.');
+  if (!between(p.slide_travel_in, 4, 30)) errors.push('slide_travel_in must be between 4 and 30 in.');
+  if (Number(p.support_arm_extension_in) < Number(p.leaf_depth_in) + 2) errors.push('support_arm_extension_in should extend at least 2 in beyond leaf_depth_in to keep bearing under the fixed table structure.');
+  if (Number(p.slide_travel_in) < Number(p.leaf_depth_in) - 1) warnings.push('slide_travel_in is shorter than the leaf depth; confirm the leaf can be deployed and supported without binding.');
+  const expectedOverall = Number(p.center_top_length_in) + Number(p.leaf_depth_in) * Number(p.leaf_count);
+  if (Number.isFinite(expectedOverall) && Math.abs(Number(p.overall_length_extended_in) - expectedOverall) > 1) warnings.push('overall_length_extended_in does not match center_top_length_in plus the selected leaves.');
+  const partsById = new Map((design.parts || []).map((part) => [part.id, part]));
+  for (const side of Number(p.leaf_count) === 1 ? ['right'] : ['left', 'right']) {
+    const leaf = partsById.get(`top.leaf.${side}`);
+    const front = partsById.get(`support.${side}.front`);
+    const back = partsById.get(`support.${side}.back`);
+    if (!leaf || !front || !back) errors.push(`${side} leaf must include a leaf panel plus front and back retractable support arms.`);
+    if (leaf && front && back) {
+      const leafMinX = Number(leaf.position.x) - Number(leaf.size.x) / 2;
+      const leafMaxX = Number(leaf.position.x) + Number(leaf.size.x) / 2;
+      const supportMinX = Math.min(Number(front.position.x) - Number(front.size.x) / 2, Number(back.position.x) - Number(back.size.x) / 2);
+      const supportMaxX = Math.max(Number(front.position.x) + Number(front.size.x) / 2, Number(back.position.x) + Number(back.size.x) / 2);
+      if (supportMaxX < leafMinX || supportMinX > leafMaxX) errors.push(`${side} support arms do not reach under the ${side} leaf footprint.`);
+    }
+  }
+  warnings.push('Generated extension-leaf tables are not load certified; use rated table-leaf hardware or engineered supports before loading leaves.');
+  if (!Number(p.claimed_capacity_lbs)) warnings.push('No claimed_capacity_lbs is certified by the sandbox; treat table and leaf capacity as unknown.');
 }
 
 function validateTwoStepStoolRules(design, errors, warnings) {

@@ -128,6 +128,44 @@ const blockedCompatibleTemplateGate = enforceWorkflowGate({
 assert.equal(blockedCompatibleTemplateGate.action, 'propose_component_composition');
 assert.equal(blockedCompatibleTemplateGate.tool_call.name, 'propose_component_composition');
 
+const exactTemplateSearchGate = enforceWorkflowGate({
+  action: 'search_components',
+  rationale: 'Look for slide support parts before generating.',
+  tool_call: {
+    name: 'search_components',
+    arguments: {
+      query: 'telescoping slide support leaf'
+    }
+  }
+}, {
+  scenario: {
+    template_id: 'extension_leaf_dining_table',
+    design_id: 'extension_table_probe',
+    parameters: { width_in: 40, leaf_depth_in: 12 }
+  },
+  transcript: [
+    {
+      model_action: {
+        action: 'search_templates',
+        tool_call: { name: 'search_templates', arguments: { query: 'extension leaf dining table' } }
+      },
+      tool_result: {
+        ok: true,
+        templates: [
+          { template_id: 'extension_leaf_dining_table', score: 31 },
+          { template_id: 'board_with_linear_hardware', score: 3 }
+        ]
+      }
+    }
+  ]
+});
+
+assert.equal(exactTemplateSearchGate.action, 'generate_design');
+assert.equal(exactTemplateSearchGate.tool_call.arguments.template_id, 'extension_leaf_dining_table');
+assert.equal(exactTemplateSearchGate.tool_call.arguments.design_id, 'extension_table_probe');
+assert.equal(exactTemplateSearchGate.tool_call.arguments.parameters.leaf_depth_in, 12);
+assert.equal(exactTemplateSearchGate.overridden_model_action.action, 'search_components');
+
 const blockedTemplateRetryGate = enforceWorkflowGate({
   action: 'generate_design',
   rationale: 'Try the wall organizer template again.',
