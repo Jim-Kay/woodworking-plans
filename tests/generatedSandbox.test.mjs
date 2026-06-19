@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { canonicalToPortalResult } from '../src/generated/adapter.js';
 import { generateCanonicalOpenScad } from '../src/generated/openScad.js';
 import { calculateGeneratedPlan } from '../src/generated/portal.js';
-import { generateDesign, exportPlanPackage, validateGeneratedDesign, checkPublishability, createCapabilityRequest, executeSandboxTool, listAssemblyRelationshipTypes, listAssemblyRelationships, listComponentCategories, listComponents, listSandboxTools, reviewBuildSteps, searchAssemblyRelationships, searchComponents, searchTemplates } from '../src/generated/sandbox.js';
+import { generateDesign, exportPlanPackage, validateGeneratedDesign, checkPublishability, createCapabilityRequest, executeSandboxTool, listAssemblyRelationshipTypes, listAssemblyRelationships, listComponentCategories, listComponents, listSandboxTools, reviewBuildSteps, reviewComponentInterfaces, searchAssemblyRelationships, searchComponents, searchTemplates } from '../src/generated/sandbox.js';
 
 const scenario = {
   template_id: 'tray_bird_feeder',
@@ -251,6 +251,10 @@ assert.equal(extensionTable.parts.filter((part) => part.physical === false).leng
 const extensionValidation = validateGeneratedDesign(extensionTable);
 assert.equal(extensionValidation.ok, true);
 assert.match(extensionValidation.warnings.join('\n'), /not load certified/);
+const extensionInterfaceReview = reviewComponentInterfaces(extensionTable);
+assert.equal(extensionInterfaceReview.quality_gate_passed, false);
+assert.equal(extensionInterfaceReview.recommended_action, 'request_capability');
+assert.match(extensionInterfaceReview.findings.map((finding) => finding.message).join('\n'), /fixed rail\/track mounted to the base plus a moving support arm/);
 assert.equal(exportPlanPackage(extensionTable).publishability.ok, true);
 assert.match(generateCanonicalOpenScad(extensionTable), /top\.leaf\.left/);
 

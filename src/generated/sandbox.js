@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path';
 import { canonicalToPortalResult } from './adapter.js';
 import { getAssemblyRelationship, listAssemblyRelationshipTypes, listAssemblyRelationships, searchAssemblyRelationships } from './assemblyRelationshipCatalog.js';
 import { reviewBuildSteps } from './buildStepQuality.js';
+import { reviewComponentInterfaces } from './componentInterfaceReview.js';
 import { generateBoardWithLinearHardwareDesign } from './boardWithLinearHardware.js';
 import { getComponent, listComponentCategories, listComponents, searchComponents } from './componentCatalog.js';
 import { generateExtensionLeafTableDesign } from './extensionLeafTable.js';
@@ -14,7 +15,7 @@ import { generateTwoStepStoolDesign } from './twoStepStool.js';
 import { checkPublishability, validateGeneratedDesign } from './validator.js';
 import { generateWallPanelPocketHardwareDesign } from './wallPanelPocketHardware.js';
 
-export { checkPublishability, createCapabilityRequest, generateCanonicalOpenScad, getAssemblyRelationship, getComponent, listAssemblyRelationshipTypes, listAssemblyRelationships, listComponentCategories, listComponents, listTemplates, normalizePhotoDesignBrief, reviewBuildSteps, scenarioFromPhotoDesignBrief, searchAssemblyRelationships, searchComponents, searchTemplates, summarizePhotoDesignBrief, validateGeneratedDesign };
+export { checkPublishability, createCapabilityRequest, generateCanonicalOpenScad, getAssemblyRelationship, getComponent, listAssemblyRelationshipTypes, listAssemblyRelationships, listComponentCategories, listComponents, listTemplates, normalizePhotoDesignBrief, reviewBuildSteps, reviewComponentInterfaces, scenarioFromPhotoDesignBrief, searchAssemblyRelationships, searchComponents, searchTemplates, summarizePhotoDesignBrief, validateGeneratedDesign };
 
 const DESIGN_PARAMETER_KEYS = [
   'width_in',
@@ -265,6 +266,15 @@ export const SANDBOX_TOOLS = [
   {
     name: 'review_build_steps',
     description: 'Review whether assembly steps and portal step visuals are builder-grade before publication, using a PDF-style instruction rubric.',
+    input_schema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {}
+    }
+  },
+  {
+    name: 'review_component_interfaces',
+    description: 'Review whether complex generated designs are decomposed into independent subsystems with explicit support, motion, clearance, and mounting interfaces before relying on the full assembled model.',
     input_schema: {
       type: 'object',
       additionalProperties: false,
@@ -632,6 +642,12 @@ export function executeSandboxTool(toolCall, state = {}) {
     if (!nextState.design) return { state: nextState, result: { ok: false, error: 'No design exists yet.' } };
     nextState.validation = validateGeneratedDesign(nextState.design);
     return { state: nextState, result: nextState.validation };
+  }
+
+  if (name === 'review_component_interfaces') {
+    if (!nextState.design) return { state: nextState, result: { ok: false, error: 'No design exists yet.' } };
+    nextState.componentInterfaceReview = reviewComponentInterfaces(nextState.design);
+    return { state: nextState, result: nextState.componentInterfaceReview };
   }
 
   if (name === 'review_build_steps') {

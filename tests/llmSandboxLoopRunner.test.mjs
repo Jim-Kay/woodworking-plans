@@ -319,6 +319,58 @@ assert.equal(buildStepReviewGate.action, 'review_build_steps');
 assert.equal(buildStepReviewGate.tool_call.name, 'review_build_steps');
 assert.equal(buildStepReviewGate.overridden_model_action.action, 'request_capability');
 
+const componentInterfaceReviewGate = enforceWorkflowGate({
+  action: 'review_build_steps',
+  rationale: 'The extension table validated, so review build steps.',
+  tool_call: { name: 'review_build_steps', arguments: {} }
+}, {
+  scenario: {
+    template_id: 'extension_leaf_dining_table',
+    design_id: 'extension_table_probe'
+  },
+  design: {
+    design_id: 'extension_table_probe',
+    template_id: 'extension_leaf_dining_table'
+  },
+  validation: { ok: true, status: 'valid' },
+  buildStepReview: null,
+  transcript: []
+});
+
+assert.equal(componentInterfaceReviewGate.action, 'review_component_interfaces');
+assert.equal(componentInterfaceReviewGate.tool_call.name, 'review_component_interfaces');
+assert.equal(componentInterfaceReviewGate.overridden_model_action.action, 'review_build_steps');
+
+const failedComponentInterfaceGate = enforceWorkflowGate({
+  action: 'review_build_steps',
+  rationale: 'Try to move on despite failed interface review.',
+  tool_call: { name: 'review_build_steps', arguments: {} }
+}, {
+  scenario: {
+    template_id: 'extension_leaf_dining_table',
+    design_id: 'extension_table_probe'
+  },
+  design: {
+    design_id: 'extension_table_probe',
+    template_id: 'extension_leaf_dining_table'
+  },
+  validation: { ok: true, status: 'valid' },
+  componentInterfaceReview: {
+    quality_gate_passed: false,
+    capability_request_arguments: {
+      capability: 'component-first extension table slide subsystem',
+      reason: 'Missing fixed slide tracks.',
+      evidence: ['No physical fixed slide member found.']
+    }
+  },
+  buildStepReview: null,
+  transcript: []
+});
+
+assert.equal(failedComponentInterfaceGate.action, 'request_capability');
+assert.equal(failedComponentInterfaceGate.tool_call.name, 'request_capability');
+assert.match(failedComponentInterfaceGate.tool_call.arguments.capability, /component-first extension table/);
+
 const exportAfterReviewReadyGate = enforceWorkflowGate({
   action: 'request_capability',
   rationale: 'The model still wants a component request.',
@@ -348,6 +400,21 @@ assert.equal(exportAfterReviewReadyGate.overridden_model_action.action, 'request
 assert.equal(readyForFinalPackage({
   design: { design_id: 'ready_design' },
   validation: { ok: true, status: 'valid' },
+  buildStepReview: { ok: true, status: 'ready', quality_gate_passed: true },
+  finalPackage: null
+}), true);
+
+assert.equal(readyForFinalPackage({
+  design: { design_id: 'extension_needs_interfaces', template_id: 'extension_leaf_dining_table' },
+  validation: { ok: true, status: 'valid' },
+  buildStepReview: { ok: true, status: 'ready', quality_gate_passed: true },
+  finalPackage: null
+}), false);
+
+assert.equal(readyForFinalPackage({
+  design: { design_id: 'extension_ready', template_id: 'extension_leaf_dining_table' },
+  validation: { ok: true, status: 'valid' },
+  componentInterfaceReview: { ok: true, status: 'ready', quality_gate_passed: true },
   buildStepReview: { ok: true, status: 'ready', quality_gate_passed: true },
   finalPackage: null
 }), true);

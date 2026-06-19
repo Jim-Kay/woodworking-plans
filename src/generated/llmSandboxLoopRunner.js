@@ -184,6 +184,8 @@ async function chooseNextAction(state, options) {
         'When an unsupported template can be described with existing components and relationships, call propose_component_composition before request_capability. Include exact component_ids, relationship_ids when applicable, deterministic algorithm steps, validation strategy, build steps, renderer requirements, and open questions.',
         'A component composition proposal is not executable code. It is a Codex-review artifact; do not claim it is publishable until Codex adds deterministic implementation support.',
         'If propose_component_composition reports unknown component_ids or relationship_ids, repair the proposal with exact known IDs from the result, search_components, or search_assembly_relationships. Do not request new components based only on invented IDs.',
+        'For complex supported templates with moving, load-bearing, or hidden subsystems, run review_component_interfaces after validate_design. This checks subsystem boundaries, support paths, motion members, and clearances that may be hidden by the final assembled model.',
+        'If review_component_interfaces fails, request the missing reusable capability instead of publishing or relying on build-step review.',
         'After validate_design succeeds, call review_build_steps before check_publishability or export_plan_package.',
         'If review_build_steps recommends annotations, use annotate_design and then run review_build_steps again.',
         'If review_build_steps reports missing visual, diagram, or renderer capabilities that annotations cannot solve, call request_capability with those details.',
@@ -200,6 +202,7 @@ async function chooseNextAction(state, options) {
         scenario: state.scenario,
         current_design_summary: summarizeGeneratedDesign(state.design),
         current_validation: state.validation,
+        current_component_interface_review: state.componentInterfaceReview || null,
         current_build_step_review: state.buildStepReview || null,
         current_publishability: state.finalPackage?.publishability || null,
         recent_results: state.transcript.slice(-3).map((item) => ({ action: item.model_action.action, tool_result: compactToolResultForPrompt(item.tool_result) }))
@@ -353,6 +356,34 @@ export function enforceWorkflowGate(next, state) {
       overridden_model_action: next
     };
   }
+  if (state.design && state.validation?.ok && requiresComponentInterfaceReview(state.design) && !state.componentInterfaceReview && action !== 'review_component_interfaces') {
+    return {
+      action: 'review_component_interfaces',
+      rationale: [
+        'Workflow gate inserted by the sandbox loop: this design uses a complex component composition with hidden or moving support interfaces.',
+        'Run component interface review before build-step review, publishability checks, or export.'
+      ].join(' '),
+      tool_call: { name: 'review_component_interfaces', arguments: {} },
+      overridden_model_action: next
+    };
+  }
+  if (state.design && state.validation?.ok && requiresComponentInterfaceReview(state.design) && state.componentInterfaceReview?.quality_gate_passed === false && action !== 'request_capability') {
+    return {
+      action: 'request_capability',
+      rationale: [
+        'Workflow gate inserted by the sandbox loop: component interface review found missing subsystem or motion-interface capability.',
+        'Request a reusable capability instead of publishing the generated design.'
+      ].join(' '),
+      tool_call: {
+        name: 'request_capability',
+        arguments: capabilityArgumentsFrom(state.componentInterfaceReview.capability_request_arguments || {})
+      },
+      overridden_model_action: next
+    };
+  }
+  if (state.design && state.validation?.ok && requiresComponentInterfaceReview(state.design) && state.componentInterfaceReview?.quality_gate_passed === false && action === 'request_capability') {
+    return next;
+  }
   if (state.design && state.validation?.ok && !state.buildStepReview && action !== 'review_build_steps') {
     return {
       action: 'review_build_steps',
@@ -398,6 +429,17 @@ export function enforceWorkflowGate(next, state) {
     };
   }
   if (publishingAction && state.design && state.validation?.ok && !state.buildStepReview) {
+    if (requiresComponentInterfaceReview(state.design) && !state.componentInterfaceReview) {
+      return {
+        action: 'review_component_interfaces',
+        rationale: [
+          'Workflow gate inserted by the sandbox loop: the model attempted to publish before component interface review.',
+          'Run interface review first so hidden or moving subsystems are checked independently.'
+        ].join(' '),
+        tool_call: { name: 'review_component_interfaces', arguments: {} },
+        overridden_model_action: next
+      };
+    }
     return {
       action: 'review_build_steps',
       rationale: [
@@ -424,8 +466,17 @@ function buildStepReviewReady(review) {
   return review?.quality_gate_passed === true || review?.status === 'ready';
 }
 
+function componentInterfaceReviewReady(state = {}) {
+  return !requiresComponentInterfaceReview(state.design) || state.componentInterfaceReview?.quality_gate_passed === true;
+}
+
+function requiresComponentInterfaceReview(design = {}) {
+  return design?.template_id === 'extension_leaf_dining_table'
+    || (design?.relationships || []).some((relationshipId) => /motion|clearance|support/.test(String(relationshipId)));
+}
+
 export function readyForFinalPackage(state = {}) {
-  return Boolean(state.design && state.validation?.ok && buildStepReviewReady(state.buildStepReview) && !state.finalPackage && !state.capabilityRequest && !state.compositionProposal);
+  return Boolean(state.design && state.validation?.ok && componentInterfaceReviewReady(state) && buildStepReviewReady(state.buildStepReview) && !state.finalPackage && !state.capabilityRequest && !state.compositionProposal);
 }
 
 function exactTemplateFromSearchHistory(transcript = [], scenario = {}) {

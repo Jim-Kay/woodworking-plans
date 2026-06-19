@@ -172,6 +172,7 @@ npm run sandbox -- export_plan_package generated/runs/demo/design.json generated
 - `generate_design`
 - `summarize_design`
 - `validate_design`
+- `review_component_interfaces`
 - `review_build_steps`
 - `revise_design`
 - `annotate_design`
@@ -190,10 +191,11 @@ The intended model sequence is usually:
 5. Generate a design from the selected template.
 6. Validate the generated design.
 7. Revise if validation fails.
-8. Run `review_build_steps` to check whether the build instructions and rendered step visuals are understandable to a first-time builder.
-9. Use `annotate_design` when the design is structurally valid but needs better build guidance, drill instructions, labels, or part notes.
-10. Check publishability.
-11. Export a plan package, or propose/request a missing capability from Codex.
+8. Run `review_component_interfaces` for complex, photo-derived, moving, load-bearing, or hidden mechanisms before trusting the assembled model.
+9. Run `review_build_steps` to check whether the build instructions and rendered step visuals are understandable to a first-time builder.
+10. Use `annotate_design` when the design is structurally valid but needs better build guidance, drill instructions, labels, or part notes.
+11. Check publishability.
+12. Export a plan package, or propose/request a missing capability from Codex.
 
 Codex should generally improve prompts, tool schemas, validators, adapters, and portal support. The local model should make design-level choices through sandbox tools: dimensions, parameter revisions, build guidance, labels, notes, and missing-capability requests. If the model cannot express a desired improvement through the current tools, that is a signal for Codex to add a narrower tool rather than directly hardcoding the design improvement.
 
@@ -209,6 +211,8 @@ This avoids creating duplicate components under slightly different names, such a
 Catalog search uses a hybrid retrieval strategy. Exact IDs and aliases score highest, but the search layer also expands common woodworking synonyms, tolerates invalid category hints, and uses fuzzy text similarity over descriptions, inputs, outputs, and example uses. The search result is still only a candidate list: the model should select exact `template_id` or `component_id` values and let deterministic generation, proposal review, validation, and publishability checks decide whether the candidate is actually usable.
 
 The assembly relationship catalog is the connection-language layer. It starts as a taxonomy of relationship types such as `fixed_contact`, `support`, `motion`, `layout_reference`, and `clearance`. The records can later grow toward ontology-like rules, but the current tool is intentionally pragmatic: use `search_assembly_relationships` to find exact relationship IDs for cases like a rail fastened to a panel, a shelf spanning between side panels, a hinged fold-down panel, a rabbet ledge supporting strainer rails, or caster plates mounted to a base. Composition proposals should include `relationship_ids` when relationships are central to the design.
+
+For complex reference objects, the model should prefer component-first planning over whole-object guessing. It should identify independent subsystems, such as tabletop panels, leg-and-apron base, slide carriers, moving support arms, stops, and alignment hardware, then check the interfaces between those subsystems. A final 3D render can look plausible while hiding missing mechanism details under a tabletop or panel. `review_component_interfaces` is the deterministic guard for that failure mode: if it reports that a moving or load-bearing subsystem is not decomposed into explicit fixed and moving members, the model should request a reusable capability from Codex rather than continuing toward publication.
 
 Before proposing a new template, the model should call `search_templates` with the scenario `template_id`, project name, and plain-language intent. This helps map names such as `mail_key_organizer` or `entry organizer with hooks` to existing supported templates instead of creating duplicate composition proposals.
 
