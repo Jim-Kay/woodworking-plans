@@ -22,6 +22,9 @@ try {
   await expectCount(extensionTableCard, 1, 'generated extension table catalog card');
   assert.equal(await extensionTableCard.getAttribute('data-status'), 'ready');
   assert.equal(await extensionTableCard.locator('.badge.ok').textContent(), 'Ready');
+  await extensionTableCard.locator('.planThumb img').waitFor({ state: 'visible', timeout: 10_000 });
+  const extensionThumbnailLoaded = await extensionTableCard.locator('.planThumb img').evaluate((img) => img.complete && img.naturalWidth > 0 && img.naturalHeight > 0);
+  assert.equal(extensionThumbnailLoaded, true);
 
   await page.goto(`${baseUrl}?plan=generated-two-step-stool`, { waitUntil: 'networkidle' });
   assert.equal(await page.locator('#appTitle').textContent(), 'Generated Two-Step Stool');

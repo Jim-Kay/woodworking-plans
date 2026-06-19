@@ -245,7 +245,10 @@ export const PLAN_CATALOG = [
       notes: ['This is a draft generated concept from multi-photo reference, not a certified structural plan.', 'Drawer slides are not automatically rated for vertical leaf loads; use rated hardware or add mechanical support legs/brackets.', 'Test the slide path empty before fitting leaves, then test leaves gradually while checking for sag, binding, and fastener movement.']
     },
     tags: ['generated', 'table', 'extension leaf', 'slides', 'advanced'],
-    thumbnail: 'generated-extension-leaf-table'
+    thumbnail: 'generated-extension-leaf-table',
+    media: {
+      thumbnail: { type: 'capture' }
+    }
   }
 ];
 
