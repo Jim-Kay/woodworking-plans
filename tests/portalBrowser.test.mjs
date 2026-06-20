@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { createServer as createNetServer } from 'node:net';
 import { chromium } from 'playwright';
 
-const baseUrl = 'http://localhost:5173';
+const port = Number(process.env.PORTAL_BROWSER_TEST_PORT || await findOpenPort());
+const baseUrl = `http://127.0.0.1:${port}`;
 let server = null;
 
 await ensureServer();
@@ -63,6 +65,7 @@ async function ensureServer() {
   if (await isServing()) return;
   server = spawn(process.execPath, ['scripts/serve.mjs'], {
     cwd: process.cwd(),
+    env: { ...process.env, PORT: String(port) },
     stdio: 'ignore',
     windowsHide: true
   });
@@ -76,10 +79,27 @@ async function ensureServer() {
 async function isServing() {
   try {
     const response = await fetch(baseUrl);
-    return response.ok;
+    if (!response.ok) return false;
+    const html = await response.text();
+    return html.includes('<title>Floating Frame Planner</title>');
   } catch {
     return false;
   }
+}
+
+function findOpenPort() {
+  return new Promise((resolve, reject) => {
+    const probe = createNetServer();
+    probe.on('error', reject);
+    probe.listen(0, '127.0.0.1', () => {
+      const address = probe.address();
+      const selectedPort = typeof address === 'object' && address ? address.port : null;
+      probe.close(() => {
+        if (selectedPort) resolve(selectedPort);
+        else reject(new Error('Could not allocate a test port.'));
+      });
+    });
+  });
 }
 
 async function expectCount(locator, count, label) {

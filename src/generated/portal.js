@@ -4,10 +4,11 @@ import { generateExtensionLeafTableDesign } from './extensionLeafTable.js';
 import { generateCanonicalOpenScad } from './openScad.js';
 import { generateTrayBirdFeederDesign } from './trayBirdFeeder.js';
 import { generateTwoStepStoolDesign } from './twoStepStool.js';
+import { generateWallPanelPocketHardwareDesign } from './wallPanelPocketHardware.js';
 import { checkPublishability, validateGeneratedDesign } from './validator.js';
 
 export function calculateGeneratedPlan(plan) {
-  if (!['generated-tray-bird-feeder', 'generated-wall-key-rack', 'generated-two-step-stool', 'generated-extension-leaf-table'].includes(plan.build)) {
+  if (!['generated-tray-bird-feeder', 'generated-wall-key-rack', 'generated-wall-mail-organizer', 'generated-two-step-stool', 'generated-extension-leaf-table'].includes(plan.build)) {
     return { type: 'generated', ok: false, errors: [`Unsupported generated build: ${plan.build}`], warnings: [], parts: [] };
   }
   const design = plan.build === 'generated-extension-leaf-table' ? generateExtensionLeafTableDesign({
@@ -52,6 +53,27 @@ export function calculateGeneratedPlan(plan) {
       rail_height_in: plan.stoolRailH,
       rail_thickness_in: plan.stoolRailT,
       material: plan.stoolMaterial
+    }
+  }) : plan.build === 'generated-wall-mail-organizer' ? generateWallPanelPocketHardwareDesign({
+    design_id: 'portal_wall_mail_organizer',
+    template_id: 'wall_panel_with_pocket_and_linear_hardware',
+    intent: 'wall-mounted mail and key organizer with a shallow pocket and hook row',
+    title: 'Generated Wall Mail Organizer',
+    parameters: {
+      width_in: plan.organizerW,
+      height_in: plan.organizerH,
+      board_thickness_in: plan.organizerBoardT,
+      pocket_depth_in: plan.organizerPocketD,
+      pocket_height_in: plan.organizerPocketH,
+      pocket_lip_height_in: plan.organizerPocketLipH,
+      pocket_stock_thickness_in: plan.organizerPocketStockT,
+      hook_count: plan.organizerHookCount,
+      hook_spacing_in: plan.organizerHookSpacing,
+      min_end_inset_in: plan.organizerEndInset,
+      mounting_holes: plan.organizerMountingHoles,
+      material: plan.organizerMaterial,
+      pocket_material: plan.organizerPocketMaterial,
+      hardware_type: plan.organizerHardware
     }
   }) : plan.build === 'generated-wall-key-rack' ? generateBoardWithLinearHardwareDesign({
     design_id: 'portal_wall_key_rack',
@@ -111,6 +133,12 @@ export function calculateGeneratedPlan(plan) {
     stoolD: design.parameters.depth_in,
     stoolH: design.parameters.height_in,
     lowerStepH: design.parameters.lower_step_height_in,
+    organizerW: design.parameters.width_in,
+    organizerH: design.parameters.height_in,
+    organizerBoardT: design.parameters.board_thickness_in,
+    organizerPocketD: design.parameters.pocket_depth_in,
+    organizerPocketH: design.parameters.pocket_height_in,
+    organizerHookCount: design.parameters.hook_count,
     tableW: design.parameters.width_in,
     tableCenterL: design.parameters.center_top_length_in,
     tableLeafD: design.parameters.leaf_depth_in,
@@ -125,6 +153,7 @@ export function calculateGeneratedPlan(plan) {
 }
 
 function generatedStyle(build) {
+  if (build === 'generated-wall-mail-organizer') return 'linear-wall-hardware';
   if (build === 'generated-wall-key-rack') return 'linear-wall-hardware';
   if (build === 'generated-two-step-stool') return 'two-step-stool';
   if (build === 'generated-extension-leaf-table') return 'extension-leaf-table';

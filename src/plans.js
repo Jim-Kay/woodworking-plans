@@ -177,6 +177,40 @@ export const PLAN_CATALOG = [
     thumbnail: 'key-rack'
   },
   {
+    id: 'generated-wall-mail-organizer',
+    title: 'Generated Wall Mail Organizer',
+    family: 'Generated Plans',
+    status: 'ready',
+    build: 'generated-wall-mail-organizer',
+    defaults: {
+      build: 'generated-wall-mail-organizer',
+      organizerW: 18,
+      organizerH: 10,
+      organizerBoardT: 0.75,
+      organizerPocketD: 2.5,
+      organizerPocketH: 4,
+      organizerPocketLipH: 1.5,
+      organizerPocketStockT: 0.5,
+      organizerHookCount: 5,
+      organizerHookSpacing: 3,
+      organizerEndInset: 1.5,
+      organizerMaterial: 'pine_1x6',
+      organizerPocketMaterial: 'thin_plywood',
+      organizerHardware: 'screw_hook',
+      organizerMountingHoles: true
+    },
+    summary: 'A wall-mounted entry organizer with a shallow mail pocket, hook row, and pre-layout mounting references.',
+    materials: 'Pine 1x6 back board, thin plywood pocket parts, screw hooks, wall screws or anchors',
+    details: {
+      description: 'A generated wall organizer based on the reusable wall-panel pocket-and-hardware template. It combines one flat back board, a shallow envelope pocket, a centered row of key hooks, and wall mounting references while keeping the drill-layout and pocket-assembly steps separate for first-time builders.',
+      materials: ['Pine 1x6 or similar back board', 'Thin plywood or other light stock for the pocket', 'Five screw hooks or small pegs', 'Wall screws and anchors appropriate for the wall', 'Finish if desired'],
+      tools: ['Saw', 'Drill/driver', 'Tape measure', 'Square', 'Sander', 'Clamps'],
+      notes: ['This plan uses the generic wall-panel pocket-and-hardware template, not a one-off coded organizer.', 'Drill the hook and wall-mount layout before assembling the pocket so the back board stays flat on the bench.', 'Mount into framing where possible, or use anchors rated for the expected load of keys, mail, and pocket contents.']
+    },
+    tags: ['generated', 'mail organizer', 'entryway', 'hooks', 'wall mounted'],
+    thumbnail: 'key-rack'
+  },
+  {
     id: 'generated-two-step-stool',
     title: 'Generated Two-Step Stool',
     family: 'Generated Plans',
@@ -267,6 +301,7 @@ export function buildForPlanId(id) {
 export function planIdForBuild(build) {
   if (build === 'generated-tray-bird-feeder') return 'generated-tray-bird-feeder';
   if (build === 'generated-wall-key-rack') return 'generated-wall-key-rack';
+  if (build === 'generated-wall-mail-organizer') return 'generated-wall-mail-organizer';
   if (build === 'generated-two-step-stool') return 'generated-two-step-stool';
   if (build === 'generated-extension-leaf-table') return 'generated-extension-leaf-table';
   if (build === 'tote-rack') return 'tote-rack-27';

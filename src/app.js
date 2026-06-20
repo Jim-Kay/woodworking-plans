@@ -479,11 +479,11 @@ function isShelfBuild(build, planId = currentPlanId) {
 }
 
 function isGeneratedPlan() {
-  return currentPlanId === 'generated-tray-bird-feeder' || currentPlanId === 'generated-wall-key-rack' || isGeneratedBuild(plan.build);
+  return currentPlanId === 'generated-tray-bird-feeder' || currentPlanId === 'generated-wall-key-rack' || currentPlanId === 'generated-wall-mail-organizer' || isGeneratedBuild(plan.build);
 }
 
 function isGeneratedBuild(build) {
-  return build === 'generated-tray-bird-feeder' || build === 'generated-wall-key-rack' || build === 'generated-two-step-stool' || build === 'generated-extension-leaf-table';
+  return build === 'generated-tray-bird-feeder' || build === 'generated-wall-key-rack' || build === 'generated-wall-mail-organizer' || build === 'generated-two-step-stool' || build === 'generated-extension-leaf-table';
 }
 
 function isGeneratedTrayPlan() {
@@ -492,6 +492,10 @@ function isGeneratedTrayPlan() {
 
 function isGeneratedWallRackPlan() {
   return plan.build === 'generated-wall-key-rack';
+}
+
+function isGeneratedWallOrganizerPlan() {
+  return plan.build === 'generated-wall-mail-organizer';
 }
 
 function isGeneratedStoolPlan() {
@@ -550,10 +554,10 @@ function renderFields() {
     label.textContent = normalizeBuild(plan.build) === 'strainer' ? 'Strainer' : 'Liner';
   });
   if (isGeneratedPlan()) {
-    document.querySelector('[data-stage-part="primary"]').textContent = isGeneratedExtensionTablePlan() ? 'Top' : isGeneratedWallRackPlan() ? 'Board' : isGeneratedStoolPlan() ? 'Treads' : 'Panel';
-    document.querySelector('[data-stage-part="support"]').textContent = isGeneratedExtensionTablePlan() ? 'Legs' : isGeneratedWallRackPlan() ? 'Hooks' : isGeneratedStoolPlan() ? 'Legs' : 'Rails';
-    document.querySelector('[data-stage-part="surface"]').textContent = isGeneratedExtensionTablePlan() ? 'Supports' : isGeneratedWallRackPlan() ? 'Pilot holes' : isGeneratedStoolPlan() ? 'Rails' : 'Drill holes';
-    document.querySelector('[data-stage-part="hardware"]').textContent = isGeneratedExtensionTablePlan() ? 'Slides' : isGeneratedWallRackPlan() ? 'Mounting' : isGeneratedStoolPlan() ? 'Safety' : 'Fasteners';
+    document.querySelector('[data-stage-part="primary"]').textContent = isGeneratedExtensionTablePlan() ? 'Top' : isGeneratedWallOrganizerPlan() ? 'Board and pocket' : isGeneratedWallRackPlan() ? 'Board' : isGeneratedStoolPlan() ? 'Treads' : 'Panel';
+    document.querySelector('[data-stage-part="support"]').textContent = isGeneratedExtensionTablePlan() ? 'Legs' : isGeneratedWallOrganizerPlan() ? 'Hooks' : isGeneratedWallRackPlan() ? 'Hooks' : isGeneratedStoolPlan() ? 'Legs' : 'Rails';
+    document.querySelector('[data-stage-part="surface"]').textContent = isGeneratedExtensionTablePlan() ? 'Supports' : isGeneratedWallOrganizerPlan() ? 'Pocket layout' : isGeneratedWallRackPlan() ? 'Pilot holes' : isGeneratedStoolPlan() ? 'Rails' : 'Drill holes';
+    document.querySelector('[data-stage-part="hardware"]').textContent = isGeneratedExtensionTablePlan() ? 'Slides' : isGeneratedWallOrganizerPlan() ? 'Wall mount' : isGeneratedWallRackPlan() ? 'Mounting' : isGeneratedStoolPlan() ? 'Safety' : 'Fasteners';
   } else if (isShelfPlan()) {
     document.querySelector('[data-stage-part="primary"]').textContent = 'Posts';
     document.querySelector('[data-stage-part="support"]').textContent = 'Rails';
@@ -599,6 +603,11 @@ function renderToggles() {
             ['treads', 'Treads'],
             ['legs', 'Legs'],
             ['rails', 'Rails']
+          ]
+        : isGeneratedWallOrganizerPlan()
+        ? [
+            ['panels', 'Board and pocket'],
+            ['references', 'Hooks and holes']
           ]
         : isGeneratedWallRackPlan()
         ? [
@@ -653,6 +662,16 @@ function renderDimensionSummary() {
       ['Tread thickness', formatLength(plan.stoolTreadT, plan.unit)],
       ['Leg stock', `${formatLength(plan.stoolLegW, plan.unit)} x ${formatLength(plan.stoolLegD, plan.unit)}`],
       ['Physical parts', result.physicalPartCount],
+      ['Estimated board feet', result.ok ? result.boardFeet.toFixed(2) : '-'],
+      ['Publishable', result.publishability?.ok ? 'Yes' : 'Needs work']
+    ] : isGeneratedWallOrganizerPlan() ? [
+      ['Plan type', 'Wall mail organizer'],
+      ['Board size', `${formatLength(result.organizerW, plan.unit)} x ${formatLength(result.organizerH, plan.unit)} x ${formatLength(result.organizerBoardT, plan.unit)}`],
+      ['Pocket depth', formatLength(result.organizerPocketD, plan.unit)],
+      ['Pocket height', formatLength(result.organizerPocketH, plan.unit)],
+      ['Hooks', result.organizerHookCount],
+      ['Physical parts', result.physicalPartCount],
+      ['Guide marks', result.referencePartCount],
       ['Estimated board feet', result.ok ? result.boardFeet.toFixed(2) : '-'],
       ['Publishable', result.publishability?.ok ? 'Yes' : 'Needs work']
     ] : isGeneratedWallRackPlan() ? [
@@ -1644,14 +1663,15 @@ function generatedLinearHardwareLayoutImage(width, height) {
   const drawingX = pad + labelW;
   const drawingW = width - drawingX - pad;
   const drawingH = height - pad * 2;
-  const rackW = result.rackW || plan.rackW || 18;
-  const rackH = result.rackH || plan.rackH || 4;
-  const hookCount = result.hookCount || plan.rackHookCount || 5;
-  const hookSpacing = plan.rackHookSpacing || 3;
-  const endInset = plan.rackEndInset || 1.5;
-  const scale = Math.min(drawingW / Math.max(rackW, 1), drawingH / Math.max(rackH + 2.25, 1));
-  const boardW = rackW * scale;
-  const boardH = rackH * scale;
+  const organizer = isGeneratedWallOrganizerPlan();
+  const boardWidth = organizer ? result.organizerW || plan.organizerW || 18 : result.rackW || plan.rackW || 18;
+  const boardHeight = organizer ? result.organizerH || plan.organizerH || 10 : result.rackH || plan.rackH || 4;
+  const hookCount = organizer ? result.organizerHookCount || plan.organizerHookCount || 5 : result.hookCount || plan.rackHookCount || 5;
+  const hookSpacing = organizer ? plan.organizerHookSpacing || 3 : plan.rackHookSpacing || 3;
+  const endInset = organizer ? plan.organizerEndInset || 1.5 : plan.rackEndInset || 1.5;
+  const scale = Math.min(drawingW / Math.max(boardWidth, 1), drawingH / Math.max(boardHeight + 2.25, 1));
+  const boardW = boardWidth * scale;
+  const boardH = boardHeight * scale;
   const boardX = drawingX + (drawingW - boardW) / 2;
   const boardY = pad + 62;
   const hookY = boardY + boardH * 0.55;
@@ -1670,7 +1690,7 @@ function generatedLinearHardwareLayoutImage(width, height) {
   for (let y = pad; y < height; y += 32) svg.push(`<line x1="${pad}" y1="${y}" x2="${width - pad}" y2="${y}" stroke="#1f2937" stroke-width="1"/>`);
   svg.push(`<text x="${pad}" y="${pad - 6}" fill="#bfdbfe" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700">Mark and drill before installing hooks</text>`);
   svg.push(`<text x="${pad}" y="${pad + 24}" fill="#e5e7eb" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700">Back board</text>`);
-  svg.push(`<text x="${pad}" y="${pad + 44}" fill="#93c5fd" font-family="Inter, Arial, sans-serif" font-size="12">${escapeHtml(formatLength(rackW, plan.unit))} x ${escapeHtml(formatLength(rackH, plan.unit))}</text>`);
+  svg.push(`<text x="${pad}" y="${pad + 44}" fill="#93c5fd" font-family="Inter, Arial, sans-serif" font-size="12">${escapeHtml(formatLength(boardWidth, plan.unit))} x ${escapeHtml(formatLength(boardHeight, plan.unit))}</text>`);
   svg.push(`<text x="${pad}" y="${pad + 70}" fill="#e5e7eb" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700">Hook pilot holes</text>`);
   svg.push(`<text x="${pad}" y="${pad + 90}" fill="#cbd5e1" font-family="Inter, Arial, sans-serif" font-size="12">${hookCount} marks at ${escapeHtml(formatLength(hookSpacing, plan.unit))} spacing</text>`);
   svg.push(`<text x="${pad}" y="${pad + 116}" fill="#e5e7eb" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700">Wall mounting holes</text>`);
@@ -2272,6 +2292,14 @@ function printDimensionSummaryHtml() {
         ['Plan type', 'Two-step stool'],
         ['Overall size', `${formatLength(result.stoolW, plan.unit)} x ${formatLength(result.stoolD, plan.unit)} x ${formatLength(result.stoolH, plan.unit)}`],
         ['Lower step height', formatLength(result.lowerStepH, plan.unit)],
+        ['Physical parts', result.physicalPartCount]
+      ]
+      : isGeneratedWallOrganizerPlan()
+      ? [
+        ['Plan type', 'Wall mail organizer'],
+        ['Board size', `${formatLength(result.organizerW, plan.unit)} x ${formatLength(result.organizerH, plan.unit)} x ${formatLength(result.organizerBoardT, plan.unit)}`],
+        ['Pocket depth', formatLength(result.organizerPocketD, plan.unit)],
+        ['Hooks', result.organizerHookCount],
         ['Physical parts', result.physicalPartCount]
       ]
       : isGeneratedWallRackPlan()
