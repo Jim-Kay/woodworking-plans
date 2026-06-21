@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { createServer } from 'node:net';
 import { chromium } from 'playwright';
 
-const baseUrl = 'http://localhost:5173';
+const port = await reservePort();
+const baseUrl = `http://127.0.0.1:${port}`;
 let server = null;
 
 await ensureServer();
@@ -25,6 +27,11 @@ try {
   await extensionTableCard.locator('.planThumb img').waitFor({ state: 'visible', timeout: 10_000 });
   const extensionThumbnailLoaded = await extensionTableCard.locator('.planThumb img').evaluate((img) => img.complete && img.naturalWidth > 0 && img.naturalHeight > 0);
   assert.equal(extensionThumbnailLoaded, true);
+  const organizerCard = page.locator('[data-plan-id="generated-wall-mail-organizer"]');
+  await expectCount(organizerCard, 1, 'generated wall organizer catalog card');
+  await organizerCard.locator('.planThumb img').waitFor({ state: 'visible', timeout: 10_000 });
+  const organizerThumbnailLoaded = await organizerCard.locator('.planThumb img').evaluate((img) => img.complete && img.naturalWidth > 0 && img.naturalHeight > 0);
+  assert.equal(organizerThumbnailLoaded, true);
 
   await page.goto(`${baseUrl}?plan=generated-two-step-stool`, { waitUntil: 'networkidle' });
   assert.equal(await page.locator('#appTitle').textContent(), 'Generated Two-Step Stool');
@@ -50,6 +57,11 @@ try {
   assert.equal(await page.locator('#planDimensionsPane').isVisible(), true);
   assert.match(await page.locator('#statusBar').textContent(), /Extension table/);
   assert.match(await page.locator('#dimensionSummary').textContent(), /Extension leaf table/);
+  await page.goto(`${baseUrl}?plan=generated-wall-mail-organizer`, { waitUntil: 'networkidle' });
+  assert.equal(await page.locator('#appTitle').textContent(), 'Generated Wall Mail Organizer');
+  assert.match(await page.locator('#statusBar').textContent(), /mail organizer/i);
+  assert.match(await page.locator('#dimensionSummary').textContent(), /mail organizer|entry organizer/i);
+  assert.equal(await page.locator('#planNotesPane').isVisible(), true);
   assert.deepEqual(await page.locator('.badge.err').allTextContents(), []);
   assert.deepEqual(errors, []);
 } finally {
@@ -63,6 +75,7 @@ async function ensureServer() {
   if (await isServing()) return;
   server = spawn(process.execPath, ['scripts/serve.mjs'], {
     cwd: process.cwd(),
+    env: { ...process.env, PORT: String(port) },
     stdio: 'ignore',
     windowsHide: true
   });
@@ -85,4 +98,19 @@ async function isServing() {
 async function expectCount(locator, count, label) {
   const actual = await locator.count();
   assert.equal(actual, count, `${label} count`);
+}
+
+async function reservePort() {
+  return new Promise((resolve, reject) => {
+    const server = createServer();
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address();
+      const nextPort = typeof address === 'object' && address ? address.port : null;
+      server.close((error) => {
+        if (error) reject(error);
+        else resolve(nextPort);
+      });
+    });
+  });
 }

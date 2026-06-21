@@ -177,6 +177,46 @@ export const PLAN_CATALOG = [
     thumbnail: 'key-rack'
   },
   {
+    id: 'generated-wall-mail-organizer',
+    title: 'Generated Wall Mail Organizer',
+    family: 'Generated Plans',
+    status: 'ready',
+    build: 'generated-wall-mail-organizer',
+    defaults: {
+      build: 'generated-wall-mail-organizer',
+      organizerW: 18,
+      organizerH: 10,
+      organizerBoardT: 0.75,
+      organizerPocketD: 2.5,
+      organizerPocketH: 4,
+      organizerPocketLipH: 1.5,
+      organizerPocketStockT: 0.5,
+      organizerHookCount: 5,
+      organizerHookSpacing: 3,
+      organizerEndInset: 1.5,
+      organizerMountingHoles: true,
+      organizerMountHoleD: 0.1875,
+      organizerPilotHoleD: 0.125,
+      organizerHookProjection: 1.25,
+      organizerMaterial: 'pine_1x6',
+      organizerPocketMaterial: 'thin_plywood',
+      organizerHardware: 'screw_hook'
+    },
+    summary: 'A wall-mounted organizer with a shallow mail pocket, hook row, and wall-mount layout generated from reusable pocket and hardware components.',
+    materials: 'Pine 1x6 back board, thin plywood pocket parts, screw hooks, wall screws or anchors',
+    details: {
+      description: 'A generated entry organizer that combines a flat back board, a shallow front mail pocket, a lower hook row, and mounting-hole layout into one compact wall project. The pocket assembly, hook spacing, and drill guidance are driven by reusable generated-design components rather than a one-off bespoke plan.',
+      materials: ['Pine 1x6 or similar flat back board', 'Thin plywood or similar stock for the pocket bottom, cheeks, and lip', 'Five screw hooks or pegs', 'Wall screws and anchors appropriate for the wall', 'Finish if desired'],
+      tools: ['Saw', 'Drill/driver', 'Tape measure', 'Square', 'Sander'],
+      notes: ['Assemble the shallow pocket before installing hooks so the hook line stays clear of pocket fasteners.', 'Mount into wall framing where possible, or use anchors rated for the expected load.', 'Deep pockets may need stronger fastening than the default light-duty organizer use case.']
+    },
+    tags: ['generated', 'entry organizer', 'mail pocket', 'hooks', 'component composition'],
+    thumbnail: 'generated-wall-mail-organizer',
+    media: {
+      thumbnail: { type: 'capture' }
+    }
+  },
+  {
     id: 'generated-two-step-stool',
     title: 'Generated Two-Step Stool',
     family: 'Generated Plans',
@@ -267,6 +307,7 @@ export function buildForPlanId(id) {
 export function planIdForBuild(build) {
   if (build === 'generated-tray-bird-feeder') return 'generated-tray-bird-feeder';
   if (build === 'generated-wall-key-rack') return 'generated-wall-key-rack';
+  if (build === 'generated-wall-mail-organizer') return 'generated-wall-mail-organizer';
   if (build === 'generated-two-step-stool') return 'generated-two-step-stool';
   if (build === 'generated-extension-leaf-table') return 'generated-extension-leaf-table';
   if (build === 'tote-rack') return 'tote-rack-27';

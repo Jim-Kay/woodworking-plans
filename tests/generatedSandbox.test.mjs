@@ -163,6 +163,33 @@ assert.equal(validateGeneratedDesign(mailKeyOrganizer).ok, true);
 assert.equal(checkPublishability(mailKeyOrganizer, validateGeneratedDesign(mailKeyOrganizer)).ok, true);
 assert.match(generateCanonicalOpenScad(mailKeyOrganizer), /pocket.front_lip/);
 
+const portalMailOrganizer = calculateGeneratedPlan({
+  build: 'generated-wall-mail-organizer',
+  organizerW: 18,
+  organizerH: 10,
+  organizerBoardT: 0.75,
+  organizerPocketD: 2.5,
+  organizerPocketH: 4,
+  organizerPocketLipH: 1.5,
+  organizerPocketStockT: 0.5,
+  organizerHookCount: 5,
+  organizerHookSpacing: 3,
+  organizerEndInset: 1.5,
+  organizerMountingHoles: true,
+  organizerMountHoleD: 0.1875,
+  organizerPilotHoleD: 0.125,
+  organizerHookProjection: 1.25,
+  organizerMaterial: 'pine_1x6',
+  organizerPocketMaterial: 'thin_plywood',
+  organizerHardware: 'screw_hook'
+});
+assert.equal(portalMailOrganizer.ok, true);
+assert.equal(portalMailOrganizer.style, 'linear-wall-pocket-hardware');
+assert.equal(portalMailOrganizer.generatedDesign.template_id, 'wall_panel_with_pocket_and_linear_hardware');
+assert.equal(portalMailOrganizer.publishability.ok, true);
+assert.equal(portalMailOrganizer.buildSteps.some((step) => step.image === 'linear-hardware-drill-layout'), true);
+assert.equal(portalMailOrganizer.generatedDesign.parts.some((part) => part.id === 'pocket.front_lip'), true);
+
 const duplicatePocketRequest = executeSandboxTool({
   name: 'request_capability',
   arguments: {
