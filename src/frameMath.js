@@ -6,6 +6,7 @@ const Z_CLIP_TOLERANCE_IN = 1 / 32;
 const SCREW_MIN_EDGE_IN = 0.5;
 const RABBET_LEDGE_EPSILON_IN = 0.001;
 const MIN_RABBET_LEDGE_WARNING_IN = 0.125;
+const INCH_DISPLAY_DENOMINATOR = 16;
 export const Z_CLIP_LINER_SETBACK_IN = 0.5;
 
 export function normalizeBuild(build = 'liner') {
@@ -36,7 +37,32 @@ export function fromInches(value, unit = 'in') {
 export function formatLength(value, unit = 'in') {
   if (!Number.isFinite(value)) return '-';
   if (unit === 'mm') return `${(value * INCH_TO_MM).toFixed(1)} mm`;
-  return `${value.toFixed(3).replace(/\.0+$/, '').replace(/(\.\d*[1-9])0+$/, '$1')} in`;
+  return `${formatFractionalInches(value)} in`;
+}
+
+function formatFractionalInches(value) {
+  const sign = value < 0 ? '-' : '';
+  const roundedSixteenths = Math.round(Math.abs(value) * INCH_DISPLAY_DENOMINATOR);
+  const whole = Math.floor(roundedSixteenths / INCH_DISPLAY_DENOMINATOR);
+  const numerator = roundedSixteenths % INCH_DISPLAY_DENOMINATOR;
+  if (!numerator) return `${sign}${whole}`;
+
+  const divisor = greatestCommonDivisor(numerator, INCH_DISPLAY_DENOMINATOR);
+  const simplifiedNumerator = numerator / divisor;
+  const simplifiedDenominator = INCH_DISPLAY_DENOMINATOR / divisor;
+  const fraction = `${simplifiedNumerator}/${simplifiedDenominator}`;
+  return whole ? `${sign}${whole} ${fraction}` : `${sign}${fraction}`;
+}
+
+function greatestCommonDivisor(a, b) {
+  let x = Math.abs(a);
+  let y = Math.abs(b);
+  while (y) {
+    const next = x % y;
+    x = y;
+    y = next;
+  }
+  return x || 1;
 }
 
 export function getStageLabels(build = 'two') {

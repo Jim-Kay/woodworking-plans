@@ -1955,9 +1955,11 @@ function rabbetGuideContent(part) {
   const shortPointLength = formatLength(Math.max(0, part.length - 2 * (plan.face + (plan.rabbet || 0))), plan.unit);
   return `
     <b>Rabbet cut guide</b>
-    <span class="cutHelpText">Remove the highlighted area from the inside back edge. The remaining ledge supports the strainer.</span>
+    <span class="cutHelpText">Remove the highlighted area from the inside back edge, on the wall side. Seat the strainer into the assembled face from the back; the front/viewer side remains uncut.</span>
     <svg class="cutDiagram" viewBox="0 0 420 330" aria-hidden="true">
-      <text x="12" y="18">End view</text>
+      <text x="128" y="18">End view</text>
+      <text x="100" y="38">Back / wall side</text>
+      <text x="100" y="162">Front / viewer side</text>
       <path class="keepProfile" d="M42 30h30v58h22v54H42z" />
       <path class="profile" d="M42 30h30v58h22v54H42z" />
       <path class="remove" d="M72 30h22v58H72z" />
@@ -1965,7 +1967,7 @@ function rabbetGuideContent(part) {
       <line class="dimLine gray" x1="16" y1="30" x2="16" y2="142" />
       <line class="tick gray" x1="4" y1="30" x2="28" y2="30" />
       <line class="tick gray" x1="4" y1="142" x2="28" y2="142" />
-      <text class="dimText grayText" x="1" y="91">${escapeHtml(faceDepth)}</text>
+      <text class="dimText grayText" x="28" y="91">${escapeHtml(faceDepth)}</text>
       <line class="dimLine gray" x1="122" y1="30" x2="122" y2="88" />
       <line class="tick gray" x1="106" y1="30" x2="138" y2="30" />
       <line class="tick gray" x1="106" y1="88" x2="138" y2="88" />
@@ -1974,13 +1976,22 @@ function rabbetGuideContent(part) {
       <line class="tick gray" x1="106" y1="88" x2="138" y2="88" />
       <line class="tick gray" x1="106" y1="142" x2="138" y2="142" />
       <text class="dimText grayText" x="132" y="121">${escapeHtml(rabbetWidth)}</text>
+      <line class="dimLine gray" x1="42" y1="20" x2="72" y2="20" />
+      <line class="tick gray" x1="42" y1="12" x2="42" y2="28" />
+      <line class="tick gray" x1="72" y1="12" x2="72" y2="28" />
+      <text class="dimText grayText" x="55" y="13">${escapeHtml(faceWidth)}</text>
       <line class="dimLine gray" x1="72" y1="20" x2="94" y2="20" />
       <line class="tick gray" x1="72" y1="12" x2="72" y2="28" />
       <line class="tick gray" x1="94" y1="12" x2="94" y2="28" />
-      <text class="dimText grayText" x="70" y="9">${escapeHtml(rabbetDepth)}</text>
+      <text class="dimText grayText" x="96" y="13">${escapeHtml(rabbetDepth)}</text>
+      <line class="dimLine gray" x1="42" y1="154" x2="94" y2="154" />
+      <line class="tick gray" x1="42" y1="146" x2="42" y2="164" />
+      <line class="tick gray" x1="94" y1="146" x2="94" y2="164" />
+      <text class="dimText grayText" x="76" y="172">${escapeHtml(faceThickness)}</text>
       <text x="184" y="18">Board depth: ${escapeHtml(faceDepth)}</text>
       <text x="184" y="36">Vertical rabbet cut: ${escapeHtml(rabbetCutDepth)}</text>
-      <text x="184" y="54">Horizontal rabbet width from back edge: ${escapeHtml(rabbetWidth)}</text>
+      <text x="184" y="54">Rabbet ledge width: ${escapeHtml(rabbetWidth)}</text>
+      <text x="184" y="72">Strainer installs from back</text>
 
       <text x="12" y="180">Top view</text>
       <path class="topProfile" d="M78 230H166 M252 230H340 M48 300H166 M252 300H370 M48 300L78 230 M340 230L370 300" />
@@ -1998,7 +2009,7 @@ function rabbetGuideContent(part) {
       <line class="dimLine gray" x1="26" y1="230" x2="26" y2="300" />
       <line class="tick gray" x1="14" y1="230" x2="54" y2="230" />
       <line class="tick gray" x1="14" y1="300" x2="54" y2="300" />
-      <text class="dimText grayText" x="4" y="268">${escapeHtml(faceThickness)}</text>
+      <text class="dimText grayText" x="28" y="268">${escapeHtml(faceThickness)}</text>
       <line class="dimLine gray" x1="394" y1="230" x2="394" y2="248" />
       <line class="tick gray" x1="380" y1="230" x2="414" y2="230" />
       <line class="tick gray" x1="380" y1="248" x2="414" y2="248" />
@@ -2213,7 +2224,7 @@ function printPlan() {
       table{border-collapse:collapse;width:100%;font-size:12px} th,td{border:1px solid #bbb;padding:6px;text-align:left;vertical-align:top} th{background:#eee}
       .views{margin:20px 0 22px}.viewGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.viewShot{break-inside:avoid;border:1px solid #bbb;border-radius:6px;padding:8px}.viewShot b{display:block;font-size:12px;margin:0 0 6px;color:#333}.viewShot img{display:block;width:100%;height:auto;border-radius:4px;background:#0c1117}
       .steps{counter-reset:step}.printStep{break-inside:avoid;display:grid;grid-template-columns:.9fr 1.1fr;gap:12px;border:1px solid #bbb;border-radius:6px;padding:12px;margin:0 0 14px}.printStepImages{display:grid;gap:8px}.printStep img{width:100%;height:auto;border-radius:4px;background:#0c1117}.stepNo{font-size:11px;font-weight:bold;color:#555;text-transform:uppercase}.purchaseStats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}.purchaseStats span{border:1px solid #bbb;border-radius:999px;padding:5px 8px;font-size:12px}
-      .guides{margin-top:24px}.guideGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px}.printGuide{break-inside:avoid;border:1px solid #bbb;border-radius:6px;padding:12px;margin:0 0 14px}.printGuide b{display:block;margin-bottom:4px}.cutHelpText{display:block;font-size:12px;color:#333;margin-bottom:8px}.cutDiagram{width:100%;max-width:520px;height:auto}.miterDiagram{width:100%;max-width:430px;height:auto}.profile,.topProfile{fill:none;stroke:#111;stroke-width:4;stroke-linecap:round;stroke-linejoin:round}.keepProfile{fill:#b7dfbf;stroke:none}.remove{fill:#e26b6b;opacity:.55}.ledge{fill:#37a857;opacity:.75}.topRemove{fill:none;stroke:#d85656;stroke-width:3;stroke-linecap:round}.squiggle{fill:none;stroke:#888;stroke-width:1.5}.dimLine,.tick{stroke:#777;stroke-width:2}.grayText,.dimText{fill:#555;font-size:11px}.dimText{text-anchor:middle}
+      .guides{margin-top:24px}.guideGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px}.printGuide{break-inside:avoid;border:1px solid #bbb;border-radius:6px;padding:12px;margin:0 0 14px}.printGuide b{display:block;margin-bottom:4px}.cutHelpText{display:block;font-size:12px;color:#333;margin-bottom:8px}.cutDiagram{width:100%;max-width:520px;height:auto}.miterDiagram{width:100%;max-width:430px;height:auto}.cutDiagram text,.miterDiagram text{fill:#111;font-size:10px}.profile,.topProfile{fill:none;stroke:#111;stroke-width:4;stroke-linecap:round;stroke-linejoin:round}.keepProfile{fill:#b7dfbf;stroke:none}.remove{fill:#e26b6b;opacity:.55}.ledge{fill:#37a857;opacity:.75}.topRemove{fill:none;stroke:#d85656;stroke-width:3;stroke-linecap:round}.squiggle{fill:none;stroke:#888;stroke-width:1.5}.dimLine,.tick{stroke:#777;stroke-width:2}.grayText,.dimText{fill:#555;font-size:9px}.dimText{text-anchor:middle}
       @media print{.printStep,.panel,.viewShot,.printGuide{break-inside:avoid}.pageBreak{break-before:page}}
     </style>
     <h1>${escapeHtml(definition.title)}</h1>

@@ -31,7 +31,7 @@ assert.equal(strainer.parts[1].length, strainer.outerW - (base.face + base.rabbe
 assert.equal(strainer.parts[2].part, 'Strainer - Long');
 assert.equal(strainer.supportThickness, base.strainerDepth);
 assert.equal(strainer.supportBottom, 0.125);
-assert.ok(strainer.parts[0].notes.includes('0.125 in deep x 0.125 in wide rabbet'));
+assert.ok(strainer.parts[0].notes.includes('1/8 in deep x 1/8 in wide rabbet'));
 
 const shallowScrewStrainer = calculatePlan(applyMountingRules({
   ...base,
@@ -77,11 +77,11 @@ assert.equal(deepStrainer.supportThickness, 0.5);
 assert.equal(deepStrainer.supportBottom, 1.75);
 assert.deepEqual(deepStrainer.screwRange, { min: 0.875, max: 1.125, frontSafety: 0.125 });
 assert.equal(deepStrainer.parts[0].width, 3 + base.faceLip);
-assert.ok(deepStrainer.parts[0].notes.includes('0.125 in deep x 1.75 in wide rabbet'));
+assert.ok(deepStrainer.parts[0].notes.includes('1/8 in deep x 1 3/4 in wide rabbet'));
 
 const thickerCanvasStrainer = calculatePlan({ ...base, build: 'strainer', depth: 3, canvasT: 1, strainerDepth: 0.5 });
 assert.equal(thickerCanvasStrainer.supportBottom, 1.5);
-assert.ok(thickerCanvasStrainer.parts[0].notes.includes('0.125 in deep x 1.5 in wide rabbet'));
+assert.ok(thickerCanvasStrainer.parts[0].notes.includes('1/8 in deep x 1 1/2 in wide rabbet'));
 
 const twoPieceButt = calculatePlan({ ...base, join: 'butt' });
 assert.equal(twoPieceButt.ok, true);
@@ -99,7 +99,10 @@ assert.equal(clipPlan.linerW, base.reveal + base.stretcherW - 0.5);
 const screwPlan = applyMountingRules({ ...base, mountMethod: 'screws', linerW: 0.75 });
 assert.equal(screwPlan.linerW, base.reveal + base.stretcherW);
 
-assert.equal(formatLength(1.5, 'in'), '1.5 in');
+assert.equal(formatLength(1.5, 'in'), '1 1/2 in');
+assert.equal(formatLength(0.125, 'in'), '1/8 in');
+assert.equal(formatLength(1.37, 'in'), '1 3/8 in');
+assert.equal(formatLength(1 + 41 / 128, 'in'), '1 5/16 in');
 assert.equal(formatLength(1, 'mm'), '25.4 mm');
 assert.ok(getStageLabels('two').includes('Liner: Bottom'));
 assert.equal(getStageLabels('one').includes('Liner: Bottom'), false);
