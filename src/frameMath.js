@@ -4,6 +4,8 @@ import { buildFrameAssembly } from './frameAssembly.js';
 const INCH_TO_MM = 25.4;
 const Z_CLIP_TOLERANCE_IN = 1 / 32;
 const SCREW_MIN_EDGE_IN = 0.5;
+const RABBET_LEDGE_EPSILON_IN = 0.001;
+const MIN_RABBET_LEDGE_WARNING_IN = 0.125;
 export const Z_CLIP_LINER_SETBACK_IN = 0.5;
 
 export function normalizeBuild(build = 'liner') {
@@ -107,6 +109,13 @@ export function calculatePlan(plan) {
   }
   if (buildKind === 'strainer' && Number.isFinite(supportThickness) && Number.isFinite(supportDepth) && supportThickness > supportDepth) {
     errors.push('Strainer depth is deeper than the available support height.');
+  }
+  if (buildKind === 'strainer' && Number.isFinite(supportBottom)) {
+    if (supportBottom <= RABBET_LEDGE_EPSILON_IN) {
+      errors.push(`Strainer depth leaves no rabbet ledge. Increase frame depth or reduce strainer depth so at least ${formatLength(MIN_RABBET_LEDGE_WARNING_IN, plan.unit)} remains under the strainer.`);
+    } else if (supportBottom < MIN_RABBET_LEDGE_WARNING_IN) {
+      warnings.push(`Rabbet ledge is only ${formatLength(supportBottom, plan.unit)} wide. A ledge of at least ${formatLength(MIN_RABBET_LEDGE_WARNING_IN, plan.unit)} is recommended for the strainer.`);
+    }
   }
 
   if (usesSupportRails({ build: buildKind }) && (!Number.isFinite(plan.linerW) || plan.linerW <= 0)) {

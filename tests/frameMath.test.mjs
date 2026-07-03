@@ -20,13 +20,55 @@ assert.equal(base.linerW, 1.625);
 assert.equal(recommendedLinerWidth(base), base.reveal + base.stretcherW);
 assert.deepEqual(getScrewLengthRange(base, result.linerDepth), { min: 0.875, max: 1.125, frontSafety: 0.125 });
 
-const strainer = calculatePlan({ ...base, build: 'strainer', join: 'butt' });
+const zeroLedgeStrainer = calculatePlan({ ...base, build: 'strainer', join: 'butt' });
+assert.equal(zeroLedgeStrainer.ok, false);
+assert.match(zeroLedgeStrainer.errors.join('\n'), /leaves no rabbet ledge/);
+assert.equal(normalizeBuild('one'), 'strainer');
+
+const strainer = calculatePlan({ ...base, build: 'strainer', join: 'butt', depth: 1.375 });
 assert.equal(strainer.ok, true);
 assert.equal(strainer.parts[1].length, strainer.outerW - (base.face + base.rabbet) * 2);
 assert.equal(strainer.parts[2].part, 'Strainer - Long');
-assert.equal(strainer.supportThickness, strainer.supportDepth);
-assert.ok(strainer.parts[0].notes.includes('0.125 in deep x 0 in wide rabbet'));
-assert.equal(normalizeBuild('one'), 'strainer');
+assert.equal(strainer.supportThickness, base.strainerDepth);
+assert.equal(strainer.supportBottom, 0.125);
+assert.ok(strainer.parts[0].notes.includes('0.125 in deep x 0.125 in wide rabbet'));
+
+const shallowScrewStrainer = calculatePlan(applyMountingRules({
+  ...base,
+  build: 'strainer',
+  canvasW: 24,
+  canvasH: 24,
+  canvasT: 1.37,
+  stretcherW: 1,
+  reveal: 0.25,
+  face: 0.5,
+  depth: 1.87,
+  strainerDepth: 0.5,
+  mountMethod: 'screws',
+  linerW: 1.25
+}));
+assert.equal(shallowScrewStrainer.ok, false);
+assert.match(shallowScrewStrainer.errors.join('\n'), /leaves no rabbet ledge/);
+
+const shallowClipStrainer = calculatePlan(applyMountingRules({
+  ...base,
+  build: 'strainer',
+  canvasW: 24,
+  canvasH: 24,
+  canvasT: 1.37,
+  stretcherW: 1,
+  reveal: 0.25,
+  face: 0.5,
+  depth: 2.5,
+  strainerDepth: 0.5,
+  mountMethod: 'clips',
+  mountClip: '0.5',
+  linerW: 1.25
+}));
+assert.equal(shallowClipStrainer.supportDepth, 0.5);
+assert.equal(shallowClipStrainer.parts[2].width, 0.75);
+assert.equal(shallowClipStrainer.ok, false);
+assert.match(shallowClipStrainer.errors.join('\n'), /leaves no rabbet ledge/);
 
 const deepStrainer = calculatePlan({ ...base, build: 'strainer', depth: 3, strainerDepth: 0.5 });
 assert.equal(deepStrainer.ok, true);
